@@ -41,8 +41,9 @@ giou_loss_coef: 2
 eos_coef: 0.1
 
 # Dataset parameters
-dataset_file: ytvos
-ytvos_path: data/ytvos_debug5/
+dataset_name: proles2021_debug
+dataset_path: /media/pihash/DATA2/Sagi/Data/data_mini2021_splits/
+modalities: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
 remove_difficult: false
 output_dir: results
 device: cuda

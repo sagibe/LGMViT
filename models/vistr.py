@@ -19,13 +19,14 @@ class VisTRcls(nn.Module):
                          thus 360 queries for 36 frames.
             aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
         """
-
+        super().__init__()
         self.backbone = backbone
         self.mlp_head = nn.Sequential(
             nn.LayerNorm(384),
             nn.Linear(384, 2),
             nn.Softmax(dim=1)
         )
+        self.transformer = transformer
 
     def forward(self, samples):
         """ The forward expects a NestedTensor, which consists of:
@@ -73,9 +74,8 @@ def build_model(args):
         transformer,
         num_classes=args.num_classes,
         num_frames=args.num_frames,
-        num_queries=args.num_queries,
-        aux_loss=args.aux_loss,
     )
+    return model
 
     # # matcher = build_matcher(args)
     # weight_dict = {'loss_ce': 1, 'loss_bbox': args.bbox_loss_coef}
@@ -99,4 +99,4 @@ def build_model(args):
     # postprocessors = {'bbox': PostProcess()}
     # if args.masks:
     #     postprocessors['segm'] = PostProcessSegm()
-    return model
+    # return model
