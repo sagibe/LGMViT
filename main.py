@@ -18,6 +18,11 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
+SETTINGS = {
+    'config_name': 'test',
+    'use_wandb': True,
+    'wandb_suffix': ''
+}
 
 def main(config, exp_name, use_wandb=True):
     utils.init_distributed_mode(config)
@@ -30,7 +35,7 @@ def main(config, exp_name, use_wandb=True):
     random.seed(seed)
 
     model = build_model(config)
-    # model.to(device)
+    model.to(device)
 
     model_without_ddp = model
     if config.distributed:
@@ -95,10 +100,10 @@ def main(config, exp_name, use_wandb=True):
             config.clip_max_norm)
         if use_wandb:
             wandb.log(
-                {"Train total-loss": train_stats['loss'], "Train-CE-loss": train_stats['loss_ce'],
-                 "Train bbox-Loss": train_stats['loss_bbox'],
-                 "Train giou-loss": train_stats['loss_giou'], "Train mask-loss": train_stats['loss_mask'],
-                 "Train dice-loss": train_stats['loss_dice'], "epoch": epoch})
+                {"Train Loss": train_stats['loss'],
+                 "Train Accuracy": train_stats['acc'],
+                 'lr': train_stats['lr'],
+                 "epoch": epoch})
         lr_scheduler.step()
         if config.output_dir:
             checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
@@ -121,12 +126,6 @@ def main(config, exp_name, use_wandb=True):
     print('hi')
 
 
-SETTINGS = {
-    'config_name': 'test',
-    'use_wandb': False,
-    'wandb_suffix': ''
-}
-
 if __name__ == '__main__':
     settings = SETTINGS
     with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
@@ -135,7 +134,7 @@ if __name__ == '__main__':
 
     # W&B logger initialization
     if settings['use_wandb']:
-        wandb.init(project='VisTR',
+        wandb.init(project='ProLesClassifier',
                    name=settings['config_name'] + settings['wandb_suffix'],
                    entity='sagibi',
                    config={

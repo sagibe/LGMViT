@@ -8,7 +8,7 @@ from models.transformer import build_transformer
 
 class VisTRcls(nn.Module):
     """ This is the VisTR module that performs video object detection """
-    def __init__(self, backbone, transformer, num_classes, num_frames):
+    def __init__(self, backbone, transformer, num_frames, num_classes=2, embed_dim=2048):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbone to be used. See backbone.py
@@ -21,12 +21,13 @@ class VisTRcls(nn.Module):
         """
         super().__init__()
         self.backbone = backbone
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.transformer = transformer
         self.mlp_head = nn.Sequential(
-            nn.LayerNorm(384),
-            nn.Linear(384, 2),
+            nn.LayerNorm(embed_dim),
+            nn.Linear(embed_dim, 1 if num_classes == 2 else num_classes),
             nn.Softmax(dim=1)
         )
-        self.transformer = transformer
 
     def forward(self, samples):
         """ The forward expects a NestedTensor, which consists of:
@@ -47,19 +48,32 @@ class VisTRcls(nn.Module):
         #     samples = nested_tensor_from_tensor_list(samples)
         # moved the frame to batch dimension for computation efficiency
         features, pos = self.backbone(samples)
+        src = features[-1]
+        f, em, h, w = src.size()
         pos = pos[-1]
-        src, mask = features[-1].decompose()
-        src_proj = self.input_proj(src)
-        n,c,h,w = src_proj.shape
-        src_proj = src_proj.reshape(n//self.num_frames, self.num_frames, c, h, w).permute(0,2,1,3,4).flatten(-2)
-        mask = mask.reshape(n//self.num_frames, self.num_frames, h*w)
-        pos = pos.permute(0,2,1,3,4).flatten(-2)
-        hs = self.transformer(src_proj, mask, self.query_embed.weight, pos)[0]
+        pos = pos[0,:f,:,:,:].flatten(-2).permute(0,2,1)
+        # pos = pos.permute(0, 2, 1, 3, 4).flatten(-2)  # 1,0,2,3
 
-        outputs_class = self.class_embed(hs)
-        outputs_coord = self.bbox_embed(hs).sigmoid()
-        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
-        return out
+        # src_proj = self.input_proj(src)
+        src_proj = src
+        # n,c,h,w = src_proj.shape
+        # src_proj = src_proj.reshape(n//self.num_frames, self.num_frames, c, h, w).permute(0,2,1,3,4).flatten(-2)
+        src_proj = src_proj.flatten(-2).permute(0,2,1)
+        # mask = mask.reshape(n//self.num_frames, self.num_frames, h*w)
+        # pos = pos.permute(0,2,1,3,4).flatten(-2)
+
+        ##### #TODO fix size of pos embeddings
+        pos = nn.functional.interpolate(pos, size=(em), mode='linear', align_corners=False)
+        #####
+        x = src_proj + pos
+        x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
+        out_transformer = self.transformer(x)
+
+        outputs_class = self.mlp_head(out_transformer[:,0,:])
+        # outputs_class = self.class_embed(hs)
+        # outputs_coord = self.bbox_embed(hs).sigmoid()
+        # out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
+        return outputs_class #out
 
 def build_model(args):
     # if args.dataset_file == "ytvos":

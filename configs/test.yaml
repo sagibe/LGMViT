@@ -18,12 +18,12 @@ num_classes: 2
 # Transformer #
 num_layers: 6
 forward_expansion_ratio : 4
-embed_size: 384
+embed_size: 2048 # 384
 drop_path: 0.1
 forward_drop_p: 0.1
 nheads: 8
 norm_output:
-num_frames: 9
+num_frames: 40
 num_queries: 90
 pre_norm: false
 
@@ -34,15 +34,15 @@ set_cost_class: 1
 set_cost_bbox: 5
 set_cost_giou: 2
 # Loss coefficients
-mask_loss_coef: 1
-dice_loss_coef: 1
-bbox_loss_coef: 5
-giou_loss_coef: 2
-eos_coef: 0.1
+#mask_loss_coef: 1
+#dice_loss_coef: 1
+#bbox_loss_coef: 5
+#giou_loss_coef: 2
+#eos_coef: 0.1
 
 # Dataset parameters
 dataset_name: proles2021_debug
-dataset_path: /media/pihash/DATA2/Sagi/Data/data_mini2021_splits/
+dataset_path: /mnt/DATA2/Sagi/Data/data_mini2021_splits/
 modalities: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
 remove_difficult: false
 output_dir: results
