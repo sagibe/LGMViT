@@ -9,11 +9,14 @@ import wandb
 import random
 from pathlib import Path
 import utils.transforms as T
+from datasets.picai2022 import prepare_datagens
 
 from models.vistr import build_model
 import utils.util as utils
 from utils.engine import train_one_epoch
 from datasets.proles2021_debug import ProLes2021DatasetDebug
+from datasets.picai2022 import PICAI2021Dataset
+
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
 from utils.multimodal_dicom_scan import MultimodalDicomScan
@@ -64,7 +67,18 @@ def main(config, exp_name, use_wandb=True):
     # Data loading
     if config.dataset_name == 'proles2021_debug':
         dataset_train = ProLes2021DatasetDebug(data_path=config.dataset_path, modalities=config.modalities, scan_set='train', use_mask=True, transforms=transforms)
-    # testtt = dataset_train[1]
+        # if config.distributed:
+        #     sampler_train = DistributedSampler(dataset_train)
+        # else:
+        #     sampler_train = RandomSampler(dataset_train)
+        #
+        # batch_sampler_train = BatchSampler(sampler_train, config.batch_size, drop_last=True)
+        # data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
+    elif config.dataset_name == 'picai2022':
+        overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
+        dataset_train = PICAI2021Dataset(overviews_dir, fold_id=0, scan_set='train')
+        # overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
+        # data_loader_train, valid_gen, class_weights = prepare_datagens(overviews_dir,  fold_id=0)
 
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
@@ -93,8 +107,8 @@ def main(config, exp_name, use_wandb=True):
     print("Start training")
     start_time = time.time()
     for epoch in range(config.start_epoch, config.epochs):
-        if config.distributed:
-            sampler_train.set_epoch(epoch)
+        # if config.distributed:
+        #     sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
             config.clip_max_norm)

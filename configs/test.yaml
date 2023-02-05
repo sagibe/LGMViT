@@ -41,7 +41,7 @@ set_cost_giou: 2
 #eos_coef: 0.1
 
 # Dataset parameters
-dataset_name: proles2021_debug
+dataset_name: picai2022 # proles2021_debug   picai2022
 dataset_path: /mnt/DATA2/Sagi/Data/data_mini2021_splits/
 modalities: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
 remove_difficult: false
