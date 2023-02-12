@@ -42,7 +42,7 @@ def main(settings):
         dir_name += '_t2w_hist_stnd'
     if settings.normalize:
         dir_name += '_normalized'
-    save_dir = os.path.join(settings.workdir, 'processed_data', dir_name, f'fold_{str(settings.fold_id)}', settings.scan_set)
+    save_dir = os.path.join(settings.workdir, dir_name, f'fold_{str(settings.fold_id)}', settings.scan_set)
     os.makedirs(save_dir, exist_ok=True)
 
     with open(Path(settings.overviews_dir) / f'PI-CAI_{settings.scan_set}-fold-{settings.fold_id}.json') as fp:
@@ -61,8 +61,8 @@ def main(settings):
             shutil.rmtree(nifty_dir)
     count=0
     for idx, img in enumerate(image_files):
-        if count==5:
-            break
+        # if count==5:
+        #     break
         # count+=1
         # print(count)
         # img_t2w = self.prepare_scan(str(image_files[idx][0]))

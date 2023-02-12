@@ -2,6 +2,7 @@
 Train and eval functions used in main.py
 Modified from DETR (https://github.com/facebookresearch/detr)
 """
+import numpy as np
 import math
 import os
 import sys
@@ -22,6 +23,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
@@ -32,6 +36,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         outputs = model(samples)
         loss = criterion(outputs, targets)
         loss_value = loss.item()
+        sensitivity, specificity, f1, accuracy = calc_metrics(outputs, targets)
         acc = calc_accuracy(outputs, targets)
 
         # weight_dict = criterion.weight_dict
@@ -59,6 +64,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
         metric_logger.update(loss=loss_value)
         metric_logger.update(acc=acc)
+        metric_logger.update(sensitivity=sensitivity)
+        metric_logger.update(specificity=specificity)
+        metric_logger.update(f1=f1)
         # metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
@@ -67,24 +75,59 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
-def eval_epoch(model, loader, criterion, meter, device, epoch):
-    criterion.to(device)
+def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
+                    data_loader: Iterable, device: torch.device, epoch: int, max_norm: float = 0):
     model.eval()
+    criterion.eval()
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    header = 'Epoch: [{}]'.format(epoch)
+    print_freq = 10
+    for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+        samples = samples.squeeze(0).float().to(device)
+        targets = targets.float().T.to(device)
+        outputs = model(samples)
+        loss = criterion(outputs, targets)
+        loss_value = loss.item()
+        acc = calc_accuracy(outputs, targets)
+        sensitivity, specificity, f1, accuracy = calc_metrics(outputs, targets)
+        if max_norm > 0:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+        metric_logger.update(loss=loss_value)
+        metric_logger.update(acc=acc)
+        metric_logger.update(sensitivity=sensitivity)
+        metric_logger.update(specificity=specificity)
+        metric_logger.update(f1=f1)
+        # metric_logger.update(class_error=loss_dict_reduced['class_error'])
 
-    with torch.no_grad():
-        for step, data in enumerate(loader):
-            images, targets = data
-            images = images.to(device)
-            targets = targets.to(device).float()
-            targets = targets.unsqueeze(-1)
-            outputs = model(images)
-            loss = criterion(outputs, targets)
-            loss_val = loss.item()
-            acc = calc_accuracy(outputs, targets)
-            # _show_result(epoch, step, len(loader), loss_val, acc, False)
-            # _update_meter(meter, loss_val, acc)
+    # gather the stats from all processes
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
-    return meter
+
+# def eval_epoch(model, loader, criterion, meter, device, epoch):
+#     criterion.to(device)
+#     model.eval()
+#
+#     with torch.no_grad():
+#         for step, data in enumerate(loader):
+#             images, targets = data
+#             images = images.to(device)
+#             targets = targets.to(device).float()
+#             targets = targets.unsqueeze(-1)
+#             outputs = model(images)
+#             loss = criterion(outputs, targets)
+#             loss_val = loss.item()
+#             acc = calc_accuracy(outputs, targets)
+#             # _show_result(epoch, step, len(loader), loss_val, acc, False)
+#             # _update_meter(meter, loss_val, acc)
+#
+#     return meter
 
 def calc_accuracy(outputs, targets,  bin_thresh=0.5):
     if outputs.size(1) == 1:
@@ -93,6 +136,27 @@ def calc_accuracy(outputs, targets,  bin_thresh=0.5):
         preds = outputs.argmax(-1)
 
     return torch.mean(1. * (preds == targets)).item()
+
+def calc_metrics(outputs, targets,  bin_thresh=0.5):
+    if outputs.size(1) == 1:
+        preds = (sigmoid(outputs) > bin_thresh) * 1
+    else:
+        preds = outputs.argmax(-1)
+    targets_bools = targets > 0
+    preds_bools = preds > 0
+    tp = sum(targets_bools * preds_bools)
+    tn = sum(~targets_bools * ~preds_bools)
+    fp = sum(~targets_bools * preds_bools)
+    fn = sum(targets_bools * ~preds_bools)
+
+    sensitivity = tp / (tp + fn)
+    specificity = tn / (tn + fp)
+    precision = tp / (tp + fp)
+    f1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    return sensitivity.item(), specificity.item(), f1.item(), accuracy.item()
+
+    # return torch.mean(1. * (preds == targets)).item()
 
 
 # @torch.no_grad()

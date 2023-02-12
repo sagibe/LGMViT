@@ -5,6 +5,7 @@ import torch.distributed as dist
 import time
 import datetime
 from collections import defaultdict, deque
+from torch import sigmoid
 
 
 class RecursiveNamespace(SimpleNamespace):
@@ -267,4 +268,71 @@ class MetricLogger(object):
         print('{} Total time: {} ({:.4f} s / it)'.format(
             header, total_time_str, total_time / len(iterable)))
 
-
+# class PerformanceMetrics(object):
+#     """Track a series of values and provide access to smoothed values over a
+#     window or the global series average.
+#     """
+#
+#     def __init__(self):
+#         self.tp = 0
+#         self.tn = 0
+#         self.fp = 0
+#         self.fn = 0
+#         self.sensitivity = 0
+#         self.specificity = 0
+#         self.accuracy = 0
+#         self.f1 = 0
+#
+#     def update(self, outputs, targets):
+#         if outputs.size(1) == 1:
+#             preds = (sigmoid(outputs) > bin_thresh) * 1
+#         else:
+#             preds = outputs.argmax(-1)
+#         targets_bools = targets > 0
+#         preds_bools = preds > 0
+#         tp = sum(targets_bools * preds_bools)
+#         tn = sum(~targets_bools * ~preds_bools)
+#         fp = sum(~targets_bools * preds_bools)
+#         fn = sum(targets_bools * ~preds_bools)
+#     def synchronize_between_processes(self):
+#         """
+#         Warning: does not synchronize the deque!
+#         """
+#         if not is_dist_avail_and_initialized():
+#             return
+#         t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
+#         dist.barrier()
+#         dist.all_reduce(t)
+#         t = t.tolist()
+#         self.count = int(t[0])
+#         self.total = t[1]
+#
+#     @property
+#     def median(self):
+#         d = torch.tensor(list(self.deque))
+#         return d.median().item()
+#
+#     @property
+#     def avg(self):
+#         d = torch.tensor(list(self.deque), dtype=torch.float32)
+#         return d.mean().item()
+#
+#     @property
+#     def global_avg(self):
+#         return self.total / self.count
+#
+#     @property
+#     def max(self):
+#         return max(self.deque)
+#
+#     @property
+#     def value(self):
+#         return self.deque[-1]
+#
+#     def __str__(self):
+#         return self.fmt.format(
+#             median=self.median,
+#             avg=self.avg,
+#             global_avg=self.global_avg,
+#             max=self.max,
+#             value=self.value)

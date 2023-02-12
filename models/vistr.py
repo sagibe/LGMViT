@@ -26,7 +26,7 @@ class VisTRcls(nn.Module):
         self.mlp_head = nn.Sequential(
             nn.LayerNorm(embed_dim),
             nn.Linear(embed_dim, 1 if num_classes == 2 else num_classes),
-            nn.Softmax(dim=1)
+            # nn.Softmax(dim=1)
         )
 
     def forward(self, samples):

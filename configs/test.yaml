@@ -6,6 +6,7 @@ weight_decay: 0.0001
 epochs: 18
 lr_drop: 12
 clip_max_norm: 0.1
+eval_interval: 1
 
 # Model paramters #
 pretrained_weights: weights/vistr_r101.pth
@@ -42,7 +43,7 @@ set_cost_giou: 2
 
 # Dataset parameters
 dataset_name: picai2022 # proles2021_debug   picai2022
-dataset_path: /mnt/DATA2/Sagi/Data/data_mini2021_splits/
+dataset_path: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data/processed_data_resgist_normalized_debug/
 modalities: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
 remove_difficult: false
 output_dir: results

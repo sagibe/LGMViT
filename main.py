@@ -9,11 +9,11 @@ import wandb
 import random
 from pathlib import Path
 import utils.transforms as T
-from datasets.picai2022 import prepare_datagens
+# from datasets.picai2022 import prepare_datagens
 
 from models.vistr import build_model
 import utils.util as utils
-from utils.engine import train_one_epoch
+from utils.engine import train_one_epoch, eval_epoch
 from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
 
@@ -58,7 +58,8 @@ def main(config, exp_name, use_wandb=True):
     optimizer = torch.optim.AdamW(param_dicts, lr=config.lr,
                                   weight_decay=config.weight_decay)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.lr_drop)
-    criterion = nn.BCELoss()
+    # criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     # transforms
     transforms = T.Compose([
@@ -76,17 +77,23 @@ def main(config, exp_name, use_wandb=True):
         # data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
     elif config.dataset_name == 'picai2022':
         overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
-        dataset_train = PICAI2021Dataset(overviews_dir, fold_id=0, scan_set='train')
+        dataset_train = PICAI2021Dataset(config.dataset_path, fold_id=0, scan_set='train',mask=True)
+        dataset_val = PICAI2021Dataset(config.dataset_path, fold_id=0, scan_set='val', mask=True)
         # overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
         # data_loader_train, valid_gen, class_weights = prepare_datagens(overviews_dir,  fold_id=0)
 
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
+        sampler_val = DistributedSampler(dataset_val)
     else:
         sampler_train = RandomSampler(dataset_train)
+        sampler_val = RandomSampler(dataset_val)
 
     batch_sampler_train = BatchSampler(sampler_train, config.batch_size, drop_last=True)
     data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
+
+    batch_sampler_val = BatchSampler(sampler_val, config.batch_size, drop_last=True)
+    data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.num_workers)
 
     output_dir = os.path.join(Path(config.output_dir), exp_name)
     ckpt_dir = os.path.join(output_dir, 'ckpt')
@@ -112,12 +119,31 @@ def main(config, exp_name, use_wandb=True):
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
             config.clip_max_norm)
+        if epoch % config.eval_interval == 0:
+            val_stats = eval_epoch(
+                model, criterion, data_loader_val, device, epoch,
+                config.clip_max_norm)
         if use_wandb:
-            wandb.log(
-                {"Train Loss": train_stats['loss'],
-                 "Train Accuracy": train_stats['acc'],
-                 'lr': train_stats['lr'],
-                 "epoch": epoch})
+            if epoch % config.eval_interval == 0:
+                wandb.log(
+                    {"Train Loss": train_stats['loss'],
+                     "Train Accuracy": train_stats['acc'],
+                     "Train Sensitivity": train_stats['sensitivity'],
+                     "Train Specificity": train_stats['specificity'],
+                     "Train F!": train_stats['f1'],
+                     'lr': train_stats['lr'],
+                     "Validation Loss": val_stats['loss'],
+                     "Validation Accuracy": val_stats['acc'],
+                     "epoch": epoch})
+            else:
+                wandb.log(
+                    {"Train Loss": train_stats['loss'],
+                     "Train Accuracy": train_stats['acc'],
+                     "Train Sensitivity": train_stats['sensitivity'],
+                     "Train Specificity": train_stats['specificity'],
+                     "Train F!": train_stats['f1'],
+                     'lr': train_stats['lr'],
+                     "epoch": epoch})
         lr_scheduler.step()
         if config.output_dir:
             checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
