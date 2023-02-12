@@ -88,9 +88,9 @@ def init_distributed_mode(args):
     torch.cuda.set_device(args.gpu)
     args.dist_backend = 'nccl'
     print('| distributed init (rank {}): {}'.format(
-        args.rank, args.dist_url), flush=True)
-    torch.distributed.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                                         world_size=args.world_size, rank=args.rank)
+        args.rank, args.DISTRIBUTED.DIST_URL), flush=True)
+    torch.distributed.init_process_group(backend=args.dist_backend, init_method=args.DISTRIBUTED.DIST_URL,
+                                         world_size=args.DISTRIBUTED.WORLD_SIZE, rank=args.rank)
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
 
@@ -268,71 +268,54 @@ class MetricLogger(object):
         print('{} Total time: {} ({:.4f} s / it)'.format(
             header, total_time_str, total_time / len(iterable)))
 
-# class PerformanceMetrics(object):
-#     """Track a series of values and provide access to smoothed values over a
-#     window or the global series average.
-#     """
-#
-#     def __init__(self):
-#         self.tp = 0
-#         self.tn = 0
-#         self.fp = 0
-#         self.fn = 0
-#         self.sensitivity = 0
-#         self.specificity = 0
-#         self.accuracy = 0
-#         self.f1 = 0
-#
-#     def update(self, outputs, targets):
-#         if outputs.size(1) == 1:
-#             preds = (sigmoid(outputs) > bin_thresh) * 1
-#         else:
-#             preds = outputs.argmax(-1)
-#         targets_bools = targets > 0
-#         preds_bools = preds > 0
-#         tp = sum(targets_bools * preds_bools)
-#         tn = sum(~targets_bools * ~preds_bools)
-#         fp = sum(~targets_bools * preds_bools)
-#         fn = sum(targets_bools * ~preds_bools)
-#     def synchronize_between_processes(self):
-#         """
-#         Warning: does not synchronize the deque!
-#         """
-#         if not is_dist_avail_and_initialized():
-#             return
-#         t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
-#         dist.barrier()
-#         dist.all_reduce(t)
-#         t = t.tolist()
-#         self.count = int(t[0])
-#         self.total = t[1]
-#
-#     @property
-#     def median(self):
-#         d = torch.tensor(list(self.deque))
-#         return d.median().item()
-#
-#     @property
-#     def avg(self):
-#         d = torch.tensor(list(self.deque), dtype=torch.float32)
-#         return d.mean().item()
-#
-#     @property
-#     def global_avg(self):
-#         return self.total / self.count
-#
-#     @property
-#     def max(self):
-#         return max(self.deque)
-#
-#     @property
-#     def value(self):
-#         return self.deque[-1]
-#
-#     def __str__(self):
-#         return self.fmt.format(
-#             median=self.median,
-#             avg=self.avg,
-#             global_avg=self.global_avg,
-#             max=self.max,
-#             value=self.value)
+class PerformanceMetrics(object):
+    """Track a series of values and provide access to smoothed values over a
+    window or the global series average.
+    """
+
+    def __init__(self, device, bin_thresh=0.5):
+        self.device = device
+        self.tp = torch.zeros(1, device=device, dtype=torch.int64)
+        self.tn = torch.zeros(1, device=device, dtype=torch.int64)
+        self.fp = torch.zeros(1, device=device, dtype=torch.int64)
+        self.fn = torch.zeros(1, device=device, dtype=torch.int64)
+        self.bin_thresh = bin_thresh
+
+    def update(self, outputs, targets):
+        if outputs.size(1) == 1:
+            preds = (sigmoid(outputs) > self.bin_thresh) * 1
+        else:
+            preds = outputs.argmax(-1)
+        targets_bools = targets > 0
+        preds_bools = preds > 0
+        self.tp += sum(targets_bools * preds_bools)
+        self.tn += sum(~targets_bools * ~preds_bools)
+        self.fp += sum(~targets_bools * preds_bools)
+        self.fn += sum(targets_bools * ~preds_bools)
+    @property
+    def sensitivity(self):
+        return (self.tp / (self.tp + self.fn)).item()
+
+    @property
+    def specificity(self):
+        return (self.tn / (self.tn + self.fp)).item()
+
+    @property
+    def precision(self):
+        return (self.tp / (self.tp + self.fp)).item()
+
+    @property
+    def f1(self):
+        return (2 * self.tp / (2 * self.tp + self.fp + self.fn)).item()
+
+    @property
+    def accuracy(self):
+        return ((self.tp + self.tn) / (self.tp + self.tn + self.fp + self.fn)).item()
+
+    # def __str__(self):
+    #     return self.fmt.format(
+    #         median=self.median,
+    #         avg=self.avg,
+    #         global_avg=self.global_avg,
+    #         max=self.max,
+    #         value=self.value)

@@ -8,7 +8,7 @@ from models.transformer import build_transformer
 
 class VisTRcls(nn.Module):
     """ This is the VisTR module that performs video object detection """
-    def __init__(self, backbone, transformer, num_frames, num_classes=2, embed_dim=2048):
+    def __init__(self, backbone, transformer, num_classes=2, embed_dim=2048):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbone to be used. See backbone.py
@@ -78,7 +78,7 @@ class VisTRcls(nn.Module):
 def build_model(args):
     # if args.dataset_file == "ytvos":
     #     num_classes = 41
-    device = torch.device(args.device)
+    device = torch.device(args.DEVICE)
     backbone = build_backbone(args)
 
     transformer = build_transformer(args)
@@ -86,8 +86,7 @@ def build_model(args):
     model = VisTRcls(
         backbone,
         transformer,
-        num_classes=args.num_classes,
-        num_frames=args.num_frames,
+        num_classes=args.MODEL.NUM_CLASSES
     )
     return model
 

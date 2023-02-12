@@ -108,9 +108,9 @@ class Joiner(nn.Sequential):
 
 def build_backbone(args):
     position_embedding = build_position_encoding(args)
-    train_backbone = args.lr_backbone > 0
-    return_interm_layers = args.return_interm_backbone_layers
-    backbone = Backbone(args.backbone, train_backbone, return_interm_layers, args.dilation)
+    train_backbone = args.TRAINING.LR > 0
+    return_interm_layers = args.MODEL.BACKBONE.RETURN_INTERM_LAYERS
+    backbone = Backbone(args.MODEL.BACKBONE.NAME, train_backbone, return_interm_layers, args.MODEL.BACKBONE.DILATION)
     model = Joiner(backbone, position_embedding)
     model.num_channels = backbone.num_channels
     return model

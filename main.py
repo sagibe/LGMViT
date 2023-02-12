@@ -24,15 +24,18 @@ from utils.multimodal_dicom_scan import MultimodalDicomScan
 SETTINGS = {
     'config_name': 'test',
     'use_wandb': True,
-    'wandb_suffix': ''
+    'wandb_suffix': '',
+    'device': 'cuda',
+    'seed': 42
 }
 
-def main(config, exp_name, use_wandb=True):
+def main(config, settings):
     utils.init_distributed_mode(config)
-    device = torch.device(config.device)
+    device = torch.device(settings['device'])
+    config.DEVICE=device
 
     # fix the seed for reproducibility
-    seed = config.seed + utils.get_rank()
+    seed = settings['seed'] + utils.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
@@ -52,12 +55,12 @@ def main(config, exp_name, use_wandb=True):
         {"params": [p for n, p in model_without_ddp.named_parameters() if "backbone" not in n and p.requires_grad]},
         {
             "params": [p for n, p in model_without_ddp.named_parameters() if "backbone" in n and p.requires_grad],
-            "lr": config.lr_backbone,
+            "lr": config.TRAINING.LR,
         },
     ]
-    optimizer = torch.optim.AdamW(param_dicts, lr=config.lr,
-                                  weight_decay=config.weight_decay)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.lr_drop)
+    optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,
+                                  weight_decay=config.TRAINING.WEIGHT_DECAY)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
     # criterion = nn.BCELoss()
     criterion = nn.BCEWithLogitsLoss()
 
@@ -66,8 +69,8 @@ def main(config, exp_name, use_wandb=True):
         T.ToTensor()
     ])
     # Data loading
-    if config.dataset_name == 'proles2021_debug':
-        dataset_train = ProLes2021DatasetDebug(data_path=config.dataset_path, modalities=config.modalities, scan_set='train', use_mask=True, transforms=transforms)
+    if config.DATA.DATASET == 'proles2021_debug':
+        dataset_train = ProLes2021DatasetDebug(data_path=config.DATA.DATASET_PATH, modalities=config.DATA.MODALITIES, scan_set='train', use_mask=True, transforms=transforms)
         # if config.distributed:
         #     sampler_train = DistributedSampler(dataset_train)
         # else:
@@ -75,10 +78,10 @@ def main(config, exp_name, use_wandb=True):
         #
         # batch_sampler_train = BatchSampler(sampler_train, config.batch_size, drop_last=True)
         # data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
-    elif config.dataset_name == 'picai2022':
+    elif config.DATA.DATASET == 'picai2022':
         overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
-        dataset_train = PICAI2021Dataset(config.dataset_path, fold_id=0, scan_set='train',mask=True)
-        dataset_val = PICAI2021Dataset(config.dataset_path, fold_id=0, scan_set='val', mask=True)
+        dataset_train = PICAI2021Dataset(config.DATA.DATASET_PATH, fold_id=0, scan_set='train',mask=True)
+        dataset_val = PICAI2021Dataset(config.DATA.DATASET_PATH, fold_id=0, scan_set='val', mask=True)
         # overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
         # data_loader_train, valid_gen, class_weights = prepare_datagens(overviews_dir,  fold_id=0)
 
@@ -89,51 +92,54 @@ def main(config, exp_name, use_wandb=True):
         sampler_train = RandomSampler(dataset_train)
         sampler_val = RandomSampler(dataset_val)
 
-    batch_sampler_train = BatchSampler(sampler_train, config.batch_size, drop_last=True)
-    data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
+    batch_sampler_train = BatchSampler(sampler_train, config.TRAINING.BATCH_SIZE, drop_last=True)
+    data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.TRAINING.NUM_WORKERS)
 
-    batch_sampler_val = BatchSampler(sampler_val, config.batch_size, drop_last=True)
-    data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.num_workers)
+    batch_sampler_val = BatchSampler(sampler_val, config.TRAINING.BATCH_SIZE, drop_last=True)
+    data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
 
-    output_dir = os.path.join(Path(config.output_dir), exp_name)
+    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['config_name'])
     ckpt_dir = os.path.join(output_dir, 'ckpt')
     os.makedirs(ckpt_dir, exist_ok=True)
 
-    if config.resume:
-        if config.resume.startswith('https'):
+    if config.TRAINING.RESUME:
+        if config.TRAINING.RESUME.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
-                config.resume, map_location='cpu', check_hash=True)
+                config.TRAINING.RESUME, map_location='cpu', check_hash=True)
         else:
-            checkpoint = torch.load(config.resume, map_location='cpu')
+            checkpoint = torch.load(config.TRAINING.RESUME, map_location='cpu')
         model_without_ddp.load_state_dict(checkpoint['model'])
-        if not config.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+        if not config.TRAINING.EVAL and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
             optimizer.load_state_dict(checkpoint['optimizer'])
             lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-            config.start_epoch = checkpoint['epoch'] + 1
+            config.TRAINING.START_EPOCH = checkpoint['epoch'] + 1
 
     print("Start training")
     start_time = time.time()
-    for epoch in range(config.start_epoch, config.epochs):
+    for epoch in range(config.TRAINING.START_EPOCH, config.TRAINING.EPOCHS):
         # if config.distributed:
         #     sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
-            config.clip_max_norm)
-        if epoch % config.eval_interval == 0:
+            config.TRAINING.CLIP_MAX_NORM)
+        if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
                 model, criterion, data_loader_val, device, epoch,
-                config.clip_max_norm)
-        if use_wandb:
-            if epoch % config.eval_interval == 0:
+                config.TRAINING.CLIP_MAX_NORM)
+        if settings['use_wandb']:
+            if epoch % config.TRAINING.EVAL_INTERVAL == 0:
                 wandb.log(
                     {"Train Loss": train_stats['loss'],
                      "Train Accuracy": train_stats['acc'],
                      "Train Sensitivity": train_stats['sensitivity'],
                      "Train Specificity": train_stats['specificity'],
-                     "Train F!": train_stats['f1'],
+                     "Train F1": train_stats['f1'],
                      'lr': train_stats['lr'],
                      "Validation Loss": val_stats['loss'],
                      "Validation Accuracy": val_stats['acc'],
+                     "Validation Sensitivity": val_stats['sensitivity'],
+                     "Validation Specificity": val_stats['specificity'],
+                     "Validation F1": train_stats['f1'],
                      "epoch": epoch})
             else:
                 wandb.log(
@@ -141,14 +147,14 @@ def main(config, exp_name, use_wandb=True):
                      "Train Accuracy": train_stats['acc'],
                      "Train Sensitivity": train_stats['sensitivity'],
                      "Train Specificity": train_stats['specificity'],
-                     "Train F!": train_stats['f1'],
+                     "Train F1": train_stats['f1'],
                      'lr': train_stats['lr'],
                      "epoch": epoch})
         lr_scheduler.step()
-        if config.output_dir:
+        if config.DATA.OUTPUT_DIR:
             checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
             # extra checkpoint before LR drop and every epochs
-            if (epoch + 1) % config.lr_drop == 0 or (epoch + 1) % 1 == 0:
+            if (epoch + 1) % config.TRAINING.LR_DROP == 0 or (epoch + 1) % 1 == 0:
                 checkpoint_paths.append(os.path.join(ckpt_dir, f'checkpoint{epoch:04}.pth'))
             for checkpoint_path in checkpoint_paths:
                 utils.save_on_master({
@@ -178,13 +184,12 @@ if __name__ == '__main__':
                    name=settings['config_name'] + settings['wandb_suffix'],
                    entity='sagibi',
                    config={
-                       "batch_size": config.batch_size,
-                       "num_epochs": config.epochs,
-                       "lr": config.lr,
-                       "lr_backbone": config.lr_backbone,
-                       "pretrain_weights": config.pretrained_weights
+                       "batch_size": config.TRAINING.BATCH_SIZE,
+                       "num_epochs": config.TRAINING.EPOCHS,
+                       "lr": config.TRAINING.LR,
+                       "pretrain_weights": config.MODEL.PRETRAINED_WEIGHTS
                    })
 
-    if config.output_dir:
-        Path(config.output_dir).mkdir(parents=True, exist_ok=True)
-    main(config, exp_name=settings['config_name'], use_wandb=settings['use_wandb'])
+    if config.DATA.OUTPUT_DIR:
+        Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+    main(config, settings)

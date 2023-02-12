@@ -90,10 +90,10 @@ class Mlp(nn.Module):
         return x
 
 class TransformerEncoderBlock(nn.Sequential):
-    def __init__(self, embed_size=768, drop_path=0., forward_expansion=4, forward_drop_p=0., norm_layer=nn.LayerNorm):
+    def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0., norm_layer=nn.LayerNorm):
         super().__init__()
         self.norm1 = norm_layer(embed_size)
-        self.attn = Attention(embed_size)
+        self.attn = Attention(embed_size, num_heads=num_heads)
         self.norm2 = norm_layer(embed_size)
         self.mlp = Mlp(in_features=embed_size, hidden_features=forward_expansion, drop=forward_drop_p)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
@@ -109,9 +109,10 @@ def _get_clones(module, N):
 
 class TransformerEncoder(nn.Module):
 
-    def __init__(self, embed_size=768, drop_path=0., forward_expansion=4, forward_drop_p=0., norm_layer=nn.LayerNorm, num_layers=6, norm_output=None):
+    def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0., norm_layer=nn.LayerNorm, num_layers=6, norm_output=None):
         super().__init__()
         encoder_layer = TransformerEncoderBlock(embed_size=embed_size,
+                                                num_heads=num_heads,
                                                 drop_path=drop_path,
                                                 forward_expansion=forward_expansion,
                                                 forward_drop_p=forward_drop_p,
@@ -130,12 +131,13 @@ class TransformerEncoder(nn.Module):
 
 def build_transformer(args):
     return TransformerEncoder(
-        embed_size=args.embed_size,
-        drop_path=args.drop_path,
-        forward_expansion=args.forward_expansion_ratio,
-        forward_drop_p=args.forward_drop_p,
+        embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,
+        num_heads=args.MODEL.TRANSFORMER.HEADS,
+        drop_path=args.MODEL.TRANSFORMER.DROP_PATH,
+        forward_expansion=args.MODEL.TRANSFORMER.FORWARD_EXPANSION_RATIO,
+        forward_drop_p=args.MODEL.TRANSFORMER.FORWARD_DROP_P,
         norm_layer=nn.LayerNorm,
-        num_layers=args.num_layers,
+        num_layers=args.MODEL.TRANSFORMER.NUM_LAYERS,
         norm_output=None
     )
     # return TransformerEncoder(

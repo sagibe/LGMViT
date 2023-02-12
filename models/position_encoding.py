@@ -56,10 +56,10 @@ class PositionEmbeddingSine(nn.Module):
 
 
 def build_position_encoding(args):
-    N_steps = args.embed_size // 3
-    if args.position_embedding in ('v2', 'sine'):
+    N_steps = args.MODEL.TRANSFORMER.EMBED_SIZE // 3
+    if args.MODEL.POSITION_EMBEDDING.TYPE in ('v2', 'sine'):
         # TODO find a better way of exposing other arguments
-        position_embedding = PositionEmbeddingSine(N_steps, num_frames=args.num_frames, normalize=True, device=args.device)
+        position_embedding = PositionEmbeddingSine(N_steps, num_frames=args.MODEL.POSITION_EMBEDDING.Z_SIZE, normalize=True, device=args.DEVICE)
     else:
         raise ValueError(f"not supported {args.position_embedding}")
 
