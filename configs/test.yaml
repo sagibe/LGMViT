@@ -1,94 +1,47 @@
-# Training # TRAINING
 TRAINING:
   LR: 0.00001
-#lr: 0.0001
-#lr_backbone: 1.0e-05
   LR_DROP: 12
-#lr_drop: 12
   BATCH_SIZE: 1
-#batch_size: 1
   WEIGHT_DECAY: 0.0001
-#weight_decay: 0.0001
   EPOCHS: 18
-#epochs: 18
   CLIP_MAX_NORM: 0.1
-#clip_max_norm: 0.1
   EVAL_INTERVAL: 1
-#eval_interval: 1
-## Loss #
-#aux_loss: true
-## Matcher
-#set_cost_class: 1
-#set_cost_bbox: 5
-#set_cost_giou: 2
-## Loss coefficients
-##mask_loss_coef: 1
-##dice_loss_coef: 1
-##bbox_loss_coef: 5
-##giou_loss_coef: 2
-##eos_coef: 0.1
-#device: cuda
-#seed: 42
   RESUME: ''
-#resume: ''
   START_EPOCH: 0
-#start_epoch: 0
   EVAL: false
-#eval: false
   NUM_WORKERS: 4
-#num_workers: 4
 
-
-# Model paramters # MODEL
 MODEL:
   PRETRAINED_WEIGHTS: weights/vistr_r101.pth
-#pretrained_weights: weights/vistr_r101.pth
   NUM_CLASSES: 2
-#  num_classes: 2
   POSITION_EMBEDDING:
     TYPE: sine
     Z_SIZE: 40
-#position_embedding: sine
   BACKBONE:
     NAME: resnet101
-#backbone: resnet101
     RETURN_INTERM_LAYERS: false
-#return_interm_backbone_layers: false
     DILATION: false
-#dilation: false
   TRANSFORMER:
     NUM_LAYERS: 6
-#num_layers: 6
     FORWARD_EXPANSION_RATIO: 4
-#forward_expansion_ratio : 4
     EMBED_SIZE: 2048
-#embed_size: 2048 # 384
     HEADS: 8
-#nheads: 8
     DROP_PATH: 0.1
-#drop_path: 0.1
     FORWARD_DROP_P: 0.1
-#forward_drop_p: 0.1
-#norm_output:
-#num_frames: 40
-#num_queries: 90
-#pre_norm: false
 
-# Dataset parameters # DATA
 DATA:
   DATASET: picai2022 # proles2021_debug   picai2022
-#dataset_name: picai2022 # proles2021_debug   picai2022
-  DATASET_PATH: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_resgist_normalized/
-#dataset_path: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_resgist_normalized/
+  DATASET_PATH: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data/processed_data_resgist_normalized_debug/
+  DATA_FOLD: 0
+  INPUT_SIZE: 128
+  PREPROCESS:
+    RESIZE_MODE: interpolate  # options: interpolate or padding
+    MASK_PROSTATE: true # apply prostate mask on scan
+    CROP_PROSTATE: true # crop scan according to prostate mask
+    CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
-#modalities: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
-#remove_difficult: false
   OUTPUT_DIR: results
-#output_dir: results
 
-# Distributed training parameters
 DISTRIBUTED:
   WORLD_SIZE: 1
-#world_size: 1
   DIST_URL: env://
-#dist_url: env://

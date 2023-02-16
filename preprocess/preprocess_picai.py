@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from torchio.transforms import HistogramStandardization
 
 from preprocess.preprocess_utils import prepare_scan, _bias_corrector, registration, sitk_to_numpy, create_landmarks, \
-    normalize_and_hist_stnd
+    normalize_and_hist_stnd, resize_scan
 from utils.util import RecursiveNamespace
 
 SETTINGS = {
@@ -19,12 +19,12 @@ SETTINGS = {
     'overviews_dir': '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/',
     'prostate_seg_dir': '/mnt/DATA2/Sagi/Data/PICAI/annotations/picai_labels/anatomical_delineations/whole_gland/AI/Bosma22b/',
     'fold_id': 0,
-    'scan_set': 'val',  # options: 'train', 'val'
+    'scan_set': 'train',  # options: 'train', 'val'
     'bias_correction_t2w': False,
-    'registration': True,
+    'registration': False,
     'create_landmarks': False,
     't2w_hist_standardization': False,
-    'normalize': True,
+    'normalize': False,
 }
 
 def main(settings):
@@ -91,11 +91,16 @@ def main(settings):
         seg_labels = labels.get_data()
         cls_labels = (np.sum(np.squeeze(seg_labels), axis=(0, 1)) > 0).astype(int)
 
-        if sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=len(cls_labels) or \
-                sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=prostate_mask.shape[0] or \
-                sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[1]!=prostate_mask.shape[1]:
+        if sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=prostate_mask.shape[0] :
             print(scan_id)
-            continue
+
+        # if sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=len(cls_labels) or \
+        #         sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=prostate_mask.shape[0] or \
+        #         sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[1]!=prostate_mask.shape[1]:
+        #     print(scan_id)
+        #     print(f'data shape{labels.shape}')
+        #     print(f'mask shape{prostate_mask.shape}')
+            # continue
         # else:
         #     continue
 
@@ -144,7 +149,13 @@ def main(settings):
         # ax[1].imshow(modalities['t2w'][slice_num,:,:]*prostate_mask[slice_num,:,:], cmap='gray')
         # ax[2].imshow(modalities['t2w'][slice_num, :, :] * prostate_mask2[slice_num,:, :], cmap='gray')
         # plt.show()
-        #
+        # slice_num = 10
+        # f, ax = plt.subplots(1, 2)
+        # ax[0].imshow(modalities['t2w'][slice_num,:,:], cmap='gray')
+        # ax[1].imshow(modalities['t2w'][slice_num,:,:]*prostate_mask[slice_num,:,:], cmap='gray')
+        # # ax[2].imshow(modalities['t2w'][slice_num, :, :] * prostate_mask2[slice_num,:, :], cmap='gray')
+        # plt.show()
+
 
         # test = (img[list(modalities).index(modality)].split('/')[-1]).split('.')[0]
         save_path = os.path.join(save_dir, scan_id + '.pkl')
@@ -154,13 +165,7 @@ def main(settings):
         'seg_labels': seg_labels,
         'cls_labels': cls_labels,
         }
-
-        with open(save_path, 'wb') as handle:
-            pickle.dump(scan_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        # with open(save_path, 'rb') as handle:
-        #     b = pickle.load(handle)
-        print('hi')
+        # print('hi')
 
 main(settings=SETTINGS)
 

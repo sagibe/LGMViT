@@ -23,8 +23,8 @@ from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
     'config_name': 'test',
+    'exp_name': 'testtttt',  # if None default is config_name
     'use_wandb': True,
-    'wandb_suffix': '',
     'device': 'cuda',
     'seed': 42
 }
@@ -79,12 +79,18 @@ def main(config, settings):
         # batch_sampler_train = BatchSampler(sampler_train, config.batch_size, drop_last=True)
         # data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
     elif config.DATA.DATASET == 'picai2022':
-        overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
-        dataset_train = PICAI2021Dataset(config.DATA.DATASET_PATH, fold_id=0, scan_set='train',mask=True)
-        dataset_val = PICAI2021Dataset(config.DATA.DATASET_PATH, fold_id=0, scan_set='val', mask=True)
-        # overviews_dir = '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/'
-        # data_loader_train, valid_gen, class_weights = prepare_datagens(overviews_dir,  fold_id=0)
-
+        dataset_train = PICAI2021Dataset(config.DATA.DATASET_PATH, fold_id=config.DATA.DATA_FOLD, scan_set='train',
+                                         input_size=config.DATA.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         mask=config.DATA.PREPROCESS.MASK_PROSTATE,
+                                         crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = PICAI2021Dataset(config.DATA.DATASET_PATH, fold_id=config.DATA.DATA_FOLD, scan_set='val',
+                                       input_size=config.DATA.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       mask=config.DATA.PREPROCESS.MASK_PROSTATE,
+                                       crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
         sampler_val = DistributedSampler(dataset_val)
@@ -98,7 +104,7 @@ def main(config, settings):
     batch_sampler_val = BatchSampler(sampler_val, config.TRAINING.BATCH_SIZE, drop_last=True)
     data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
 
-    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['config_name'])
+    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['exp_name'])
     ckpt_dir = os.path.join(output_dir, 'ckpt')
     os.makedirs(ckpt_dir, exist_ok=True)
 
@@ -129,26 +135,26 @@ def main(config, settings):
         if settings['use_wandb']:
             if epoch % config.TRAINING.EVAL_INTERVAL == 0:
                 wandb.log(
-                    {"Train Loss": train_stats['loss'],
-                     "Train Accuracy": train_stats['acc'],
-                     "Train Sensitivity": train_stats['sensitivity'],
-                     "Train Specificity": train_stats['specificity'],
-                     "Train F1": train_stats['f1'],
-                     'lr': train_stats['lr'],
-                     "Validation Loss": val_stats['loss'],
-                     "Validation Accuracy": val_stats['acc'],
-                     "Validation Sensitivity": val_stats['sensitivity'],
-                     "Validation Specificity": val_stats['specificity'],
-                     "Validation F1": train_stats['f1'],
+                    {"Train/Loss": train_stats['loss'],
+                     "Train/Accuracy": train_stats['acc'],
+                     "Train/Sensitivity": train_stats['sensitivity'],
+                     "Train/Specificity": train_stats['specificity'],
+                     "Train/F1": train_stats['f1'],
+                     'Train/lr': train_stats['lr'],
+                     "Validation/Loss": val_stats['loss'],
+                     "Validation/Accuracy": val_stats['acc'],
+                     "Validation/Sensitivity": val_stats['sensitivity'],
+                     "Validation/Specificity": val_stats['specificity'],
+                     "Validation/F1": train_stats['f1'],
                      "epoch": epoch})
             else:
                 wandb.log(
-                    {"Train Loss": train_stats['loss'],
-                     "Train Accuracy": train_stats['acc'],
-                     "Train Sensitivity": train_stats['sensitivity'],
-                     "Train Specificity": train_stats['specificity'],
-                     "Train F1": train_stats['f1'],
-                     'lr': train_stats['lr'],
+                    {"Train/Loss": train_stats['loss'],
+                     "Train/Accuracy": train_stats['acc'],
+                     "Train/Sensitivity": train_stats['sensitivity'],
+                     "Train/Specificity": train_stats['specificity'],
+                     "Train/F1": train_stats['f1'],
+                     'Train/lr': train_stats['lr'],
                      "epoch": epoch})
         lr_scheduler.step()
         if config.DATA.OUTPUT_DIR:
@@ -177,11 +183,12 @@ if __name__ == '__main__':
     with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
         config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     config = utils.RecursiveNamespace(**config)
+    if settings['exp_name'] is None: settings['exp_name']=settings['config_name']
 
     # W&B logger initialization
     if settings['use_wandb']:
         wandb.init(project='ProLesClassifier',
-                   name=settings['config_name'] + settings['wandb_suffix'],
+                   name=settings['exp_name'],
                    entity='sagibi',
                    config={
                        "batch_size": config.TRAINING.BATCH_SIZE,

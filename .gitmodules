@@ -1,0 +1,3 @@
+[submodule "preprocess/Attention_Gated_Prostate_MRI"]
+	path = preprocess/Attention_Gated_Prostate_MRI
+	url = https://github.com/sagibe/Attention_Gated_Prostate_MRI.git
