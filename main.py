@@ -141,13 +141,15 @@ def main(config, settings):
                      "Train/Accuracy": train_stats['acc'],
                      "Train/Sensitivity": train_stats['sensitivity'],
                      "Train/Specificity": train_stats['specificity'],
+                     "Train/Precision": train_stats['precision'],
                      "Train/F1": train_stats['f1'],
                      'Train/lr': train_stats['lr'],
                      "Validation/Loss": val_stats['loss'],
                      "Validation/Accuracy": val_stats['acc'],
                      "Validation/Sensitivity": val_stats['sensitivity'],
                      "Validation/Specificity": val_stats['specificity'],
-                     "Validation/F1": train_stats['f1'],
+                     "Validation/Precision": val_stats['precision'],
+                     "Validation/F1": val_stats['f1'],
                      "epoch": epoch})
             else:
                 wandb.log(
@@ -155,6 +157,7 @@ def main(config, settings):
                      "Train/Accuracy": train_stats['acc'],
                      "Train/Sensitivity": train_stats['sensitivity'],
                      "Train/Specificity": train_stats['specificity'],
+                     "Train/Precision": train_stats['precision'],
                      "Train/F1": train_stats['f1'],
                      'Train/lr': train_stats['lr'],
                      "epoch": epoch})
@@ -191,7 +194,6 @@ if __name__ == '__main__':
     if settings['use_wandb']:
         wandb.init(project='ProLesClassifier',
                    name=settings['exp_name'],
-                   entity='sagibi',
                    config={
                        "batch_size": config.TRAINING.BATCH_SIZE,
                        "num_epochs": config.TRAINING.EPOCHS,

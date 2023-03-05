@@ -21,10 +21,10 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class PICAI2021Dataset:
-    def __init__(self, data_dir, transforms=None, fold_id=0, scan_set='train', input_size=128,
+    def __init__(self, data_dir, transforms=None, fold_id=0, scan_set='', input_size=128,
                  resize_mode='interpolate', mask=True, crop_prostate=True, padding=0, task='cls'):
         # ignore_list = ['10084_1000084', '11441_1001465', '10152_1000154']  # '11441_1001465'
-        files_dir = os.path.join(data_dir, f'fold_{fold_id}',scan_set)
+        files_dir = os.path.join(data_dir, f'fold_{fold_id}',scan_set) if (scan_set == 'train' or scan_set == 'val') else data_dir
         self.scan_list = [os.path.join(files_dir,f) for f in os.listdir(files_dir) if f.endswith('.pkl')]
         # self.scan_list = [os.path.join(files_dir, f) for f in os.listdir(files_dir) if f.endswith('.pkl') and f.split('.')[0] not in ignore_list]
         self.input_size = input_size

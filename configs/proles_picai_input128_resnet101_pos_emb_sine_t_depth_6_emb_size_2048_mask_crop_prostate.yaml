@@ -44,6 +44,15 @@ DATA:
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA2/Sagi/Models/ProLesClassifier/
 
+TEST:
+  DATASET_PATH: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
+  BATCH_SIZE: 1
+  CLIP_MAX_NORM: 0.1
+  CHECKPOINT: 35
+  NUM_WORKERS: 4
+  CLS_THRESH: 0.99
+  OUTPUT_DIR: /mnt/DATA2/Sagi/Models/ProLesClassifier/
+
 DISTRIBUTED:
   WORLD_SIZE: 1
   DIST_URL: env://

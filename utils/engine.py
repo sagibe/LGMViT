@@ -27,6 +27,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('precision', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     metric_logger.add_meter('auroc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     header = 'Epoch: [{}]'.format(epoch)
@@ -48,6 +49,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(acc=metrics.accuracy)
         metric_logger.update(sensitivity=metrics.sensitivity)
         metric_logger.update(specificity=metrics.specificity)
+        metric_logger.update(precision=metrics.precision)
         metric_logger.update(f1=metrics.f1)
         metric_logger.update(auroc=metrics.auroc)
         # metric_logger.update(class_error=loss_dict_reduced['class_error'])
@@ -70,6 +72,7 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
         metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
         metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('precision', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
         metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
         metric_logger.add_meter('auroc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
         header = 'Epoch: [{}]'.format(epoch)
@@ -89,6 +92,7 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             metric_logger.update(acc=metrics.accuracy)
             metric_logger.update(sensitivity=metrics.sensitivity)
             metric_logger.update(specificity=metrics.specificity)
+            metric_logger.update(precision=metrics.precision)
             metric_logger.update(f1=metrics.f1)
             metric_logger.update(auroc=metrics.auroc)
             # metric_logger.update(class_error=loss_dict_reduced['class_error'])
@@ -97,3 +101,33 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.device,
+                    max_norm: float = 0, cls_thresh: float = 0.5):
+    with torch.no_grad():
+        model.eval()
+        metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
+        metric_logger = utils.MetricLogger(delimiter="  ")
+        metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('precision', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('auroc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        header = 'Test stats: '
+        print_freq = 10
+        for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+            samples = samples.squeeze(0).float().to(device)
+            targets = targets.float().T.to(device)
+            outputs = model(samples)
+            metrics.update(outputs, targets)
+            if max_norm > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+            metric_logger.update(acc=metrics.accuracy)
+            metric_logger.update(sensitivity=metrics.sensitivity)
+            metric_logger.update(specificity=metrics.specificity)
+            metric_logger.update(precision=metrics.precision)
+            metric_logger.update(f1=metrics.f1)
+            metric_logger.update(auroc=metrics.auroc)
+
+    return metrics
