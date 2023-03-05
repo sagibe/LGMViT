@@ -17,7 +17,7 @@ from torchio import Subject, ScalarImage
 #         ).astype(np.float32), axis=(0, 1)
 #     )
 
-def prepare_scan(path: str):
+def  prepare_scan(path: str):
     return sitk.ReadImage(path)
 
 def _bias_corrector(input_image):
@@ -104,7 +104,6 @@ def sitk_to_numpy(modalities):
 def create_landmarks(image_paths,settings, path_nifty, modality='t2w', create_nifty=False, cutoff=0.99):
     paths = []
     cases = {}
-    image_paths = image_paths[:10]
     for img in image_paths:
         modalities={
             't2w': prepare_scan(str(img[0])),
@@ -121,7 +120,7 @@ def create_landmarks(image_paths,settings, path_nifty, modality='t2w', create_ni
 
         sitk_to_numpy(modalities)
         cases[(img[list(modalities).index(modality)].split('/')[-1]).split('.')[0]] = modalities[modality]
-        cases[(img[0].split('/')[-1]).split('.')[0][:-5]] = modalities[modality]
+        # cases[(img[0].split('/')[-1]).split('.')[0][:-5]] = modalities[modality]
 
     for case_name, case in tqdm(cases.items(), desc='Prepearing nifty files'):
         nii_filename = os.path.join(path_nifty, case_name + "_" + modality + ".nii.gz")

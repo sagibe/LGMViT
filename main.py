@@ -22,8 +22,8 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'test',
-    'exp_name': 'testtttt',  # if None default is config_name
+    'config_name': 'proles_picai_input128_resnet101_pos_emb_sine_t_depth_6_emb_size_2048_mask_crop_prostate',
+    'exp_name': None,  # if None default is config_name
     'use_wandb': True,
     'device': 'cuda',
     'seed': 42
@@ -100,9 +100,11 @@ def main(config, settings):
 
     batch_sampler_train = BatchSampler(sampler_train, config.TRAINING.BATCH_SIZE, drop_last=True)
     data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.TRAINING.NUM_WORKERS)
+    # data_loader_train = DataLoader(dataset_train, num_workers=config.TRAINING.NUM_WORKERS)
 
     batch_sampler_val = BatchSampler(sampler_val, config.TRAINING.BATCH_SIZE, drop_last=True)
     data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
+    # data_loader_val = DataLoader(dataset_val, num_workers=config.TRAINING.NUM_WORKERS)
 
     output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['exp_name'])
     ckpt_dir = os.path.join(output_dir, 'ckpt')
@@ -127,11 +129,11 @@ def main(config, settings):
         #     sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
-            config.TRAINING.CLIP_MAX_NORM)
+            config.TRAINING.CLIP_MAX_NORM, config.TRAINING.CLS_THRESH)
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
                 model, criterion, data_loader_val, device, epoch,
-                config.TRAINING.CLIP_MAX_NORM)
+                config.TRAINING.CLIP_MAX_NORM, config.TRAINING.CLS_THRESH)
         if settings['use_wandb']:
             if epoch % config.TRAINING.EVAL_INTERVAL == 0:
                 wandb.log(

@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+import scipy
 import os
 from pathlib import Path
 import json
@@ -11,28 +13,30 @@ import matplotlib.pyplot as plt
 from torchio.transforms import HistogramStandardization
 
 from preprocess.preprocess_utils import prepare_scan, _bias_corrector, registration, sitk_to_numpy, create_landmarks, \
-    normalize_and_hist_stnd, resize_scan
+    normalize_and_hist_stnd
+from preprocess.Attention_Gated_Prostate_MRI.inference_segmentation import seg_inference_single_slice
 from utils.util import RecursiveNamespace
 
 SETTINGS = {
     'workdir': '/mnt/DATA2/Sagi/Data/PICAI/processed_data',
     'overviews_dir': '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/',
-    'prostate_seg_dir': '/mnt/DATA2/Sagi/Data/PICAI/annotations/picai_labels/anatomical_delineations/whole_gland/AI/Bosma22b/',
+    'prostate_seg_type': 'picai',  # options: 'sheba' or 'picai'
+    # relavant for picai prostate_seg_type:
+    'prostate_seg_dir': '/mnt/DATA2/Sagi/Data/PICAI/annotations/picai_labels/anatomical_delineations/whole_gland/AI/Bosma22b_resmapled/',
+    # relavant for sheba prostate_seg_type:
+    'sheba_prostate_config_path': './Attention_Gated_Prostate_MRI/configs_local/seg_config_220908.json',
+
     'fold_id': 0,
-    'scan_set': 'train',  # options: 'train', 'val'
-    'bias_correction_t2w': False,
-    'registration': False,
+    'scan_set': 'val',  # options: 'train', 'val'
+    'bias_correction_t2w': True,
+    'registration': True,
     'create_landmarks': False,
-    't2w_hist_standardization': False,
-    'normalize': False,
+    't2w_hist_standardization': True,
+    'normalize': True,
 }
 
 def main(settings):
     settings = RecursiveNamespace(**settings)
-    # overviews_dir = settings['overviews_dir']
-    # scan_set = settings['scan_set']
-    # fold_id = settings['fold_id']
-
     dir_name = 'processed_data'
     if settings.bias_correction_t2w:
         dir_name += '_t2w_bias_corr'
@@ -59,15 +63,10 @@ def main(settings):
             landmarks = create_landmarks(image_files, settings, nifty_dir, modality='t2w', create_nifty=True)
             joblib.dump(landmarks, landmarks_path)
             shutil.rmtree(nifty_dir)
+
     count=0
     for idx, img in enumerate(image_files):
-        # if count==5:
-        #     break
-        # count+=1
-        # print(count)
-        # img_t2w = self.prepare_scan(str(image_files[idx][0]))
-        # img_adc = self.prepare_scan(str(image_files[idx][1]))
-        # img_hbv = self.prepare_scan(str(image_files[idx][2]))
+
         scan_id = (img[0].split('/')[-1]).split('.')[0][:-5]
         if not os.path.isfile(os.path.join(settings.prostate_seg_dir,scan_id + '.nii.gz')):
             print(scan_id)
@@ -77,22 +76,14 @@ def main(settings):
             'adc': prepare_scan(str(img[1])),
             'dwi': prepare_scan(str(img[2]))
         }
-        # plt.imshow(sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32)[10,:,:], cmap='gray')
-        # plt.show()
 
-        # f, ax = plt.subplots(1, 3)
-        # ax[0].imshow(sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32)[10,:,:], cmap='gray')
-        # ax[1].imshow(sitk.GetArrayFromImage(modalities['adc']).astype(np.float32)[10,:,:], cmap='gray')
-        # ax[2].imshow(sitk.GetArrayFromImage(modalities['dwi']).astype(np.float32)[10,:,:], cmap='gray')
-        # plt.show()
-        prostate_seg = nib.load(os.path.join(settings.prostate_seg_dir,scan_id + '.nii.gz'))
-        prostate_mask = prostate_seg.get_data().transpose(2, 1, 0)
+        if settings.prostate_seg_type == 'picai':
+            prostate_seg = nib.load(os.path.join(settings.prostate_seg_dir,scan_id + '.nii.gz'))
+            prostate_mask = prostate_seg.get_data().transpose(2, 1, 0)
+
         labels = nib.load(label_files[idx])
         seg_labels = labels.get_data()
         cls_labels = (np.sum(np.squeeze(seg_labels), axis=(0, 1)) > 0).astype(int)
-
-        if sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=prostate_mask.shape[0] :
-            print(scan_id)
 
         # if sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=len(cls_labels) or \
         #         sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=prostate_mask.shape[0] or \
@@ -100,12 +91,6 @@ def main(settings):
         #     print(scan_id)
         #     print(f'data shape{labels.shape}')
         #     print(f'mask shape{prostate_mask.shape}')
-            # continue
-        # else:
-        #     continue
-
-        # count+=1
-        # print(count)
 
         if settings.bias_correction_t2w:
             modalities['t2w'] = _bias_corrector(modalities['t2w'])
@@ -127,14 +112,15 @@ def main(settings):
         # plt.show()
 
         sitk_to_numpy(modalities)
-        for mod in modalities:
-            if settings.t2w_hist_standardization and mod=='t2w':
-                landmarks = joblib.load(landmarks_path)
-                transform = HistogramStandardization({'img': landmarks})
-                modalities[mod] = normalize_and_hist_stnd(transform, modalities[mod], hist_stnd=True, normalize=settings.normalize)
-            else:
-                transform = None
-                modalities[mod] = normalize_and_hist_stnd(transform, modalities[mod], hist_stnd=False, normalize=settings.normalize)
+        if settings.normalize:
+            for mod in modalities:
+                if settings.t2w_hist_standardization and mod=='t2w':
+                    landmarks = joblib.load(landmarks_path)
+                    transform = HistogramStandardization({'img': landmarks})
+                    modalities[mod] = normalize_and_hist_stnd(transform, modalities[mod], hist_stnd=True, normalize=settings.normalize)
+                else:
+                    transform = None
+                    modalities[mod] = normalize_and_hist_stnd(transform, modalities[mod], hist_stnd=False, normalize=settings.normalize)
 
         # slice_num = 10
         # f, ax = plt.subplots(1, 3)
@@ -156,6 +142,8 @@ def main(settings):
         # # ax[2].imshow(modalities['t2w'][slice_num, :, :] * prostate_mask2[slice_num,:, :], cmap='gray')
         # plt.show()
 
+        if settings.prostate_seg_type == 'sheba':
+            prostate_mask = seg_inference_single_slice(modalities['t2w'], settings.sheba_prostate_config_path, resample=True)
 
         # test = (img[list(modalities).index(modality)].split('/')[-1]).split('.')[0]
         save_path = os.path.join(save_dir, scan_id + '.pkl')
@@ -165,7 +153,15 @@ def main(settings):
         'seg_labels': seg_labels,
         'cls_labels': cls_labels,
         }
-        # print('hi')
+
+        with open(save_path, 'wb') as handle:
+            pickle.dump(scan_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # with open(save_path, 'rb') as handle:
+        #     b = pickle.load(handle)
+        count += 1
+        print(count)
+    print('Done!')
 
 main(settings=SETTINGS)
 

@@ -8,7 +8,7 @@ from models.transformer import build_transformer
 
 class VisTRcls(nn.Module):
     """ This is the VisTR module that performs video object detection """
-    def __init__(self, backbone, transformer, num_classes=2, embed_dim=2048):
+    def  __init__(self, backbone, transformer, num_classes=2, embed_dim=2048, pos_embed_mode='interpolate'):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbone to be used. See backbone.py
@@ -21,6 +21,7 @@ class VisTRcls(nn.Module):
         """
         super().__init__()
         self.backbone = backbone
+        self.pos_embed_mode = pos_embed_mode
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.transformer = transformer
         self.mlp_head = nn.Sequential(
@@ -44,26 +45,21 @@ class VisTRcls(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
-        # if not isinstance(samples, NestedTensor):
-        #     samples = nested_tensor_from_tensor_list(samples)
-        # moved the frame to batch dimension for computation efficiency
         features, pos = self.backbone(samples)
         src = features[-1]
         f, em, h, w = src.size()
         pos = pos[-1]
-        pos = pos[0,:f,:,:,:].flatten(-2).permute(0,2,1)
-        # pos = pos.permute(0, 2, 1, 3, 4).flatten(-2)  # 1,0,2,3
-
-        # src_proj = self.input_proj(src)
+        pos = pos.flatten(-2).permute(0,1,3,2).unsqueeze(0)
         src_proj = src
-        # n,c,h,w = src_proj.shape
-        # src_proj = src_proj.reshape(n//self.num_frames, self.num_frames, c, h, w).permute(0,2,1,3,4).flatten(-2)
         src_proj = src_proj.flatten(-2).permute(0,2,1)
-        # mask = mask.reshape(n//self.num_frames, self.num_frames, h*w)
-        # pos = pos.permute(0,2,1,3,4).flatten(-2)
 
         ##### #TODO fix size of pos embeddings
-        pos = nn.functional.interpolate(pos, size=(em), mode='linear', align_corners=False)
+        if self.pos_embed_mode == 'interpolate':
+            pos = nn.functional.interpolate(pos, size=(f, h * w, em), mode='trilinear',align_corners=False).squeeze()
+        elif self.pos_embed_mode == 'prune':
+            pos = nn.functional.interpolate(pos.squeeze(), size=(em), mode='linear', align_corners=False)
+        else:
+            raise NotImplementedError('Unknown positional embedding mode')
         #####
         x = src_proj + pos
         x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
@@ -76,8 +72,6 @@ class VisTRcls(nn.Module):
         return outputs_class #out
 
 def build_model(args):
-    # if args.dataset_file == "ytvos":
-    #     num_classes = 41
     device = torch.device(args.DEVICE)
     backbone = build_backbone(args)
 
@@ -86,7 +80,8 @@ def build_model(args):
     model = VisTRcls(
         backbone,
         transformer,
-        num_classes=args.MODEL.NUM_CLASSES
+        num_classes=args.MODEL.NUM_CLASSES,
+        pos_embed_mode=args.MODEL.POSITION_EMBEDDING.MODE
     )
     return model
 

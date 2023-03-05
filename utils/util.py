@@ -6,6 +6,7 @@ import time
 import datetime
 from collections import defaultdict, deque
 from torch import sigmoid
+from torchmetrics.classification import BinaryAUROC
 
 
 class RecursiveNamespace(SimpleNamespace):
@@ -275,6 +276,8 @@ class PerformanceMetrics(object):
 
     def __init__(self, device, bin_thresh=0.5):
         self.device = device
+        self.preds = torch.empty((0, 1), device=device, dtype=torch.float32)
+        self.targets = torch.empty((0, 1), device=device, dtype=torch.float32)
         self.tp = torch.zeros(1, device=device, dtype=torch.int64)
         self.tn = torch.zeros(1, device=device, dtype=torch.int64)
         self.fp = torch.zeros(1, device=device, dtype=torch.int64)
@@ -282,6 +285,8 @@ class PerformanceMetrics(object):
         self.bin_thresh = bin_thresh
 
     def update(self, outputs, targets):
+        self.preds = torch.cat((self.preds, outputs), 0)
+        self.targets = torch.cat((self.targets, targets), 0)
         if outputs.size(1) == 1:
             preds = (sigmoid(outputs) > self.bin_thresh) * 1
         else:
@@ -311,6 +316,10 @@ class PerformanceMetrics(object):
     @property
     def accuracy(self):
         return ((self.tp + self.tn) / (self.tp + self.tn + self.fp + self.fn)).item()
+    @property
+    def auroc(self):
+        auroc = BinaryAUROC(thresholds=None)
+        return auroc(self.preds, self.targets)
 
     # def __str__(self):
     #     return self.fmt.format(
@@ -319,3 +328,4 @@ class PerformanceMetrics(object):
     #         global_avg=self.global_avg,
     #         max=self.max,
     #         value=self.value)
+
