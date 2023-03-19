@@ -35,7 +35,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.squeeze(0).float().to(device)
         targets = targets.float().T.to(device)
-        outputs = model(samples)
+        outputs, attn_map = model(samples)
         loss = criterion(outputs, targets)
         loss_value = loss.item()
         metrics.update(outputs, targets)
@@ -80,7 +80,7 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
             targets = targets.float().T.to(device)
-            outputs = model(samples)
+            outputs, attn_map = model(samples)
             loss = criterion(outputs, targets)
             loss_value = loss.item()
             metrics.update(outputs, targets)

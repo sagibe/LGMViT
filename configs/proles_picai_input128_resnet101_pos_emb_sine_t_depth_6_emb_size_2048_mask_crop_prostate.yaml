@@ -3,7 +3,7 @@ TRAINING:
   LR_DROP: 12
   BATCH_SIZE: 1
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 100
+  EPOCHS: 50
   CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
   RESUME: ''
@@ -13,7 +13,7 @@ TRAINING:
   CLS_THRESH: 0.5
 
 MODEL:
-  PRETRAINED_WEIGHTS: weights/vistr_r101.pth
+  PRETRAINED_WEIGHTS:
   NUM_CLASSES: 2
   POSITION_EMBEDDING:
     TYPE: sine
@@ -32,8 +32,10 @@ MODEL:
     FORWARD_DROP_P: 0.1
 
 DATA:
-  DATASET: picai2022 # proles2021_debug   picai2022
+  DATASET_DIR: /mnt/DATA2/Sagi/Data/ # proles2021_debug   picai2022
+  DATASETS: PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
   DATASET_PATH: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
+  DATA_LIST: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   DATA_FOLD: 0
   INPUT_SIZE: 128
   PREPROCESS:
@@ -48,9 +50,9 @@ TEST:
   DATASET_PATH: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
   BATCH_SIZE: 1
   CLIP_MAX_NORM: 0.1
-  CHECKPOINT: 35
+  CHECKPOINT: 34
   NUM_WORKERS: 4
-  CLS_THRESH: 0.99
+  CLS_THRESH: 0.5
   OUTPUT_DIR: /mnt/DATA2/Sagi/Models/ProLesClassifier/
 
 DISTRIBUTED:

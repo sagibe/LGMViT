@@ -63,13 +63,13 @@ class VisTRcls(nn.Module):
         #####
         x = src_proj + pos
         x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
-        out_transformer = self.transformer(x)
+        out_transformer, attn_map = self.transformer(x)
 
         outputs_class = self.mlp_head(out_transformer[:,0,:])
         # outputs_class = self.class_embed(hs)
         # outputs_coord = self.bbox_embed(hs).sigmoid()
         # out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
-        return outputs_class #out
+        return outputs_class, attn_map #out
 
 def build_model(args):
     device = torch.device(args.DEVICE)

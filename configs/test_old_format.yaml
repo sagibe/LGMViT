@@ -9,7 +9,7 @@ clip_max_norm: 0.1
 eval_interval: 1
 
 # Model paramters #
-pretrained_weights: weights/vistr_r101.pth
+pretrained_weights:
 backbone: resnet101
 return_interm_backbone_layers: false
 dilation: false

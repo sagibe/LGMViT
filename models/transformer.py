@@ -44,7 +44,7 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x, mask=None, return_attention=False):
+    def forward(self, x, return_attention=False):
         # x: B, N, C
         # mask: [B, N, ] torch.bool
         B, N, C = x.shape
@@ -60,10 +60,12 @@ class Attention(nn.Module):
         x = self.proj(x)
         x = self.proj_drop(x)
 
-        if return_attention:
-            return x, attn
-        else:
-            return x
+        return x, attn
+
+        # if return_attention:
+        #     return x, attn
+        # else:
+        #     return x, None
 
 
 class Mlp(nn.Module):
@@ -90,7 +92,7 @@ class Mlp(nn.Module):
         return x
 
 class TransformerEncoderBlock(nn.Sequential):
-    def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0., norm_layer=nn.LayerNorm):
+    def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0., norm_layer=nn.LayerNorm ):
         super().__init__()
         self.norm1 = norm_layer(embed_size)
         self.attn = Attention(embed_size, num_heads=num_heads)
@@ -99,17 +101,23 @@ class TransformerEncoderBlock(nn.Sequential):
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         # self.patch_embed = PatchEmbedding(patch_size=16, stride=16, padding=0, in_chans=3, embed_dim=embed_size)
 
-    def forward(self, x):
-        x = x + self.drop_path(self.attn(self.norm1(x)))
+    def forward(self, x, return_attention=False):
+        out_attn, attn_map = self.attn(self.norm1(x))
+        x = x + self.drop_path(out_attn)
+        # x = x + self.drop_path(self.attn(self.norm1(x)))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
-        return x
+        if return_attention:
+            return x, attn_map
+        else:
+            return x
 
 def _get_clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
 
 class TransformerEncoder(nn.Module):
 
-    def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0., norm_layer=nn.LayerNorm, num_layers=6, norm_output=None):
+    def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0.,
+                 norm_layer=nn.LayerNorm, num_layers=6, norm_output=None, return_attention=False):
         super().__init__()
         encoder_layer = TransformerEncoderBlock(embed_size=embed_size,
                                                 num_heads=num_heads,
@@ -123,11 +131,14 @@ class TransformerEncoder(nn.Module):
 
     def forward(self, src):
         output = src
-        for layer in self.layers:
-            output = layer(output)
+        for idx, layer in enumerate(self.layers):
+            if idx < self.num_layers - 1:
+                output = layer(output)
+            else:
+                output, attn_map = layer(output, return_attention=True)
         if self.norm_output is not None:
             output = self.norm_output(output)
-        return output
+        return output, attn_map
 
 def build_transformer(args):
     return TransformerEncoder(

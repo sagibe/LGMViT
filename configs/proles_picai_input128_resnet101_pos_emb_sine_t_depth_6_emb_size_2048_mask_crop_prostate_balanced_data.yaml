@@ -5,7 +5,7 @@ TRAINING:
   WEIGHT_DECAY: 0.0001
   EPOCHS: 50
   CLIP_MAX_NORM: 0.1
-  EVAL_INTERVAL: 100
+  EVAL_INTERVAL: 1
   RESUME: ''
   START_EPOCH: 0
   EVAL: false
@@ -13,7 +13,7 @@ TRAINING:
   CLS_THRESH: 0.5
 
 MODEL:
-  PRETRAINED_WEIGHTS: /mnt/DATA2/Sagi/Models/ProLesClassifier/proles_picai_input128_resnet101_pos_emb_sine_t_depth_6_emb_size_2048_mask_crop_prostate_sheba_only/ckpt/checkpoint0048.pth
+  PRETRAINED_WEIGHTS:
   NUM_CLASSES: 2
   POSITION_EMBEDDING:
     TYPE: sine
@@ -32,9 +32,9 @@ MODEL:
     FORWARD_DROP_P: 0.1
 
 DATA:
-  DATASET_DIR: /mnt/DATA2/Sagi/Data/ # proles2021_debug   picai2022
-  DATASETS: PICAI/processed_data/debug/
-  DATA_LIST: # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
+  DATASET: picai2022 # proles2021_debug   picai2022
+  DATASET_PATH: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
+  DATA_LIST: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list_balanced.json
   DATA_FOLD: 0
   INPUT_SIZE: 128
   PREPROCESS:
