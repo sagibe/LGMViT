@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 # from datasets.picai2022 import prepare_datagens
 
-from models.vistr import build_model
+from models.proles import build_model
 import utils.util as utils
 from utils.engine import eval_test
 from datasets.proles2021_debug import ProLes2021DatasetDebug

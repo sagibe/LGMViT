@@ -2,18 +2,19 @@
 Backbone modules.
 Modified from DETR (https://github.com/facebookresearch/detr)
 """
-from collections import OrderedDict
-
+import numpy as np
 import torch
-import torch.nn.functional as F
 import torchvision
 from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
-from typing import Dict, List
+from typing import Dict
 
+from models.layers.backbones.convnext import *
+from models.layers.backbones.patch_embedding import PatchEmbedding
 from utils.util import NestedTensor, is_main_process
 
-from .position_encoding import build_position_encoding
+from models.layers.position_encoding import build_position_encoding
+# from backbones.convnext import *
 
 
 class FrozenBatchNorm2d(torch.nn.Module):
@@ -57,15 +58,20 @@ class FrozenBatchNorm2d(torch.nn.Module):
 
 class BackboneBase(nn.Module):
 
-    def __init__(self, backbone: nn.Module, train_backbone: bool, num_channels: int, return_interm_layers: bool):
+    def __init__(self, backbone: nn.Module, train_backbone: bool, num_channels: int, return_interm_layers: bool, backbone_stages: int):
         super().__init__()
         for name, parameter in backbone.named_parameters():
             if not train_backbone or 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
                 parameter.requires_grad_(False)
         if return_interm_layers:
-            return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
+            # return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
+            return_layers = {}
+            for idx in range(backbone_stages):
+                return_layers[f'layer{idx+1}'] = str(idx)
+            print('hi')
+
         else:
-            return_layers = {'layer4': "0"}
+            return_layers = {f'layer{backbone_stages}': "0"}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.num_channels = num_channels
 
@@ -77,31 +83,41 @@ class BackboneBase(nn.Module):
         return out
 
 
-class Backbone(BackboneBase):
+class ResNetBackbone(BackboneBase):
     """ResNet backbone with frozen BatchNorm."""
     def __init__(self, name: str,
                  train_backbone: bool,
                  return_interm_layers: bool,
-                 dilation: bool):
+                 dilation: bool,
+                 backbone_stages: int):
         backbone = getattr(torchvision.models, name)(
             replace_stride_with_dilation=[False, False, dilation],
             pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d)
         num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
-        super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
+        super().__init__(backbone, train_backbone, num_channels, return_interm_layers, backbone_stages)
 
 
 class Joiner(nn.Sequential):
     def __init__(self, backbone, position_embedding):
         super().__init__(backbone, position_embedding)
 
-    def forward(self, scan):
+    def forward(self, scan, use_pos_embed=True):
         xs = self[0](scan)
         out = []
-        pos = []
-        for name, x in xs.items():
-            out.append(x)
-            # position encoding
-            pos.append(self[1](x).to(x.dtype))
+        if use_pos_embed:
+            pos = []
+        else:
+            pos = None
+        if isinstance(xs, dict):
+            for name, x in xs.items():
+                out.append(x)
+                # position encoding
+                if use_pos_embed:
+                    pos.append(self[1](x).to(x.dtype))
+        else:
+            out.append(xs)
+            if use_pos_embed:
+                pos.append(self[1](xs).to(xs.dtype))
 
         return out, pos
 
@@ -109,8 +125,23 @@ class Joiner(nn.Sequential):
 def build_backbone(args):
     position_embedding = build_position_encoding(args)
     train_backbone = args.TRAINING.LR > 0
-    return_interm_layers = args.MODEL.BACKBONE.RETURN_INTERM_LAYERS
-    backbone = Backbone(args.MODEL.BACKBONE.NAME, train_backbone, return_interm_layers, args.MODEL.BACKBONE.DILATION)
+    if 'resnet' in args.MODEL.BACKBONE.NAME:
+        backbone = ResNetBackbone(name=args.MODEL.BACKBONE.NAME,
+                                  train_backbone=train_backbone,
+                                  return_interm_layers=args.MODEL.BACKBONE.RETURN_INTERM_LAYERS,
+                                  dilation=args.MODEL.BACKBONE.DILATION,
+                                  backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES)
+    elif 'convnext' in args.MODEL.BACKBONE.NAME:
+        backbone = convnext_tiny(backbone_only=True,
+                                 backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES)
+    elif 'patch_embed' in args.MODEL.BACKBONE.NAME:
+        backbone = PatchEmbedding(patch_size=args.MODEL.PATCH_SIZE,
+                                  stride=args.MODEL.PATCH_SIZE,
+                                  padding=0,
+                                  in_chans=3,
+                                  embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE)
+
     model = Joiner(backbone, position_embedding)
-    model.num_channels = backbone.num_channels
+    if 'resnet' in args.MODEL.BACKBONE.NAME:
+        model.num_channels = backbone.num_channels
     return model

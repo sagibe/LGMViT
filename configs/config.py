@@ -26,11 +26,12 @@ def get_default_config():
     cfg.MODEL = edict()
     cfg.MODEL.PRETRAINED_WEIGHTS = ''
     cfg.MODEL.NUM_CLASSES = 2
+    cfg.MODEL.PATCH_SIZE = 16
     # MODEL.POSITION_EMBEDDING
     cfg.MODEL.POSITION_EMBEDDING = edict()
     cfg.MODEL.POSITION_EMBEDDING.TYPE = 'sine'
     cfg.MODEL.POSITION_EMBEDDING.Z_SIZE = 40
-    cfg.MODEL.POSITION_EMBEDDING.MODE = 'interpolate'
+    cfg.MODEL.POSITION_EMBEDDING.FIT_MODE = 'interpolate'
     # MODEL.BACKBONE
     cfg.MODEL.BACKBONE = edict()
     cfg.MODEL.BACKBONE.NAME = 'resnet101'
@@ -38,6 +39,7 @@ def get_default_config():
     cfg.MODEL.BACKBONE.DILATION = False
     # MODEL.TRANSFORMER
     cfg.MODEL.TRANSFORMER = edict()
+    cfg.MODEL.TRANSFORMER.TYPE = 'vit'
     cfg.MODEL.TRANSFORMER.NUM_LAYERS = 6
     cfg.MODEL.TRANSFORMER.FORWARD_EXPANSION_RATIO = 4
     cfg.MODEL.TRANSFORMER.EMBED_SIZE = 2048

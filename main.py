@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import os
 import time
 import datetime
@@ -13,7 +14,7 @@ import utils.transforms as T
 from configs.config import get_default_config, update_config_from_file
 # from datasets.picai2022 import prepare_datagens
 
-from models.vistr import build_model
+from models.proles import build_model
 import utils.util as utils
 from utils.engine import train_one_epoch, eval_epoch
 from datasets.proles2021_debug import ProLes2021DatasetDebug
@@ -24,9 +25,9 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'proles_picai_input128_resnet101_pos_emb_sine_t_depth_6_emb_size_2048_mask_crop_prostate_sheba_pretrain48_only_picai',
+    'config_name': 'debug',
     'exp_name': None,  # if None default is config_name
-    'use_wandb': True,
+    'use_wandb': False,
     'device': 'cuda',
     'seed': 42
 }
@@ -34,7 +35,7 @@ SETTINGS = {
 def main(config, settings):
     utils.init_distributed_mode(config)
     device = torch.device(settings['device'])
-    config.DEVICE=device
+    config.DEVICE = device
 
     # fix the seed for reproducibility
     seed = settings['seed'] + utils.get_rank()
@@ -212,6 +213,7 @@ if __name__ == '__main__':
     settings = SETTINGS
     config = get_default_config()
     update_config_from_file('configs/'+settings['config_name']+'.yaml', config)
+    config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
     #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     # config = utils.RecursiveNamespace(**config)

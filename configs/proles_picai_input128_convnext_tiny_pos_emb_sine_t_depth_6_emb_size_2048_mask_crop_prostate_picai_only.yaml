@@ -17,18 +17,17 @@ MODEL:
   NUM_CLASSES: 2
   PATCH_SIZE: 32
   POSITION_EMBEDDING:
-    TYPE: sine # sine, learned, null
+    TYPE: sine # sine, learned
     Z_SIZE: 40
-    FIT_MODE: interpolate # interpolate, prune
+    FIT_MODE: interpolate # interpolate
   BACKBONE:
-    NAME: resnet101 # convnext  resnet101 , patch_embed
+    NAME: resnet101 # convnext  resnet101
     RETURN_INTERM_LAYERS: true
     DILATION: false
   TRANSFORMER:
-    TYPE: vit # vit, max_vit
     NUM_LAYERS: 6
     FORWARD_EXPANSION_RATIO: 4
-    EMBED_SIZE: 2048
+    EMBED_SIZE: 512
     HEADS: 8
     DROP_PATH: 0.1
     FORWARD_DROP_P: 0.1
@@ -59,4 +58,3 @@ TEST:
 DISTRIBUTED:
   WORLD_SIZE: 1
   DIST_URL: env://
-

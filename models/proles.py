@@ -1,17 +1,19 @@
 import torch
-import torch.nn.functional as F
+from scipy.ndimage import zoom
 from torch import nn
+import torch.nn.functional as F
 
-from models.backbone import build_backbone
-from models.transformer import build_transformer
+from models.layers.backbone import build_backbone
+from models.layers.transformer import build_transformer
 
 
-class VisTRcls(nn.Module):
+class ProLesClassifier(nn.Module):
     """ This is the VisTR module that performs video object detection """
-    def  __init__(self, backbone, transformer, num_classes=2, embed_dim=2048, pos_embed_mode='interpolate'):
+    def __init__(self, backbone, transformer, feat_size, num_classes=2, backbone_stages=4,
+                 embed_dim=2048, use_pos_embed=True, pos_embed_fit_mode='interpolate'):
         """ Initializes the model.
         Parameters:
-            backbone: torch module of the backbone to be used. See backbone.py
+            backbone: torch module of the backbones to be used. See backbones.py
             transformer: torch module of the transformer architecture. See transformer.py
             num_classes: number of object classes
             num_queries: number of object queries, ie detection slot. This is the maximal number of objects
@@ -20,9 +22,13 @@ class VisTRcls(nn.Module):
             aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
         """
         super().__init__()
+        self.feat_size = feat_size
         self.backbone = backbone
-        self.pos_embed_mode = pos_embed_mode
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.backbone_stages = backbone_stages
+        self.use_pos_embed = use_pos_embed
+        self.pos_embed_fit_mode = pos_embed_fit_mode
+        # self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.avgpool = nn.AvgPool1d(feat_size*feat_size)
         self.transformer = transformer
         self.mlp_head = nn.Sequential(
             nn.LayerNorm(embed_dim),
@@ -45,43 +51,55 @@ class VisTRcls(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
-        features, pos = self.backbone(samples)
+        features, pos = self.backbone(samples, use_pos_embed=self.use_pos_embed)
         src = features[-1]
         f, em, h, w = src.size()
-        pos = pos[-1]
-        pos = pos.flatten(-2).permute(0,1,3,2).unsqueeze(0)
         src_proj = src
-        src_proj = src_proj.flatten(-2).permute(0,2,1)
+        src_proj = src_proj.flatten(-2).permute(0, 2, 1)
 
-        ##### #TODO fix size of pos embeddings
-        if self.pos_embed_mode == 'interpolate':
-            pos = nn.functional.interpolate(pos, size=(f, h * w, em), mode='trilinear',align_corners=False).squeeze()
-        elif self.pos_embed_mode == 'prune':
-            pos = nn.functional.interpolate(pos.squeeze(), size=(em), mode='linear', align_corners=False)
+        if self.use_pos_embed:
+            pos_last = pos[-1]
+            pos_last = pos_last.flatten(1, 2)
+            x = src_proj + pos_last
         else:
-            raise NotImplementedError('Unknown positional embedding mode')
-        #####
-        x = src_proj + pos
-        x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
-        out_transformer, attn_map = self.transformer(x)
+            x = src_proj
+            ###############
+        # # x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
+        # out_transformer, attn_map = self.transformer(x)
+        # out_transformer = out_transformer.permute(0,2,1)
+        #
+        # outputs_class = self.mlp_head(self.avgpool(out_transformer).squeeze())
+        ##############
+        # x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
+        x = x.flatten(0,1).unsqueeze(0)
+        out_transformer, attn = self.transformer(x)
 
-        outputs_class = self.mlp_head(out_transformer[:,0,:])
-        # outputs_class = self.class_embed(hs)
-        # outputs_coord = self.bbox_embed(hs).sigmoid()
-        # out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
+        out_transformer = out_transformer.reshape(f, h * w, em).permute(0,2,1)
+
+        relative_attention = lambda attn: attn.max(dim=1)[0][0].max(axis=0)[0].view(f, self.feat_size, self.feat_size)
+        attn_map = F.softmax(relative_attention(attn), dim=1)
+        # prediction_attention_1_full_res = zoom(prediction_attention_1, 16, order=0)
+
+        outputs_class = self.mlp_head(self.avgpool(out_transformer).squeeze())
         return outputs_class, attn_map #out
 
 def build_model(args):
     device = torch.device(args.DEVICE)
+    feat_size = args.DATA.INPUT_SIZE // args.MODEL.PATCH_SIZE
+    pos_embed = args.MODEL.POSITION_EMBEDDING.TYPE is not None
     backbone = build_backbone(args)
 
     transformer = build_transformer(args)
 
-    model = VisTRcls(
+    model = ProLesClassifier(
         backbone,
         transformer,
+        feat_size=feat_size,
         num_classes=args.MODEL.NUM_CLASSES,
-        pos_embed_mode=args.MODEL.POSITION_EMBEDDING.MODE
+        backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES,
+        embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE,
+        use_pos_embed=pos_embed,
+        pos_embed_fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE
     )
     return model
 

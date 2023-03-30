@@ -15,10 +15,11 @@ TRAINING:
 MODEL:
   PRETRAINED_WEIGHTS:
   NUM_CLASSES: 2
+  PATCH_SIZE: 32
   POSITION_EMBEDDING:
-    TYPE: sine
+    TYPE: learned # sine, learned
     Z_SIZE: 40
-    MODE: interpolate
+    FIT_MODE: interpolate # interpolate, prune
   BACKBONE:
     NAME: resnet101
     RETURN_INTERM_LAYERS: false
@@ -32,9 +33,8 @@ MODEL:
     FORWARD_DROP_P: 0.1
 
 DATA:
-  DATASET_DIR: /mnt/DATA2/Sagi/Data/ # proles2021_debug   picai2022
+  DATASET_DIR: /mnt/DATA2/Sagi/Data/
   DATASETS: PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
-  DATASET_PATH: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
   DATA_LIST: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   DATA_FOLD: 0
   INPUT_SIZE: 128

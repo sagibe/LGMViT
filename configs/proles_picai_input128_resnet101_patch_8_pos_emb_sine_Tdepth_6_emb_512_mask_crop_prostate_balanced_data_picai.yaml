@@ -13,12 +13,13 @@ TRAINING:
   CLS_THRESH: 0.5
 
 MODEL:
-  PRETRAINED_WEIGHTS: /mnt/DATA2/Sagi/Models/ProLesClassifier/proles_picai_input128_resnet101_pos_emb_sine_t_depth_6_emb_size_2048_mask_crop_prostate_sheba_only/ckpt/checkpoint0048.pth
+  PRETRAINED_WEIGHTS:
   NUM_CLASSES: 2
+  PATCH_SIZE: 8
   POSITION_EMBEDDING:
-    TYPE: sine
+    TYPE: sine # sine, learned
     Z_SIZE: 40
-    MODE: interpolate
+    FIT_MODE: interpolate # interpolate, prune
   BACKBONE:
     NAME: resnet101
     RETURN_INTERM_LAYERS: false
@@ -26,15 +27,15 @@ MODEL:
   TRANSFORMER:
     NUM_LAYERS: 6
     FORWARD_EXPANSION_RATIO: 4
-    EMBED_SIZE: 2048
+    EMBED_SIZE: 512
     HEADS: 8
     DROP_PATH: 0.1
     FORWARD_DROP_P: 0.1
 
 DATA:
-  DATASET_DIR: /mnt/DATA2/Sagi/Data/ # proles2021_debug   picai2022
+  DATASET_DIR: /mnt/DATA2/Sagi/Data/
   DATASETS: PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
-  DATA_LIST: # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
+  DATA_LIST: /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list_balanced.json # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   DATA_FOLD: 0
   INPUT_SIZE: 128
   PREPROCESS:

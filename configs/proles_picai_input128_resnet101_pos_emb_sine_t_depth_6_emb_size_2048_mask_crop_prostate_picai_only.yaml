@@ -5,7 +5,7 @@ TRAINING:
   WEIGHT_DECAY: 0.0001
   EPOCHS: 50
   CLIP_MAX_NORM: 0.1
-  EVAL_INTERVAL: 1
+  EVAL_INTERVAL: 100
   RESUME: ''
   START_EPOCH: 0
   EVAL: false
@@ -17,15 +17,14 @@ MODEL:
   NUM_CLASSES: 2
   PATCH_SIZE: 32
   POSITION_EMBEDDING:
-    TYPE: sine # sine, learned, null
+    TYPE: sine # sine, learned
     Z_SIZE: 40
     FIT_MODE: interpolate # interpolate, prune
   BACKBONE:
-    NAME: resnet101 # convnext  resnet101 , patch_embed
-    RETURN_INTERM_LAYERS: true
+    NAME: resnet101
+    RETURN_INTERM_LAYERS: false
     DILATION: false
   TRANSFORMER:
-    TYPE: vit # vit, max_vit
     NUM_LAYERS: 6
     FORWARD_EXPANSION_RATIO: 4
     EMBED_SIZE: 2048
@@ -35,7 +34,7 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA2/Sagi/Data/
-  DATASETS: PICAI/processed_data/debug/ # PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
+  DATASETS: PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
   DATA_LIST: # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   DATA_FOLD: 0
   INPUT_SIZE: 128
@@ -59,4 +58,3 @@ TEST:
 DISTRIBUTED:
   WORLD_SIZE: 1
   DIST_URL: env://
-
