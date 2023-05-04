@@ -190,8 +190,10 @@ class MetricLogger(object):
             if isinstance(v, torch.Tensor):
                 v = v.item()
             assert isinstance(v, (float, int))
-            self.meters[k].update(v)
-
+            if k in ['loss', 'lr']:
+                self.meters[k].update(v)
+            else:
+                self.meters[k] = v
     def __getattr__(self, attr):
         if attr in self.meters:
             return self.meters[attr]
@@ -210,7 +212,8 @@ class MetricLogger(object):
 
     def synchronize_between_processes(self):
         for meter in self.meters.values():
-            meter.synchronize_between_processes()
+            if isinstance(meter, SmoothedValue):
+                meter.synchronize_between_processes()
 
     def add_meter(self, name, meter):
         self.meters[name] = meter
@@ -319,7 +322,7 @@ class PerformanceMetrics(object):
     @property
     def auroc(self):
         auroc = BinaryAUROC(thresholds=None)
-        return auroc(self.preds, self.targets)
+        return auroc(self.preds, self.targets).item()
 
     # def __str__(self):
     #     return self.fmt.format(

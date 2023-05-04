@@ -25,12 +25,12 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-    metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-    metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-    metric_logger.add_meter('precision', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-    metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-    metric_logger.add_meter('auroc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    metric_logger.add_meter('acc', None)
+    metric_logger.add_meter('sensitivity', None)
+    metric_logger.add_meter('specificity', None)
+    metric_logger.add_meter('precision', None)
+    metric_logger.add_meter('f1', None)
+    metric_logger.add_meter('auroc', None)
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 50
     # count = 0
@@ -68,7 +68,16 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     # test = metric_logger.meters['sensitivity'].global_avg
-    return {k: meter.avg for k, meter in metric_logger.meters.items()}
+    return {'loss': metric_logger.meters['loss'].global_avg,
+            'acc': metrics.accuracy,
+            'sensitivity': metrics.sensitivity,
+            'specificity': metrics.specificity,
+            'precision': metrics.precision,
+            'f1': metrics.f1,
+            'auroc': metrics.auroc,
+            'lr': metric_logger.meters['lr'].global_avg,
+            }
+    # return {k: meter.avg for k, meter in metric_logger.meters.items()}
 
 def sample_loss_inputs(outputs, targets, pos_neg_ratio=1, full_neg_scan_ratio=0.5):
     if torch.sum(targets, None):
@@ -99,12 +108,12 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
         metric_logger = utils.MetricLogger(delimiter="  ")
         metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-        metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('precision', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('auroc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('acc', None)
+        metric_logger.add_meter('sensitivity', None)
+        metric_logger.add_meter('specificity', None)
+        metric_logger.add_meter('precision', None)
+        metric_logger.add_meter('f1', None)
+        metric_logger.add_meter('auroc', None)
         header = 'Epoch: [{}]'.format(epoch)
         print_freq = 50
         for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
@@ -130,7 +139,15 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
-    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+    return {'loss': metric_logger.meters['loss'].global_avg,
+            'acc': metrics.accuracy,
+            'sensitivity': metrics.sensitivity,
+            'specificity': metrics.specificity,
+            'precision': metrics.precision,
+            'f1': metrics.f1,
+            'auroc': metrics.auroc,
+            }
+    # return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.device,
                     max_norm: float = 0, cls_thresh: float = 0.5):

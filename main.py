@@ -25,7 +25,7 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_mask_crop_prostate_picai_only_2D_transformer_sampling_loss_PNR_2',
+    'config_name': 'debug',
     'exp_name': None,  # if None default is config_name
     'use_wandb': True,
     'device': 'cuda',
