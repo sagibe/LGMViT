@@ -10,7 +10,7 @@ from models.layers.transformer import build_transformer
 class ProLesClassifier(nn.Module):
     """ This is the VisTR module that performs video object detection """
     def __init__(self, backbone, transformer, feat_size, num_classes=2, backbone_stages=4,
-                 embed_dim=2048, use_pos_embed=True, pos_embed_fit_mode='interpolate'):
+                 embed_dim=2048, use_pos_embed=True, pos_embed_fit_mode='interpolate', attention_3d=True):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbones to be used. See backbones.py
@@ -23,6 +23,7 @@ class ProLesClassifier(nn.Module):
         """
         super().__init__()
         self.feat_size = feat_size
+        self.attention_3d = attention_3d
         self.backbone = backbone
         self.backbone_stages = backbone_stages
         self.use_pos_embed = use_pos_embed
@@ -71,12 +72,20 @@ class ProLesClassifier(nn.Module):
         # outputs_class = self.mlp_head(self.avgpool(out_transformer).squeeze())
         ##############
         # x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
-        x = x.flatten(0,1).unsqueeze(0)
+
+
+        if self.attention_3d:
+            x = x.flatten(0,1).unsqueeze(0)
         out_transformer, attn = self.transformer(x)
 
-        out_transformer = out_transformer.reshape(f, h * w, em).permute(0,2,1)
+        if self.attention_3d:
+            out_transformer = out_transformer.reshape(f, h * w, em)
 
-        relative_attention = lambda attn: attn.max(dim=1)[0][0].max(axis=0)[0].view(f, self.feat_size, self.feat_size)
+        out_transformer = out_transformer.permute(0,2,1)
+        if self.attention_3d:
+            relative_attention = lambda attn: attn.max(dim=1)[0][0].max(axis=0)[0].view(f, self.feat_size, self.feat_size)
+        else:
+            relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(f, self.feat_size, self.feat_size)
         attn_map = F.softmax(relative_attention(attn), dim=1)
         # prediction_attention_1_full_res = zoom(prediction_attention_1, 16, order=0)
 
@@ -99,7 +108,8 @@ def build_model(args):
         backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES,
         embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE,
         use_pos_embed=pos_embed,
-        pos_embed_fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE
+        pos_embed_fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
+        attention_3d=args.MODEL.TRANSFORMER.ATTENTION_3D
     )
     return model
 

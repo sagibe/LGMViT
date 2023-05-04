@@ -21,6 +21,11 @@ def get_default_config():
     cfg.TRAINING.EVAL = False
     cfg.TRAINING.NUM_WORKERS = 4
     cfg.TRAINING.CLS_THRESH = 0.5
+    #cfg.TRAINING.SAMPLING_LOSS
+    cfg.TRAINING.SAMPLING_LOSS = edict()
+    cfg.TRAINING.SAMPLING_LOSS.USE_SAMPLING_LOSS = False
+    cfg.TRAINING.SAMPLING_LOSS.POS_NEG_RATIO = 1.0
+    cfg.TRAINING.SAMPLING_LOSS.FULL_NEG_SCAN_RATIO = 0.5
 
     # MODEL
     cfg.MODEL = edict()
@@ -46,6 +51,7 @@ def get_default_config():
     cfg.MODEL.TRANSFORMER.HEADS = 8
     cfg.MODEL.TRANSFORMER.DROP_PATH = 0.1
     cfg.MODEL.TRANSFORMER.FORWARD_DROP_P = 0.1
+    cfg.MODEL.TRANSFORMER.ATTENTION_3D = True
 
     # DATA
     cfg.DATA = edict()
