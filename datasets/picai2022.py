@@ -21,11 +21,18 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class PICAI2021Dataset:
-    def __init__(self, data_dirs, transforms=None, fold_id=0, scan_set='', data_list=None, input_size=128,
+    def __init__(self, data_dirs, transforms=None, fold_id=None, scan_set='', data_list=None, input_size=128,
                  resize_mode='interpolate', mask=True, crop_prostate=True, padding=0, task='cls'):
 
         self.scan_list = []
         for data_dir in data_dirs:
+            # if scan_set in ['train', 'val']:
+            #     if fold_id is None:
+            #         files_dir = os.path.join(data_dir, scan_set)
+            #     else:
+            #         files_dir = os.path.join(data_dir, f'fold_{fold_id}', scan_set)
+            # else:
+            #     files_dir = data_dir
             files_dir = os.path.join(data_dir, f'fold_{fold_id}',scan_set) if scan_set in ['train', 'val'] else data_dir
             if scan_set in ['train', 'val'] and data_list is not None:
                 self.scan_list += [os.path.join(files_dir,f) for f in os.listdir(files_dir) if (f.endswith('.pkl') and f.split('.')[0] in data_list[scan_set]['with_lesions'] + data_list[scan_set]['healthy'])]
@@ -62,6 +69,10 @@ class PICAI2021Dataset:
                 img_t2w = img_t2w[prostate_slices, y1:y2, x1:x2]
                 img_adc = img_adc[prostate_slices, y1:y2, x1:x2]
                 img_dwi = img_dwi[prostate_slices, y1:y2, x1:x2]
+                #
+                # img_t2w = img_t2w[prostate_slices, :, :]
+                # img_adc = img_adc[prostate_slices, :, :]
+                # img_dwi = img_dwi[prostate_slices, :, :]
 
         if self.input_size != img_t2w.shape[1]:
             if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < img_t2w.shape[1]):

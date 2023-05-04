@@ -25,9 +25,9 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'debug',
+    'config_name': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_mask_crop_prostate_picai_only_2D_transformer_sampling_loss_PNR_2',
     'exp_name': None,  # if None default is config_name
-    'use_wandb': False,
+    'use_wandb': True,
     'device': 'cuda',
     'seed': 42
 }
@@ -152,7 +152,12 @@ def main(config, settings):
         #     sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
-            config.TRAINING.CLIP_MAX_NORM, config.TRAINING.CLS_THRESH)
+            max_norm=config.TRAINING.CLIP_MAX_NORM,
+            cls_thresh=config.TRAINING.CLS_THRESH,
+            sampling_loss=config.TRAINING.SAMPLING_LOSS.USE_SAMPLING_LOSS,
+            pos_neg_ratio=config.TRAINING.SAMPLING_LOSS.POS_NEG_RATIO,
+            full_neg_scan_ratio=config.TRAINING.SAMPLING_LOSS.FULL_NEG_SCAN_RATIO
+        )
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
                 model, criterion, data_loader_val, device, epoch,

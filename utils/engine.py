@@ -17,7 +17,8 @@ import utils.util as utils
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, max_norm: float = 0,
-                    cls_thresh: float = 0.5):
+                    cls_thresh: float = 0.5, sampling_loss: bool = False,
+                    pos_neg_ratio: float = 1, full_neg_scan_ratio: float = 0.5):
     model.train()
     criterion.train()
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
@@ -32,10 +33,18 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     metric_logger.add_meter('auroc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 50
+    # count = 0
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+        # count+=1
+        # if count % 100 == 0:
+        #     print('hi')
+        # if count == 373:
+        #     print('hi')
         samples = samples.squeeze(0).float().to(device)
         targets = targets.float().T.to(device)
         outputs, attn_map = model(samples)
+        if sampling_loss:
+            outputs, targets = sample_loss_inputs(outputs, targets, pos_neg_ratio=pos_neg_ratio, full_neg_scan_ratio=full_neg_scan_ratio)
         loss = criterion(outputs, targets)
         loss_value = loss.item()
         metrics.update(outputs, targets)
@@ -58,7 +67,28 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
-    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+    # test = metric_logger.meters['sensitivity'].global_avg
+    return {k: meter.avg for k, meter in metric_logger.meters.items()}
+
+def sample_loss_inputs(outputs, targets, pos_neg_ratio=1, full_neg_scan_ratio=0.5):
+    if torch.sum(targets, None):
+        pos_idx = (targets[:, 0] > 0).nonzero().squeeze(1)
+        neg_idx = (~ (targets[:, 0] > 0)).nonzero().squeeze(1)
+        num_of_neg = len(neg_idx) if len(neg_idx.size()) != 0 else 0
+        if num_of_neg > 0:
+            neg_samples = min(int(len(pos_idx) * (1/pos_neg_ratio)), num_of_neg)
+            neg_idx_sampled = neg_idx[torch.randperm(neg_idx.size(0))[:neg_samples]]
+            sampled_idx, _ = torch.sort(torch.cat((pos_idx, neg_idx_sampled)))
+        else:
+            sampled_idx = pos_idx
+    else:
+        num_samples = int(full_neg_scan_ratio * len(targets))
+        slice_idx = torch.arange(len(targets))
+        sampled_idx, _ = torch.sort(slice_idx[torch.randperm(slice_idx.size(0))[:num_samples]])
+    sampled_idx = sampled_idx.unsqueeze(1)
+    targets = targets[sampled_idx].squeeze(-1)
+    outputs = outputs[sampled_idx].squeeze(-1)
+    return outputs, targets
 
 def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, device: torch.device, epoch: int,
