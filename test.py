@@ -25,7 +25,7 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 
 SETTINGS = {
-    'config_name': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_mask_crop_prostate_picai_only_2D_transformer_sampling_loss_PNR_2',
+    'config_name': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_10_SL_PNR_3_FNR_0_5',
     'exp_name': None,  # if None default is config_name
     # 'data_path': '/mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
     'save_plots': True,
@@ -51,7 +51,7 @@ def main(config, settings):
                 checkpoint_path = ''
     else:
         checkpoint_path = ''
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model'])
 
     model_without_ddp = model
