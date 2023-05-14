@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import math
 import time
 import datetime
 import torch
@@ -24,7 +25,7 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 
 SETTINGS = {
-    'config_name': 'proles_picai_input128_resnet101_pos_emb_sine_t_depth_6_emb_size_2048_mask_crop_prostate',
+    'config_name': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_mask_crop_prostate_picai_only_2D_transformer_sampling_loss_PNR_2',
     'exp_name': None,  # if None default is config_name
     # 'data_path': '/mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
     'save_plots': True,
@@ -70,11 +71,13 @@ def main(config, settings):
     ]
 
     # transforms
-    transforms = T.Compose([
-        T.ToTensor()
-    ])
-
-    dataset_test = PICAI2021Dataset(config.TEST.DATASET_PATH, scan_set='',
+    # transforms = T.Compose([
+    #     T.ToTensor()
+    # ])
+    data_dirs = config.TEST.DATASET_PATH
+    if not isinstance(data_dirs, list):
+        data_dirs = [data_dirs]
+    dataset_test = PICAI2021Dataset(data_dirs, scan_set='',
                                    input_size=config.DATA.INPUT_SIZE,
                                    resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                    mask=config.DATA.PREPROCESS.MASK_PROSTATE,
@@ -137,6 +140,7 @@ if __name__ == '__main__':
     with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
         config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     config = utils.RecursiveNamespace(**config)
+    config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['exp_name'] is None: settings['exp_name'] = settings['config_name']
 
     if config.DATA.OUTPUT_DIR:
