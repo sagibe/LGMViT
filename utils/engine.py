@@ -8,23 +8,26 @@ import os
 import sys
 from typing import Iterable
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from torch import sigmoid
 
 import utils.util as utils
 # from datasets.coco_eval import CocoEvaluator
 # from datasets.panoptic_eval import PanopticEvaluator
 
-def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
+def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localization_criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
-                    device: torch.device, epoch: int, max_norm: float = 0,
-                    cls_thresh: float = 0.5, sampling_loss: bool = False,
-                    pos_neg_ratio: float = 1, full_neg_scan_ratio: float = 0.5):
+                    device: torch.device, epoch: int, localization_loss_params: dict, sampling_loss_params: dict,
+                    max_norm: float = 0, cls_thresh: float = 0.5):
     model.train()
     criterion.train()
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('cls_loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('localization_loss', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('acc', None)
     metric_logger.add_meter('sensitivity', None)
     metric_logger.add_meter('specificity', None)
@@ -34,19 +37,47 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 50
     # count = 0
-    for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
-        # count+=1
-        # if count % 100 == 0:
-        #     print('hi')
-        # if count == 373:
-        #     print('hi')
+    metric_logger.update(localization_loss=0)
+    for samples, labels in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.squeeze(0).float().to(device)
-        targets = targets.float().T.to(device)
+        targets = labels[0].float().T.to(device)
+        lesion_annot = labels[1].float().to(device)
         outputs, attn_map = model(samples)
-        if sampling_loss:
-            outputs, targets = sample_loss_inputs(outputs, targets, pos_neg_ratio=pos_neg_ratio, full_neg_scan_ratio=full_neg_scan_ratio)
-        loss = criterion(outputs, targets)
+        attn_map = attn_map.unsqueeze(0)
+        # sampling loss
+        if sampling_loss_params.USE:
+            outputs, targets, sampled_idx = sample_loss_inputs(outputs, targets,
+                                                  pos_neg_ratio=sampling_loss_params.POS_NEG_RATIO,
+                                                  full_neg_scan_ratio=sampling_loss_params.FULL_NEG_SCAN_RATIO)
+            attn_map = attn_map[:, sampled_idx, :, :]
+            lesion_annot = lesion_annot[:, sampled_idx, :, :]
+
+        cls_loss = criterion(outputs, targets)
+
+        # localization loss
+        if localization_loss_params.USE and targets.sum().item() > 0:
+            scale_factor_h = attn_map.shape[-2] / lesion_annot.shape[-2]
+            scale_factor_w = attn_map.shape[-1] / lesion_annot.shape[-1]
+            attn_map = F.interpolate(attn_map, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w),mode='nearest')
+            # lesion_annot = F.interpolate(lesion_annot, scale_factor=(scale_factor_h, scale_factor_w), mode='bilinear')
+            # ################
+            # import matplotlib.pyplot as plt
+            # slice = 7
+            # fig, (ax1, ax2) = plt.subplots(1, 2)
+            # ax1.imshow(attn_map[0, slice, :, :].cpu().detach().numpy())
+            # ax2.imshow(lesion_annot[0, slice, :, :].cpu().detach().numpy())
+            # plt.show()
+            ################
+            localization_loss = localization_loss_params.ALPHA * localization_criterion(torch.cat(utils.attention_softmax_2d(attn_map[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+                                                       torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
+            loss = cls_loss + localization_loss
+            localization_loss_value = localization_loss.item()
+            metric_logger.update(localization_loss=localization_loss_value)
+        else:
+            loss = cls_loss
+
         loss_value = loss.item()
+        cls_loss_value = cls_loss.item()
         metrics.update(outputs, targets)
         optimizer.zero_grad()
         loss.backward()
@@ -55,6 +86,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         optimizer.step()
 
         metric_logger.update(loss=loss_value)
+        metric_logger.update(cls_loss=cls_loss_value)
         metric_logger.update(acc=metrics.accuracy)
         metric_logger.update(sensitivity=metrics.sensitivity)
         metric_logger.update(specificity=metrics.specificity)
@@ -64,11 +96,17 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         # metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
+    # fix initialization of localization loss # TODO
+    if metric_logger.meters['localization_loss'].count > 1:
+        metric_logger.meters['localization_loss'].count -= 1
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     # test = metric_logger.meters['sensitivity'].global_avg
     return {'loss': metric_logger.meters['loss'].global_avg,
+            'cls_loss': metric_logger.meters['cls_loss'].global_avg,
+            'localization_loss': metric_logger.meters['localization_loss'].global_avg,
             'acc': metrics.accuracy,
             'sensitivity': metrics.sensitivity,
             'specificity': metrics.specificity,
@@ -94,10 +132,9 @@ def sample_loss_inputs(outputs, targets, pos_neg_ratio=1, full_neg_scan_ratio=0.
         num_samples = int(full_neg_scan_ratio * len(targets))
         slice_idx = torch.arange(len(targets))
         sampled_idx, _ = torch.sort(slice_idx[torch.randperm(slice_idx.size(0))[:num_samples]])
-    sampled_idx = sampled_idx.unsqueeze(1)
-    targets = targets[sampled_idx].squeeze(-1)
-    outputs = outputs[sampled_idx].squeeze(-1)
-    return outputs, targets
+    targets = targets[sampled_idx]
+    outputs = outputs[sampled_idx]
+    return outputs, targets, sampled_idx
 
 def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, device: torch.device, epoch: int,
@@ -116,9 +153,9 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.add_meter('auroc', None)
         header = 'Epoch: [{}]'.format(epoch)
         print_freq = 50
-        for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+        for samples, labels in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
-            targets = targets.float().T.to(device)
+            targets = labels[0].float().T.to(device)
             outputs, attn_map = model(samples)
             loss = criterion(outputs, targets)
             loss_value = loss.item()
@@ -155,18 +192,18 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
         model.eval()
         metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
         metric_logger = utils.MetricLogger(delimiter="  ")
-        metric_logger.add_meter('acc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('sensitivity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('specificity', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('precision', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('f1', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-        metric_logger.add_meter('auroc', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+        metric_logger.add_meter('acc', None)
+        metric_logger.add_meter('sensitivity', None)
+        metric_logger.add_meter('specificity', None)
+        metric_logger.add_meter('precision', None)
+        metric_logger.add_meter('f1', None)
+        metric_logger.add_meter('auroc', None)
         header = 'Test stats: '
-        print_freq = 10
-        for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+        print_freq = 50
+        for samples, labels in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
-            targets = targets.float().T.to(device)
-            outputs = model(samples)
+            targets = labels[0].float().T.to(device)
+            outputs, attn_map = model(samples)
             metrics.update(outputs, targets)
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)

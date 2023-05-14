@@ -17,11 +17,11 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: true
+      USE: false
       TYPE: 'kl' # options: 'kl
       ALPHA: 10
     SAMPLING_LOSS:
-      USE: true
+      USE: false
       POS_NEG_RATIO: 1
       FULL_NEG_SCAN_RATIO: 0.5
 
@@ -49,7 +49,7 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/processed_data/
-  DATASETS: picai/debug/ # picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
+  DATASETS: picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/  #  PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
   DATA_LIST: #  /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list_balanced.json # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   DATA_FOLD: 0
   INPUT_SIZE: 128
@@ -65,7 +65,7 @@ TEST:
   DATASET_PATH: /mnt/DATA1/Sagi/Data/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
   BATCH_SIZE: 1
   CLIP_MAX_NORM: 0.1
-  CHECKPOINT: 6
+  CHECKPOINT: 34
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/

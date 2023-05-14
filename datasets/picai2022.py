@@ -57,6 +57,7 @@ class PICAI2021Dataset:
         img_t2w = scan_dict['modalities']['t2w']
         img_adc = scan_dict['modalities']['adc']
         img_dwi = scan_dict['modalities']['dwi']
+        seg_labels = scan_dict['seg_labels']
         prostate_slices = np.ones(scan_dict['prostate_mask'].shape[0], dtype=bool)
 
         if self.mask:
@@ -69,6 +70,7 @@ class PICAI2021Dataset:
                 img_t2w = img_t2w[prostate_slices, y1:y2, x1:x2]
                 img_adc = img_adc[prostate_slices, y1:y2, x1:x2]
                 img_dwi = img_dwi[prostate_slices, y1:y2, x1:x2]
+                seg_labels = seg_labels[prostate_slices, y1:y2, x1:x2]
                 #
                 # img_t2w = img_t2w[prostate_slices, :, :]
                 # img_adc = img_adc[prostate_slices, :, :]
@@ -90,6 +92,9 @@ class PICAI2021Dataset:
                     img_t2w = np.pad(img_t2w, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
                     img_adc = np.pad(img_adc, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
                     img_dwi = np.pad(img_dwi, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
+            scale_factor_h = self.input_size / seg_labels.shape[-2]
+            scale_factor_w = self.input_size / seg_labels.shape[-1]
+            seg_labels = scipy.ndimage.zoom(seg_labels, (1, scale_factor_h, scale_factor_w))
 
         # f, ax = plt.subplots(1, 3)
         # slice = 10
@@ -107,8 +112,9 @@ class PICAI2021Dataset:
 
         # if self.seg_transform is not None:
         #     seg = apply_transform(self.seg_transform, seg, map_items=False)
-        labels = scan_dict['cls_labels'] if self.task=='cls' else scan_dict['seg_labels']
-        labels =labels[prostate_slices]
+        # labels = scan_dict['cls_labels'] if self.task=='cls' else scan_dict['seg_labels']
+        labels = [scan_dict['cls_labels'][prostate_slices], seg_labels]
+        # labels =labels[prostate_slices]
 
         return tuple([img_concat, labels])
         # return tuple([img_concat, seg_labels if self.get_seg_labels else cls_labels])

@@ -76,7 +76,7 @@ class PositionEmbeddingSine(nn.Module):
 
         pos = torch.cat((pos_z, pos_y, pos_x), dim=4).flatten(2, 3).squeeze(0)
         # pos = torch.cat((pos_z, pos_y, pos_x), dim=4).permute(0, 1, 4, 2, 3)
-        if pos.shape[2] != embed:
+        if pos.shape[2] != embed or pos.shape[0] != d:
             if self.fit_mode == 'interpolate':
                 pos = pos.reshape(1,1,self.z_size,h*w,-1)
                 pos = nn.functional.interpolate(pos, size=(d, h * w, embed), mode='trilinear',align_corners=False).squeeze()

@@ -11,31 +11,22 @@ TRAINING:
   EVAL: false
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  LOSS:
-    TYPE: 'bce' # options: 'bce', 'focal'
-    FOCAL_PARAMS:
-      ALPHA: 0.8
-      GAMMA: 2
-    LOCALIZATION_LOSS:
-      USE: true
-      TYPE: 'kl' # options: 'kl
-      ALPHA: 10
-    SAMPLING_LOSS:
-      USE: true
-      POS_NEG_RATIO: 1
-      FULL_NEG_SCAN_RATIO: 0.5
+  SAMPLING_LOSS:
+    USE: true
+    POS_NEG_RATIO: 1.0
+    FULL_NEG_SCAN_RATIO: 0.5
 
 MODEL:
   PRETRAINED_WEIGHTS:
   NUM_CLASSES: 2
   PATCH_SIZE: 32
   POSITION_EMBEDDING:
-    TYPE: sine # sine, learned, null
+    TYPE: sine # sine, learned
     Z_SIZE: 40
     FIT_MODE: interpolate # interpolate, prune
   BACKBONE:
-    NAME: resnet101 # convnext  resnet101 , patch_embed
-    RETURN_INTERM_LAYERS: true
+    NAME: resnet101
+    RETURN_INTERM_LAYERS: false
     DILATION: false
   TRANSFORMER:
     TYPE: vit # vit, max_vit
@@ -45,12 +36,12 @@ MODEL:
     HEADS: 8
     DROP_PATH: 0.1
     FORWARD_DROP_P: 0.1
-    ATTENTION_3D: true
+    ATTENTION_3D: false
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/processed_data/
-  DATASETS: picai/debug/ # picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
-  DATA_LIST: #  /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list_balanced.json # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
+  DATASETS: picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
+  DATA_LIST: # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   DATA_FOLD: 0
   INPUT_SIZE: 128
   PREPROCESS:
@@ -65,7 +56,7 @@ TEST:
   DATASET_PATH: /mnt/DATA1/Sagi/Data/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
   BATCH_SIZE: 1
   CLIP_MAX_NORM: 0.1
-  CHECKPOINT: 6
+  CHECKPOINT: 34
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/

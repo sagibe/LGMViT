@@ -190,7 +190,7 @@ class MetricLogger(object):
             if isinstance(v, torch.Tensor):
                 v = v.item()
             assert isinstance(v, (float, int))
-            if k in ['loss', 'lr']:
+            if k in ['loss', 'cls_loss', 'localization_loss', 'lr']:
                 self.meters[k].update(v)
             else:
                 self.meters[k] = v
@@ -331,4 +331,12 @@ class PerformanceMetrics(object):
     #         global_avg=self.global_avg,
     #         max=self.max,
     #         value=self.value)
+
+def attention_softmax_2d(attn, apply_log=True):
+    if apply_log:
+        return torch.nn.functional.log_softmax((attn.view(*attn.size()[:2], -1)), dim=2).view_as(attn)
+    else:
+        return torch.nn.functional.softmax((attn.view(*attn.size()[:2], -1)), dim=2).view_as(attn)
+
+
 

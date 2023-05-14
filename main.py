@@ -4,6 +4,8 @@ import os
 import time
 import datetime
 import torch
+# from picai_baseline.nnunet.training_docker.focal_loss import FocalLoss
+# from monai.losses import FocalLoss
 from torch import nn
 import yaml
 import json
@@ -21,11 +23,11 @@ from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
-
+from utils.losses import FocalLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'debug',
+    'config_name': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_6_emb_768_mask_crop_prostate_3D_transformer',
     'exp_name': None,  # if None default is config_name
     'use_wandb': True,
     'device': 'cuda',
@@ -65,7 +67,16 @@ def main(config, settings):
                                   weight_decay=config.TRAINING.WEIGHT_DECAY)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
     # criterion = nn.BCELoss()
-    criterion = nn.BCEWithLogitsLoss()
+    if config.TRAINING.LOSS.TYPE == 'bce':
+        criterion = nn.BCEWithLogitsLoss()
+    elif config.TRAINING.LOSS.TYPE == 'focal':
+        criterion = FocalLoss(alpha=config.TRAINING.LOSS.FOCAL_PARAMS.ALPHA, gamma=config.TRAINING.LOSS.FOCAL_PARAMS.GAMMA)
+    else:
+        raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
+        localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=False)
+    else:
+        raise ValueError(f"{config.TRAINING.LOSS.TYPE} localization loss type not supported")
 
     # transforms
     transforms = T.Compose([
@@ -87,7 +98,7 @@ def main(config, settings):
     #     # data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
     # elif config.DATA.DATASET == 'picai2022':
     data_dirs = []
-    datasets =  config.DATA.DATASETS
+    datasets = config.DATA.DATASETS
     if not isinstance(datasets, list):
         datasets = [datasets]
     for dataset in datasets:
@@ -151,12 +162,11 @@ def main(config, settings):
         # if config.distributed:
         #     sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
-            model, criterion, data_loader_train, optimizer, device, epoch,
+            model, criterion, localization_criterion, data_loader_train, optimizer, device, epoch,
+            localization_loss_params=config.TRAINING.LOSS.LOCALIZATION_LOSS,
+            sampling_loss_params=config.TRAINING.LOSS.SAMPLING_LOSS,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
-            cls_thresh=config.TRAINING.CLS_THRESH,
-            sampling_loss=config.TRAINING.SAMPLING_LOSS.USE_SAMPLING_LOSS,
-            pos_neg_ratio=config.TRAINING.SAMPLING_LOSS.POS_NEG_RATIO,
-            full_neg_scan_ratio=config.TRAINING.SAMPLING_LOSS.FULL_NEG_SCAN_RATIO
+            cls_thresh=config.TRAINING.CLS_THRESH
         )
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
@@ -166,6 +176,8 @@ def main(config, settings):
             if epoch % config.TRAINING.EVAL_INTERVAL == 0:
                 wandb.log(
                     {"Train/Loss": train_stats['loss'],
+                     "Train/Classification_Loss": train_stats['cls_loss'],
+                     "Train/Localization_Loss": train_stats['localization_loss'],
                      "Train/Accuracy": train_stats['acc'],
                      "Train/Sensitivity": train_stats['sensitivity'],
                      "Train/Specificity": train_stats['specificity'],
@@ -184,6 +196,8 @@ def main(config, settings):
             else:
                 wandb.log(
                     {"Train/Loss": train_stats['loss'],
+                     "Train/Classification_Loss": train_stats['cls_loss'],
+                     "Train/Localization_Loss": train_stats['localization_loss'],
                      "Train/Accuracy": train_stats['acc'],
                      "Train/Sensitivity": train_stats['sensitivity'],
                      "Train/Specificity": train_stats['specificity'],
