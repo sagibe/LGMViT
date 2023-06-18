@@ -6,11 +6,13 @@ import numpy as np
 import math
 import os
 import sys
+import json
 from typing import Iterable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import sigmoid
+import matplotlib.pyplot as plt
 
 import utils.util as utils
 # from datasets.coco_eval import CocoEvaluator
@@ -34,16 +36,25 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
     metric_logger.add_meter('precision', None)
     metric_logger.add_meter('f1', None)
     metric_logger.add_meter('auroc', None)
+    metric_logger.add_meter('auprc', None)
+    metric_logger.add_meter('cohen_kappa', None)
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 50
     # count = 0
     metric_logger.update(localization_loss=0)
-    for samples, labels in metric_logger.log_every(data_loader, print_freq, header):
+
+    if localization_loss_params.USE and localization_loss_params.PATIENT_LIST is not None:
+        with open(localization_loss_params.PATIENT_LIST, 'r') as f:
+            localization_patient_list = json.load(f)
+    else:
+        localization_patient_list = None
+    for samples, labels, scan_id in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.squeeze(0).float().to(device)
         targets = labels[0].float().T.to(device)
         lesion_annot = labels[1].float().to(device)
         outputs, attn_map = model(samples)
-        attn_map = attn_map.unsqueeze(0)
+        if attn_map is not None:
+            attn_map = attn_map.unsqueeze(0)
         # sampling loss
         if sampling_loss_params.USE:
             outputs, targets, sampled_idx = sample_loss_inputs(outputs, targets,
@@ -55,7 +66,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         cls_loss = criterion(outputs, targets)
 
         # localization loss
-        if localization_loss_params.USE and targets.sum().item() > 0:
+        if localization_loss_params.USE and targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
             scale_factor_h = attn_map.shape[-2] / lesion_annot.shape[-2]
             scale_factor_w = attn_map.shape[-1] / lesion_annot.shape[-1]
             attn_map = F.interpolate(attn_map, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w),mode='nearest')
@@ -93,6 +104,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         metric_logger.update(precision=metrics.precision)
         metric_logger.update(f1=metrics.f1)
         metric_logger.update(auroc=metrics.auroc)
+        metric_logger.update(auprc=metrics.auprc)
+        metric_logger.update(cohen_kappa=metrics.cohen_kappa)
         # metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
@@ -113,6 +126,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             'precision': metrics.precision,
             'f1': metrics.f1,
             'auroc': metrics.auroc,
+            'auprc': metrics.auprc,
+            'cohen_kappa': metrics.cohen_kappa,
             'lr': metric_logger.meters['lr'].global_avg,
             }
     # return {k: meter.avg for k, meter in metric_logger.meters.items()}
@@ -151,9 +166,11 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.add_meter('precision', None)
         metric_logger.add_meter('f1', None)
         metric_logger.add_meter('auroc', None)
+        metric_logger.add_meter('auprc', None)
+        metric_logger.add_meter('cohen_kappa', None)
         header = 'Epoch: [{}]'.format(epoch)
         print_freq = 50
-        for samples, labels in metric_logger.log_every(data_loader, print_freq, header):
+        for samples, labels, _ in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
             outputs, attn_map = model(samples)
@@ -171,6 +188,8 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             metric_logger.update(precision=metrics.precision)
             metric_logger.update(f1=metrics.f1)
             metric_logger.update(auroc=metrics.auroc)
+            metric_logger.update(auprc=metrics.auprc)
+            metric_logger.update(cohen_kappa=metrics.cohen_kappa)
             # metric_logger.update(class_error=loss_dict_reduced['class_error'])
 
     # gather the stats from all processes
@@ -183,11 +202,13 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             'precision': metrics.precision,
             'f1': metrics.f1,
             'auroc': metrics.auroc,
+            'auprc': metrics.auprc,
+            'cohen_kappa': metrics.cohen_kappa,
             }
     # return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.device,
-                    max_norm: float = 0, cls_thresh: float = 0.5):
+                    max_norm: float = 0, cls_thresh: float = 0.5, save_attn_dir=None):
     with torch.no_grad():
         model.eval()
         metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
@@ -198,11 +219,14 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
         metric_logger.add_meter('precision', None)
         metric_logger.add_meter('f1', None)
         metric_logger.add_meter('auroc', None)
+        metric_logger.add_meter('auprc', None)
+        metric_logger.add_meter('cohen_kappa', None)
         header = 'Test stats: '
         print_freq = 50
-        for samples, labels in metric_logger.log_every(data_loader, print_freq, header):
+        for samples, labels, scan_id in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
+            lesion_annot = labels[1].float().to(device)
             outputs, attn_map = model(samples)
             metrics.update(outputs, targets)
             if max_norm > 0:
@@ -213,5 +237,38 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
             metric_logger.update(precision=metrics.precision)
             metric_logger.update(f1=metrics.f1)
             metric_logger.update(auroc=metrics.auroc)
+            metric_logger.update(auprc=metrics.auprc)
+            metric_logger.update(cohen_kappa=metrics.cohen_kappa)
+            if save_attn_dir:
+                save_dir = os.path.join(save_attn_dir, 'attn_maps')
+                os.makedirs(save_dir, exist_ok=True)
+                scale_factor_h = attn_map.shape[-2] / lesion_annot.shape[-2]
+                scale_factor_w = attn_map.shape[-1] / lesion_annot.shape[-1]
+                attn_map = attn_map.unsqueeze(0)
+                attn_map = F.interpolate(attn_map, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w), mode='nearest')
+                for slice in range(samples.shape[0]):
+                    cur_slice = samples[slice].permute(1, 2, 0).cpu().numpy()
+                    cur_annot = lesion_annot[0][slice].cpu().numpy()
+                    cur_attn = attn_map[0][slice].cpu().numpy()
+                    if cur_annot.sum() > 0:
+                        fig, ax = plt.subplots(1, 5, figsize=(35, 6))
+                        ax[0].imshow(cur_slice[...,0], cmap='gray')
+                        ax[0].set_title('t2w')
+                        ax[0].axis('off')
+                        ax[1].imshow(cur_slice[...,1], cmap='gray')
+                        ax[1].set_title('adc')
+                        ax[1].axis('off')
+                        ax[2].imshow(cur_slice[...,2], cmap='gray')
+                        ax[2].set_title('dwi')
+                        ax[2].axis('off')
+                        ax[3].imshow(cur_annot)
+                        ax[3].set_title('Lesion Annotation')
+                        ax[3].axis('off')
+                        ax[4].imshow(cur_attn)
+                        ax[4].set_title('Attention Map')
+                        ax[4].axis('off')
+                        plt.suptitle(f"Patient ID: {scan_id[0]}  Slice: {slice}\n")
+                        fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice}.jpg'), dpi=50)
+                        # plt.show()
 
     return metrics

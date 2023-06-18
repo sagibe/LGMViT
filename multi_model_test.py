@@ -15,10 +15,12 @@ import utils.transforms as T
 from sklearn import metrics
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.metrics import precision_recall_curve
 # from datasets.picai2022 import prepare_datagens
 
 from models.proles import build_model
 import utils.util as utils
+from models.resnet import build_resnet
 from utils.engine import eval_test
 from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
@@ -28,22 +30,55 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 SETTINGS = {
     'models': [
-        {'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_mask_crop_prostate_3D_transformer',
-         'exp_name': None, # if None default is config_name
-         'plot_name': 'ProLesCalssifier_basic'},  # if None default is config_name
-        {'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_10_SL_PNR_3_FNR_0_5',
-         'exp_name': None, # if None default is config_name
-         'plot_name': 'ProLesCalssifier_localization_and_sampling_loss'},  # if None default is config_name
+        # {
+        #     'config': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_12_emb_768_2D_transformer',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'ViT-16 2D transformer'},  # if None default is config_name
+        # {
+        #     'config': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_12_emb_768_3D_transformer',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'ViT-16 3D transformer'},  # if None default is config_name
+        # {
+        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'ProLesCalssifier - Basic'},  # if None default is config_name
+        # {
+        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_SL_PNR_3_FNR_0_5',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'ProLesCalssifier - Sampling Loss'},  # if None default is config_name
+        # {
+        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_10',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'ProLesCalssifier - Localization Loss'},  # if None default is config_name
+        {
+            'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_10_SL_PNR_3_FNR_0_5',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ProLesCalssifier - Localization and Sampling Loss'},  # if None default is config_name
+        # {
+        #     'config': 'resnet101',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'Resnet101'},  # if None default is config_name
     ],
     'data_path': '/mnt/DATA1/Sagi/Data/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
     'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
-    'output_name': 'test',  # if None default is datetime
+    'output_name': None,  # if None default is datetime
     'save_results': True,
+    'save_attn': True,
     'device': 'cuda',
 }
 
 def main(settings):
-    df = pd.DataFrame(columns=['Model Name', 'F1 Score', 'Sensitivity', 'Specificity', 'AUROC', 'Precision', 'Accuracy'])
+    df = pd.DataFrame(columns=['Model Name', 'F1 Score', 'Sensitivity', 'Specificity', 'AUROC', 'AUPRC', 'Cohens Kappa', 'Precision', 'Accuracy'])
+    if settings['save_results']:
+        if settings['output_name']:
+            save_dir = os.path.join(settings['output_dir'], settings['output_name'])
+            if os.path.isdir(save_dir):
+                save_dir = os.path.join(settings['output_dir'], settings['output_name'] + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
+        else:
+            save_dir = os.path.join(settings['output_dir'], datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
+        os.makedirs(save_dir, exist_ok=True)
+
+    fig, ax = plt.subplots(1, 2, figsize=(15, 6))
     for model_settings in settings['models']:
         with open('configs/' + model_settings['config'] + '.yaml', "r") as yamlfile:
             config = yaml.load(yamlfile, Loader=yaml.FullLoader)
@@ -57,12 +92,17 @@ def main(settings):
         config.DEVICE = device
         config.TEST.DATASET_PATH = settings['data_path']
 
-        model = build_model(config)
+        if model_settings['config'].startswith('resnet'):
+            model = build_resnet(config)
+        else:
+            model = build_model(config)
         model.to(device)
         if isinstance(config.TEST.CHECKPOINT, int):
             checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
         elif isinstance(config.TEST.CHECKPOINT, str):
-            if '/' in config.TEST.CHECKPOINT:
+            if 'best' in config.TEST.CHECKPOINT:
+                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
+            elif '/' in config.TEST.CHECKPOINT:
                 checkpoint_path = config.TEST.CHECKPOINT
             else:
                 if (config.TEST.CHECKPOINT).endswith('.pth'):
@@ -108,28 +148,39 @@ def main(settings):
         batch_sampler_test = BatchSampler(sampler_test, config.TEST.BATCH_SIZE, drop_last=True)
         data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=config.TEST.NUM_WORKERS)
 
-        test_stats = eval_test(model, data_loader_test, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH)
+        if settings['save_results'] and settings['save_attn']:
+            save_attn_dir = save_dir
+        else:
+            save_attn_dir = None
+        test_stats = eval_test(model, data_loader_test, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH, save_attn_dir)
 
         df = df.append({'Model Name': model_settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
-                        'AUROC': test_stats.auroc, 'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}, ignore_index=True)
+                        'AUROC': test_stats.auroc, 'AUPRC': test_stats.auprc, 'Cohens Kappa': test_stats.cohen_kappa,
+                        'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}, ignore_index=True)
         fpr, tpr, _ = metrics.roc_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
+        lr_precision, lr_recall, _ = precision_recall_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
 
         # Plot ROC Curve
-        plt.plot(fpr, tpr, label=f"{model_settings['plot_name']}-{test_stats.auroc:.4f}")
+        ax[0].plot(fpr, tpr, label=f"{model_settings['plot_name']}-{test_stats.auroc:.4f}")
+        ax[1].plot(lr_recall, lr_precision, label=f"{model_settings['plot_name']}-{test_stats.auprc:.4f}")
 
-    plt.title('ROC Curve')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.legend()
+    # plt.title('ROC Curve')
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+    # plt.legend()
+
+    # Plot ROC Curve and Confusion Matrix
+    ax[0].set_title('ROC Curve')
+    ax[0].set_xlabel('False Positive Rate')
+    ax[0].set_ylabel('True Positive Rate')
+    ax[0].legend()
+    ax[1].set_title('Precision-Recall Curve')
+    ax[1].set_xlabel('Recall')
+    ax[1].set_ylabel('Precision')
+    ax[1].legend()
+
     if settings['save_results']:
-        if settings['output_name']:
-            save_dir = os.path.join(settings['output_dir'], settings['output_name'])
-            if os.path.isdir(save_dir):
-                save_dir = os.path.join(settings['output_dir'], settings['output_name'] + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
-        else:
-            save_dir = os.path.join(settings['output_dir'], datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
-        os.makedirs(save_dir, exist_ok=True)
-        plt.savefig(os.path.join(save_dir, f'ROC_Curve.jpg'), dpi=200)
+        fig.savefig(os.path.join(save_dir, f'ROC_PR_Curves.jpg'), dpi=200)
         df.round(6).to_csv(os.path.join(save_dir, f'metrics_table.csv'), index=False)
     else:
         plt.show()

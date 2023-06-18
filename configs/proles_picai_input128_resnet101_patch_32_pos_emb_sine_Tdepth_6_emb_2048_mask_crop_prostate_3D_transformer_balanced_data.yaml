@@ -6,8 +6,10 @@ TRAINING:
   EPOCHS: 50
   CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
+  SAVE_CKPT_INTERVAL: 1
+  SAVE_BEST_CKPT_CRITERION: 'f1'
   RESUME: ''
-  START_EPOCH: 0
+  START_EPOCH: 1
   EVAL: false
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
@@ -39,7 +41,7 @@ MODEL:
     ATTENTION_3D: true
 
 DATA:
-  DATASET_DIR: /mnt/DATA1/Sagi/Data/processed_data/
+  DATASET_DIR: /mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/
   DATASETS: picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/  #  PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
   DATA_LIST: /mnt/DATA1/Sagi/Data/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list_balanced.json
   DATA_FOLD: 0
@@ -53,7 +55,7 @@ DATA:
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/
 
 TEST:
-  DATASET_PATH: /mnt/DATA1/Sagi/Data/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
+  DATASET_PATH: /mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
   BATCH_SIZE: 1
   CLIP_MAX_NORM: 0.1
   CHECKPOINT: 34

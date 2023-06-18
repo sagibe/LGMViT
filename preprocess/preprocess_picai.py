@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import cv2
 import scipy
 import os
 from pathlib import Path
@@ -12,13 +13,13 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 from torchio.transforms import HistogramStandardization
 
-from preprocess.preprocess_utils import prepare_scan, _bias_corrector, registration, sitk_to_numpy, create_landmarks, \
+from preprocess_utils import prepare_scan, _bias_corrector, registration, sitk_to_numpy, create_landmarks, \
     normalize_and_hist_stnd
-from preprocess.Attention_Gated_Prostate_MRI.inference_segmentation import seg_inference_single_slice
+# from preprocess.Attention_Gated_Prostate_MRI.inference_segmentation import seg_inference_single_slice
 from utils.util import RecursiveNamespace
 
 SETTINGS = {
-    'workdir': '/mnt/DATA2/Sagi/Data/PICAI/processed_data',
+    'workdir': '/mnt/DATA1/Sagi/Data/PICAI/processed_data',
     'overviews_dir': '/mnt/DATA2/Sagi/Data/PICAI/results/UNet/overviews/Task2201_picai_baseline/',
     'prostate_seg_type': 'picai',  # options: 'sheba' or 'picai'
     # relavant for picai prostate_seg_type:
@@ -83,7 +84,14 @@ def main(settings):
 
         labels = nib.load(label_files[idx])
         seg_labels = labels.get_data()
-        cls_labels = (np.sum(np.squeeze(seg_labels), axis=(0, 1)) > 0).astype(int)
+        seg_labels = seg_labels.transpose(2, 0, 1)
+        seg_labels = np.rot90(seg_labels, 3, axes=(1, 2))
+        # seg_labels = np.flip(seg_labels, axis=0)
+        # seg_labels = np.flip(seg_labels, axis=1)
+        seg_labels = np.flip(seg_labels, axis=2)
+
+
+        cls_labels = (np.sum(np.squeeze(seg_labels), axis=(1, 2)) > 0).astype(int)
 
         # if sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=len(cls_labels) or \
         #         sitk.GetArrayFromImage(modalities['t2w']).astype(np.float32).shape[0]!=prostate_mask.shape[0] or \
@@ -144,6 +152,54 @@ def main(settings):
 
         if settings.prostate_seg_type == 'sheba':
             prostate_mask = seg_inference_single_slice(modalities['t2w'], settings.sheba_prostate_config_path, resample=True)
+
+        # save_dir = '/mnt/DATA1/Sagi/Temp/data_validation_pos_slices_fold_0_fix_test/'
+        # os.makedirs(save_dir, exist_ok=True)
+        # for slice_num in range(modalities['t2w'].shape[0]):
+        #     # slice_num = 10
+        #     if cls_labels[slice_num]:
+        #         annot_mask = seg_labels[slice_num, :, :]*255
+        #         t2w_annot = np.stack((modalities['t2w'][slice_num,:,:]*255,) * 3, axis=-1).astype(np.uint8)
+        #         adc_annot = np.stack((modalities['adc'][slice_num,:,:]*255,) * 3, axis=-1).astype(np.uint8)
+        #         dwi_annot = np.stack((modalities['dwi'][slice_num,:,:]*255,) * 3, axis=-1).astype(np.uint8)
+        #         # t2w_annot = modalities['t2w'][slice_num,:,:]*255
+        #         # adc_annot = modalities['adc'][slice_num,:,:]*255
+        #         # dwi_annot = modalities['dwi'][slice_num,:,:]*255
+        #         ret, thresh = cv2.threshold(annot_mask, 127, 255, 0)
+        #         thresh = thresh.astype(np.uint8)
+        #         contours = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+        #
+        #         f, ax = plt.subplots(2, 3)
+        #         ax[0][0].imshow(modalities['t2w'][slice_num,:,:], cmap='gray')
+        #         ax[0][0].set_title('t2w')
+        #         ax[0][0].axis('off')
+        #         ax[0][1].imshow(modalities['adc'][slice_num,:,:], cmap='gray')
+        #         ax[0][1].set_title('adc')
+        #         ax[0][1].axis('off')
+        #         ax[0][2].imshow(modalities['dwi'][slice_num,:,:], cmap='gray')
+        #         ax[0][2].set_title('dwi')
+        #         ax[0][2].axis('off')
+        #
+        #         # cv2.drawContours(t2w_annot, contours, -1, (60, 200, 200), 1)
+        #         # cv2.drawContours(adc_annot, contours, -1, (60, 200, 200), 1)
+        #         # cv2.drawContours(dwi_annot, contours, -1, (60, 200, 200), 1)
+        #         cv2.drawContours(t2w_annot, contours, -1, (0, 256, 0), 1)
+        #         cv2.drawContours(adc_annot, contours, -1, (0, 256, 0), 1)
+        #         cv2.drawContours(dwi_annot, contours, -1, (0, 256, 0), 1)
+        #
+        #         ax[1][0].imshow(t2w_annot)
+        #         ax[1][0].set_title('t2w')
+        #         ax[1][0].axis('off')
+        #         ax[1][1].imshow(adc_annot)
+        #         ax[1][1].set_title('adc')
+        #         ax[1][1].axis('off')
+        #         ax[1][2].imshow(dwi_annot)
+        #         ax[1][2].set_title('dwi')
+        #         ax[1][2].axis('off')
+        #
+        #         plt.suptitle(f"Patient ID: {scan_id}  Slice: {slice_num}\n")
+        #         plt.savefig(os.path.join(save_dir, scan_id + f'_slice_{slice_num}.png'), dpi=200)
+        #         # plt.show()
 
         # test = (img[list(modalities).index(modality)].split('/')[-1]).split('.')[0]
         save_path = os.path.join(save_dir, scan_id + '.pkl')

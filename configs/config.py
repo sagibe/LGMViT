@@ -16,6 +16,8 @@ def get_default_config():
     cfg.TRAINING.EPOCHS = 50
     cfg.TRAINING.CLIP_MAX_NORM = 0.1
     cfg.TRAINING.EVAL_INTERVAL = 1
+    cfg.TRAINING.SAVE_CKPT_INTERVAL = 1
+    cfg.TRAINING.SAVE_BEST_CKPT_CRITERION = 'f1'
     cfg.TRAINING.RESUME = ''
     cfg.TRAINING.START_EPOCH = 0
     cfg.TRAINING.EVAL = False
@@ -33,19 +35,12 @@ def get_default_config():
     cfg.TRAINING.LOSS.LOCALIZATION_LOSS.USE = False
     cfg.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE = 'kl'
     cfg.TRAINING.LOSS.LOCALIZATION_LOSS.ALPHA = 10
+    cfg.TRAINING.LOSS.LOCALIZATION_LOSS.PATIENT_LIST = None
     # cfg.TRAINING.LOSS.SAMPLING_LOSS
     cfg.TRAINING.LOSS.SAMPLING_LOSS = edict()
     cfg.TRAINING.LOSS.SAMPLING_LOSS.USE = False
     cfg.TRAINING.LOSS.SAMPLING_LOSS.POS_NEG_RATIO = 1
     cfg.TRAINING.LOSS.SAMPLING_LOSS.FULL_NEG_SCAN_RATIO = 0.5
-
-    cfg.TRAINING.SAMPLING_LOSS = edict()
-    cfg.TRAINING.SAMPLING_LOSS.USE = False
-    cfg.TRAINING.SAMPLING_LOSS.POS_NEG_RATIO = 1.0
-    cfg.TRAINING.SAMPLING_LOSS.FULL_NEG_SCAN_RATIO = 0.5
-
-
-
 
 
     # MODEL
@@ -76,7 +71,7 @@ def get_default_config():
 
     # DATA
     cfg.DATA = edict()
-    cfg.DATA.DATASET_DIR = '/mnt/DATA2/Sagi/Data/'
+    cfg.DATA.DATASET_DIR = '/mnt/DATA2/Sagi/Data/Prostate_MRI/'
     cfg.DATA.DATASETS = 'PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/'
     cfg.DATA.DATA_LIST = None
     cfg.DATA.DATA_FOLD = 0
@@ -92,7 +87,7 @@ def get_default_config():
 
     # TEST
     cfg.TEST = edict()
-    cfg.TEST.DATASET_PATH = '/mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/'
+    cfg.TEST.DATASET_PATH = '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/'
     cfg.TEST.BATCH_SIZE = 1
     cfg.TEST.CLIP_MAX_NORM = 0.1
     cfg.TEST.CHECKPOINT = 34

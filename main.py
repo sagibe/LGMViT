@@ -18,6 +18,7 @@ from configs.config import get_default_config, update_config_from_file
 
 from models.proles import build_model
 import utils.util as utils
+from models.resnet import build_resnet
 from utils.engine import train_one_epoch, eval_epoch
 from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
@@ -27,7 +28,7 @@ from utils.losses import FocalLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_6_emb_768_mask_crop_prostate_3D_transformer',
+    'config_name': 'debug',
     'exp_name': None,  # if None default is config_name
     'use_wandb': True,
     'device': 'cuda',
@@ -45,6 +46,7 @@ def main(config, settings):
     np.random.seed(seed)
     random.seed(seed)
 
+    # model = build_resnet(config)
     model = build_model(config)
     model.to(device)
 
@@ -66,6 +68,7 @@ def main(config, settings):
     optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,
                                   weight_decay=config.TRAINING.WEIGHT_DECAY)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0.0000005)
     # criterion = nn.BCELoss()
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
@@ -158,7 +161,8 @@ def main(config, settings):
 
     print("Start training")
     start_time = time.time()
-    for epoch in range(config.TRAINING.START_EPOCH, config.TRAINING.EPOCHS):
+    best_epoch_stat = -np.inf
+    for epoch in range(config.TRAINING.START_EPOCH, config.TRAINING.EPOCHS + 1):
         # if config.distributed:
         #     sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
@@ -184,6 +188,8 @@ def main(config, settings):
                      "Train/Precision": train_stats['precision'],
                      "Train/F1": train_stats['f1'],
                      "Train/AUROC": train_stats['auroc'],
+                     "Train/AUPRC": train_stats['auprc'],
+                     "Train/Cohens_Kappa": train_stats['cohen_kappa'],
                      'Train/lr': train_stats['lr'],
                      "Validation/Loss": val_stats['loss'],
                      "Validation/Accuracy": val_stats['acc'],
@@ -192,6 +198,8 @@ def main(config, settings):
                      "Validation/Precision": val_stats['precision'],
                      "Validation/F1": val_stats['f1'],
                      "Validation/AUROC": val_stats['auroc'],
+                     "Validation/AUPRC": val_stats['auprc'],
+                     "Validation/Cohens_Kappa": val_stats['cohen_kappa'],
                      "epoch": epoch})
             else:
                 wandb.log(
@@ -204,13 +212,22 @@ def main(config, settings):
                      "Train/Precision": train_stats['precision'],
                      "Train/F1": train_stats['f1'],
                      "Train/AUROC": train_stats['auroc'],
+                     "Train/AUPRC": train_stats['auprc'],
+                     "Train/Cohens_Kappa": train_stats['cohen_kappa'],
                      'Train/lr': train_stats['lr'],
                      "epoch": epoch})
         lr_scheduler.step()
         if config.DATA.OUTPUT_DIR:
-            checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
+            # checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
+            checkpoint_paths = []
+            try:
+                if val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION] >= best_epoch_stat:
+                    checkpoint_paths.append(os.path.join(ckpt_dir, 'checkpoint_best.pth'))
+                    best_epoch_stat = val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION]
+            except:
+                print('WARNING: Cant save best epoch checkpoint - unsupported validation metric or validation stats not available')
             # extra checkpoint before LR drop and every epochs
-            if (epoch + 1) % config.TRAINING.LR_DROP == 0 or (epoch + 1) % 1 == 0:
+            if epoch % config.TRAINING.LR_DROP == 0 or epoch % config.TRAINING.SAVE_CKPT_INTERVAL == 0:
                 checkpoint_paths.append(os.path.join(ckpt_dir, f'checkpoint{epoch:04}.pth'))
             for checkpoint_path in checkpoint_paths:
                 utils.save_on_master({

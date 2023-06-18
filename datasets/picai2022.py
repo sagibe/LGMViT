@@ -51,6 +51,7 @@ class PICAI2021Dataset:
         return len(self.scan_list)
 
     def __getitem__(self, idx):
+        scan_id = self.scan_list[idx].split('/')[-1].split('.')[0]
         with open(self.scan_list[idx], 'rb') as handle:
             scan_dict = pickle.load(handle)
 
@@ -116,7 +117,7 @@ class PICAI2021Dataset:
         labels = [scan_dict['cls_labels'][prostate_slices], seg_labels]
         # labels =labels[prostate_slices]
 
-        return tuple([img_concat, labels])
+        return tuple([img_concat, labels, scan_id])
         # return tuple([img_concat, seg_labels if self.get_seg_labels else cls_labels])
 
 def get_square_crop_coords(mask, padding=0):

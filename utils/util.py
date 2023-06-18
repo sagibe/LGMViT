@@ -6,7 +6,8 @@ import time
 import datetime
 from collections import defaultdict, deque
 from torch import sigmoid
-from torchmetrics.classification import BinaryAUROC
+from torchmetrics.classification import BinaryAUROC, AveragePrecision, BinaryCohenKappa
+# from torcheval.metrics.functional import binary_auroc, binary_auprc
 
 
 class RecursiveNamespace(SimpleNamespace):
@@ -280,7 +281,7 @@ class PerformanceMetrics(object):
     def __init__(self, device, bin_thresh=0.5):
         self.device = device
         self.preds = torch.empty((0, 1), device=device, dtype=torch.float32)
-        self.targets = torch.empty((0, 1), device=device, dtype=torch.float32)
+        self.targets = torch.empty((0, 1), device=device, dtype=torch.int)
         self.tp = torch.zeros(1, device=device, dtype=torch.int64)
         self.tn = torch.zeros(1, device=device, dtype=torch.int64)
         self.fp = torch.zeros(1, device=device, dtype=torch.int64)
@@ -289,7 +290,7 @@ class PerformanceMetrics(object):
 
     def update(self, outputs, targets):
         self.preds = torch.cat((self.preds, outputs), 0)
-        self.targets = torch.cat((self.targets, targets), 0)
+        self.targets = torch.cat((self.targets, targets.to(int)), 0)
         if outputs.size(1) == 1:
             preds = (sigmoid(outputs) > self.bin_thresh) * 1
         else:
@@ -321,8 +322,16 @@ class PerformanceMetrics(object):
         return ((self.tp + self.tn) / (self.tp + self.tn + self.fp + self.fn)).item()
     @property
     def auroc(self):
-        auroc = BinaryAUROC(thresholds=None)
+        auroc = BinaryAUROC(thresholds=None).to(self.device)
         return auroc(self.preds, self.targets).item()
+    @property
+    def auprc(self):
+        auprc = AveragePrecision(task="binary").to(self.device)
+        return auprc(self.preds, self.targets).item()
+    @property
+    def cohen_kappa(self):
+        cohen_kappa = BinaryCohenKappa().to(self.device)
+        return cohen_kappa(self.preds, self.targets).item()
 
     # def __str__(self):
     #     return self.fmt.format(
