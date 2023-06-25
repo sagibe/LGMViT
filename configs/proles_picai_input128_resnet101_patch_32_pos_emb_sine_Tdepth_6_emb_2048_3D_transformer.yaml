@@ -52,8 +52,9 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/
   DATASETS: picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/  #  PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
-  DATA_LIST: #  /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list_balanced.json # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
+  DATA_SPLIT_FILE: '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/train_val_splits.json'
   DATA_FOLD: 0
+  DATA_LIST: #  /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list_balanced.json # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   INPUT_SIZE: 128
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding

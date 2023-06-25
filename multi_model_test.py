@@ -30,40 +30,41 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 SETTINGS = {
     'models': [
-        # {
-        #     'config': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_12_emb_768_2D_transformer',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ViT-16 2D transformer'},  # if None default is config_name
-        # {
-        #     'config': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_12_emb_768_3D_transformer',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ViT-16 3D transformer'},  # if None default is config_name
-        # {
-        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ProLesCalssifier - Basic'},  # if None default is config_name
-        # {
-        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_SL_PNR_3_FNR_0_5',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ProLesCalssifier - Sampling Loss'},  # if None default is config_name
-        # {
-        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_10',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ProLesCalssifier - Localization Loss'},  # if None default is config_name
         {
-            'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_10_SL_PNR_3_FNR_0_5',
+            'config': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_12_emb_768_2D_transformer',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ViT-16 2D transformer'},  # if None default is config_name
+        {
+            'config': 'proles_picai_input128_PE_patch_16_pos_emb_sine_Tdepth_12_emb_768_3D_transformer',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ViT-16 3D transformer'},  # if None default is config_name
+        {
+            'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ProLesCalssifier - Basic'},  # if None default is config_name
+        {
+            'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_SL_PNR_3_FNR_0_5',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ProLesCalssifier - Sampling Loss'},  # if None default is config_name
+        {
+            'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_15',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ProLesCalssifier - Localization Loss'},  # if None default is config_name
+        {
+            'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_15_SL_PNR_3_FNR_0_5',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ProLesCalssifier - Localization and Sampling Loss'},  # if None default is config_name
-        # {
-        #     'config': 'resnet101',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'Resnet101'},  # if None default is config_name
+        {
+            'config': 'resnet101',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'Resnet101'},  # if None default is config_name
     ],
-    'data_path': '/mnt/DATA1/Sagi/Data/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
+    'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
+    # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
     'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
     'output_name': None,  # if None default is datetime
     'save_results': True,
-    'save_attn': True,
+    'save_attn': False,
     'device': 'cuda',
 }
 

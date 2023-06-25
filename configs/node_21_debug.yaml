@@ -1,7 +1,7 @@
 TRAINING:
   LR: 0.00001
   LR_DROP: 12
-  BATCH_SIZE: 1
+  BATCH_SIZE: 2
   WEIGHT_DECAY: 0.0001
   EPOCHS: 50
   CLIP_MAX_NORM: 0.1
@@ -19,12 +19,12 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: true
+      USE: false
       TYPE: 'kl' # options: 'kl
       ALPHA: 10
       PATIENT_LIST: null
     SAMPLING_LOSS:
-      USE: true
+      USE: false
       POS_NEG_RATIO: 1
       FULL_NEG_SCAN_RATIO: 0.5
 
@@ -51,9 +51,9 @@ MODEL:
     ATTENTION_3D: true
 
 DATA:
-  DATASET_DIR: /mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/
-  DATASETS: picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/
-  DATA_SPLIT_FILE: '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/train_val_splits_debug.json'
+  DATASET_DIR: /mnt/DATA1/Sagi/Data/node21/
+  DATASETS: cxr_images/proccessed_data/
+  DATA_LIST: /mnt/DATA1/Sagi/Data/node21/cxr_images/proccessed_data/train_val_split.json  # /mnt/DATA2/Sagi/Data/PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/data_list.json
   DATA_FOLD: 0
   INPUT_SIZE: 128
   PREPROCESS:
