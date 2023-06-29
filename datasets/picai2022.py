@@ -21,23 +21,21 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class PICAI2021Dataset:
-    def __init__(self, data_dirs, transforms=None, fold_id=None, scan_set='', data_list=None, input_size=128,
+    def __init__(self, data_dir, split_dict=None, transforms=None, fold_id=None, scan_set='', input_size=128,
                  resize_mode='interpolate', mask=True, crop_prostate=True, padding=0, task='cls'):
-
         self.scan_list = []
-        for data_dir in data_dirs:
-            # if scan_set in ['train', 'val']:
-            #     if fold_id is None:
-            #         files_dir = os.path.join(data_dir, scan_set)
-            #     else:
-            #         files_dir = os.path.join(data_dir, f'fold_{fold_id}', scan_set)
-            # else:
-            #     files_dir = data_dir
-            files_dir = os.path.join(data_dir, f'fold_{fold_id}',scan_set) if scan_set in ['train', 'val'] else data_dir
-            if scan_set in ['train', 'val'] and data_list is not None:
-                self.scan_list += [os.path.join(files_dir,f) for f in os.listdir(files_dir) if (f.endswith('.pkl') and f.split('.')[0] in data_list[scan_set]['with_lesions'] + data_list[scan_set]['healthy'])]
-            else:
-                self.scan_list += [os.path.join(files_dir, f) for f in os.listdir(files_dir) if f.endswith('.pkl')]
+        if split_dict is not None:
+            patient_list = split_dict[f'fold_{fold_id}'][scan_set]
+            self.scan_list += [os.path.join(data_dir,f) for f in os.listdir(data_dir) if (f.endswith('.pkl') and f.split('.')[0] in patient_list)]
+        else:
+            self.scan_list += [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.pkl')]
+
+        # for data_dir in data_dirs:
+        #     files_dir = os.path.join(data_dir, f'fold_{fold_id}',scan_set) if scan_set in ['train', 'val'] else data_dir
+        #     if scan_set in ['train', 'val'] and data_list is not None:
+        #         self.scan_list += [os.path.join(files_dir,f) for f in os.listdir(files_dir) if (f.endswith('.pkl') and f.split('.')[0] in data_list[scan_set]['with_lesions'] + data_list[scan_set]['healthy'])]
+        #     else:
+        #         self.scan_list += [os.path.join(files_dir, f) for f in os.listdir(files_dir) if f.endswith('.pkl')]
         # self.scan_list = [os.path.join(files_dir, f) for f in os.listdir(files_dir) if f.endswith('.pkl') and f.split('.')[0] not in ignore_list]
         self.input_size = input_size
         self.mask = mask

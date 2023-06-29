@@ -73,7 +73,7 @@ def get_default_config():
     cfg.DATA = edict()
     cfg.DATA.DATASET_DIR = '/mnt/DATA2/Sagi/Data/Prostate_MRI/'
     cfg.DATA.DATASETS = 'PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/'
-    cfg.DATA.DATA_LIST = None
+    cfg.DATA.DATA_SPLIT_FILE = '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/train_val_splits.json'
     cfg.DATA.DATA_FOLD = 0
     cfg.DATA.INPUT_SIZE = 128
     cfg.DATA.MODALITIES = 'all'  # 'all' for all available modalities. For specific modalities in a list of the desired ones (example = [])
