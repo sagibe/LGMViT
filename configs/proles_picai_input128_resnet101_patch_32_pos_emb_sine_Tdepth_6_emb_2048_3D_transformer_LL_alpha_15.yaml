@@ -65,7 +65,7 @@ DATA:
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/
 
 TEST:
-  DATASET_PATH: /mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
+  DATASET_PATH: #  if empty will take picai validation set according to fold
   BATCH_SIZE: 1
   CLIP_MAX_NORM: 0.1
   CHECKPOINT: 'best'

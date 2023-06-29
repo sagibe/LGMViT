@@ -21,12 +21,14 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class PICAI2021Dataset:
-    def __init__(self, data_dir, split_dict, transforms=None, fold_id=None, scan_set='', input_size=128,
+    def __init__(self, data_dir, split_dict=None, transforms=None, fold_id=None, scan_set='', input_size=128,
                  resize_mode='interpolate', mask=True, crop_prostate=True, padding=0, task='cls'):
-
-        patient_list = split_dict[f'fold_{fold_id}'][scan_set]
         self.scan_list = []
-        self.scan_list += [os.path.join(data_dir,f) for f in os.listdir(data_dir) if (f.endswith('.pkl') and f.split('.')[0] in patient_list)]
+        if split_dict is not None:
+            patient_list = split_dict[f'fold_{fold_id}'][scan_set]
+            self.scan_list += [os.path.join(data_dir,f) for f in os.listdir(data_dir) if (f.endswith('.pkl') and f.split('.')[0] in patient_list)]
+        else:
+            self.scan_list += [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.pkl')]
 
         # for data_dir in data_dirs:
         #     files_dir = os.path.join(data_dir, f'fold_{fold_id}',scan_set) if scan_set in ['train', 'val'] else data_dir
