@@ -14,6 +14,7 @@ import random
 from pathlib import Path
 import utils.transforms as T
 from configs.config import get_default_config, update_config_from_file
+from datasets.covid1920 import Covid1920Dataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
 
@@ -29,10 +30,11 @@ from utils.losses import FocalLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_15',
+    'config_name': 'debug',
     'exp_name': None,  # if None default is config_name
-    'data_fold': 2,  # None to take fold number from config
+    'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
+    'wandb_proj_name': 'ProLesClassifier',  # ProLesClassifier_covid1920
     'device': 'cuda',
     'seed': 42
 }
@@ -139,6 +141,19 @@ def main(config, settings):
                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
         dataset_val = Node21Dataset(data_dir,
                                        scan_set='val',
+                                       input_size=config.DATA.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'covid_19_20' in config.DATA.DATASETS:
+        dataset_train = Covid1920Dataset(data_dir,
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.DATA.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = Covid1920Dataset(data_dir,
+                                       scan_set='val',
+                                       split_dict=split_dict,
                                        input_size=config.DATA.INPUT_SIZE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING)
@@ -281,7 +296,7 @@ if __name__ == '__main__':
 
     # W&B logger initialization
     if settings['use_wandb']:
-        wandb.init(project='ProLesClassifier',
+        wandb.init(project=settings['wandb_proj_name'],
                    name=settings['exp_name'],
                    config={
                        "batch_size": config.TRAINING.BATCH_SIZE,

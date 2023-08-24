@@ -69,7 +69,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         if localization_loss_params.USE and targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
             scale_factor_h = attn_map.shape[-2] / lesion_annot.shape[-2]
             scale_factor_w = attn_map.shape[-1] / lesion_annot.shape[-1]
-            attn_map = F.interpolate(attn_map, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w),mode='nearest')
+            attn_map = F.interpolate(attn_map, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w), mode='nearest')
             # lesion_annot = F.interpolate(lesion_annot, scale_factor=(scale_factor_h, scale_factor_w), mode='bilinear')
             # ################
             # import matplotlib.pyplot as plt
