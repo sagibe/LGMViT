@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import sigmoid
 import matplotlib.pyplot as plt
+import cv2
 
 import utils.util as utils
 # from datasets.coco_eval import CocoEvaluator
@@ -250,6 +251,7 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
                     cur_slice = samples[slice].permute(1, 2, 0).cpu().numpy()
                     cur_annot = lesion_annot[0][slice].cpu().numpy()
                     cur_attn = attn_map[0][slice].cpu().numpy()
+                    # plot_attention_map(cur_slice, cur_attn)
                     if cur_annot.sum() > 0:
                         fig, ax = plt.subplots(1, 5, figsize=(35, 6))
                         ax[0].imshow(cur_slice[...,0], cmap='gray')
@@ -272,3 +274,68 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
                         # plt.show()
 
     return metrics
+
+def plot_attention_on_image(image, attention_map):
+    """
+    Plots an attention map on top of an image.
+
+    Args:
+        image (numpy.ndarray): The input image as a NumPy array.
+        attention_map (numpy.ndarray): The attention map as a NumPy array.
+    """
+    # Normalize the attention map to be between 0 and 1
+    attention_map = (attention_map - np.min(attention_map)) / (np.max(attention_map) - np.min(attention_map))
+
+    # Resize the attention map to match the image dimensions
+    attention_map = np.resize(attention_map, image.shape[:2])
+
+    # Create a heatmap using a colormap
+    heatmap = plt.get_cmap('viridis')(attention_map)
+
+    # Overlay the heatmap on the original image
+    overlaid_image = (heatmap[..., :3] * 0.5 + image * 0.5).clip(0, 1)
+
+    # Plot the overlaid image
+    plt.figure(figsize=(10, 6))
+    plt.subplot(1, 2, 1)
+    plt.imshow(image)
+    plt.title("Original Image")
+    plt.axis('off')
+
+    plt.subplot(1, 2, 2)
+    plt.imshow(overlaid_image)
+    plt.title("Image with Attention Map")
+    plt.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_attention_map(image, attention_map):
+  """Plots the attention map on top of the image.
+
+  Args:
+    image: The image to plot the attention map on.
+    attention_map: The attention map to plot.
+
+  Returns:
+    A tuple of the original image and the image with the attention map overlaid.
+  """
+
+  # Convert the image and attention map to NumPy arrays.
+  image = np.array(image)
+  attention_map = np.array(attention_map)
+
+  # Resize the attention map to the same size as the image.
+  attention_map = cv2.resize(attention_map, (image.shape[1], image.shape[0]))
+
+  # Normalize the attention map to the range [0, 1].
+  attention_map = attention_map / np.max(attention_map)
+
+  # Convert the attention map to a heatmap.
+  heatmap = cv2.applyColorMap(attention_map, cv2.COLORMAP_JET)
+
+  # Add the heatmap to the image.
+  overlaid_image = cv2.addWeighted(image, 0.7, heatmap, 0.3, 0)
+
+  return image, overlaid_image

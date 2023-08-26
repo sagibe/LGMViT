@@ -14,6 +14,7 @@ import random
 from pathlib import Path
 import utils.transforms as T
 from configs.config import get_default_config, update_config_from_file
+from datasets.brats20 import BraTS20Dataset
 from datasets.covid1920 import Covid1920Dataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
@@ -152,6 +153,19 @@ def main(config, settings):
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
         dataset_val = Covid1920Dataset(data_dir,
+                                       scan_set='val',
+                                       split_dict=split_dict,
+                                       input_size=config.DATA.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'BraTS2020' in config.DATA.DATASETS:
+        dataset_train = BraTS20Dataset(data_dir,
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.DATA.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = BraTS20Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.DATA.INPUT_SIZE,
