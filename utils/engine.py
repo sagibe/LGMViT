@@ -14,8 +14,12 @@ import torch.nn.functional as F
 from torch import sigmoid
 import matplotlib.pyplot as plt
 import cv2
+from mmengine.visualization import Visualizer
 
 import utils.util as utils
+from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attetntion
+
+
 # from datasets.coco_eval import CocoEvaluator
 # from datasets.panoptic_eval import PanopticEvaluator
 
@@ -53,24 +57,37 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         samples = samples.squeeze(0).float().to(device)
         targets = labels[0].float().T.to(device)
         lesion_annot = labels[1].float().to(device)
-        outputs, attn_map = model(samples)
-        if attn_map is not None:
-            attn_map = attn_map.unsqueeze(0)
+        outputs, attn = model(samples)
+        attn_maps = generate_spatial_attetntion(attn)
+        # #######
+        # relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(20, 8, 8)
+        # # attn_map_old = F.softmax(relative_attention(attn), dim=1)
+        # attn_map_old = relative_attention(attn)
+        # #######
+        # if attn_map_old is not None:
+        #     attn_map_old = attn_map_old.unsqueeze(0)
         # sampling loss
         if sampling_loss_params.USE:
             outputs, targets, sampled_idx = sample_loss_inputs(outputs, targets,
                                                   pos_neg_ratio=sampling_loss_params.POS_NEG_RATIO,
                                                   full_neg_scan_ratio=sampling_loss_params.FULL_NEG_SCAN_RATIO)
-            attn_map = attn_map[:, sampled_idx, :, :]
+            attn_map = attn_map[sampled_idx, :, :, :]
             lesion_annot = lesion_annot[:, sampled_idx, :, :]
 
         cls_loss = criterion(outputs, targets)
 
         # localization loss
         if localization_loss_params.USE and targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
-            scale_factor_h = attn_map.shape[-2] / lesion_annot.shape[-2]
-            scale_factor_w = attn_map.shape[-1] / lesion_annot.shape[-1]
-            attn_map = F.interpolate(attn_map, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w), mode='nearest')
+            # scale_factor_h = attn_map_old.shape[-2] / lesion_annot.shape[-2]
+            # scale_factor_w = attn_map_old.shape[-1] / lesion_annot.shape[-1]
+            # attn_map_old = F.interpolate(attn_map_old, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w), mode='nearest')
+            # attn_map_old = F.interpolate(attn_map_old, (lesion_annot.shape[-1], lesion_annot.shape[-1]), mode='nearest')
+
+            reduced_attn_maps = extract_heatmap(attn_maps,
+                                                feat_interpolation=localization_loss_params.FEAT_SPATIAL_INTERPOLATION,
+                                                channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                                                resize_shape=lesion_annot.shape[-2:])
+            reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
             # lesion_annot = F.interpolate(lesion_annot, scale_factor=(scale_factor_h, scale_factor_w), mode='bilinear')
             # ################
             # import matplotlib.pyplot as plt
@@ -80,7 +97,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             # ax2.imshow(lesion_annot[0, slice, :, :].cpu().detach().numpy())
             # plt.show()
             ################
-            localization_loss = localization_loss_params.ALPHA * localization_criterion(torch.cat(utils.attention_softmax_2d(attn_map[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+            localization_loss = localization_loss_params.ALPHA * localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
                                                        torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
             loss = cls_loss + localization_loss
             localization_loss_value = localization_loss.item()
@@ -174,7 +191,7 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         for samples, labels, _ in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
-            outputs, attn_map = model(samples)
+            outputs, attn = model(samples)
             loss = criterion(outputs, targets)
             loss_value = loss.item()
             metrics.update(outputs, targets)
@@ -228,7 +245,7 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
             lesion_annot = labels[1].float().to(device)
-            outputs, attn_map = model(samples)
+            outputs, attn = model(samples)
             metrics.update(outputs, targets)
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
@@ -243,99 +260,37 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
             if save_attn_dir:
                 save_dir = os.path.join(save_attn_dir, 'attn_maps')
                 os.makedirs(save_dir, exist_ok=True)
-                scale_factor_h = attn_map.shape[-2] / lesion_annot.shape[-2]
-                scale_factor_w = attn_map.shape[-1] / lesion_annot.shape[-1]
-                attn_map = attn_map.unsqueeze(0)
-                attn_map = F.interpolate(attn_map, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w), mode='nearest')
+                attn_maps = generate_spatial_attetntion(attn)
                 for slice in range(samples.shape[0]):
                     cur_slice = samples[slice].permute(1, 2, 0).cpu().numpy()
                     cur_annot = lesion_annot[0][slice].cpu().numpy()
-                    cur_attn = attn_map[0][slice].cpu().numpy()
-                    # plot_attention_map(cur_slice, cur_attn)
+                    cur_attn = attn_maps[slice].cpu()
+                    cur_attn_heatmap = extract_heatmap(cur_attn, channel_reduction='select_max', resize_shape=cur_slice.shape[:2])
+                    attn_over_img = generate_heatmap_over_img(cur_attn_heatmap, cur_slice, alpha=0.3)
+                    attn_over_annot = generate_heatmap_over_img(cur_attn_heatmap, cur_annot, alpha=0.3)
+
                     if cur_annot.sum() > 0:
-                        fig, ax = plt.subplots(1, 5, figsize=(35, 6))
-                        ax[0].imshow(cur_slice[...,0], cmap='gray')
-                        ax[0].set_title('t2w')
-                        ax[0].axis('off')
-                        ax[1].imshow(cur_slice[...,1], cmap='gray')
-                        ax[1].set_title('adc')
-                        ax[1].axis('off')
-                        ax[2].imshow(cur_slice[...,2], cmap='gray')
-                        ax[2].set_title('dwi')
-                        ax[2].axis('off')
-                        ax[3].imshow(cur_annot)
-                        ax[3].set_title('Lesion Annotation')
-                        ax[3].axis('off')
-                        ax[4].imshow(cur_attn)
-                        ax[4].set_title('Attention Map')
-                        ax[4].axis('off')
+                        fig, ax = plt.subplots(2, 3, figsize=(10, 7))
+                        ax[0][0].imshow(cur_slice[...,0], cmap='gray')
+                        ax[0][0].set_title('t2w')
+                        ax[0][0].axis('off')
+                        ax[0][1].imshow(cur_slice[...,1], cmap='gray')
+                        ax[0][1].set_title('adc')
+                        ax[0][1].axis('off')
+                        ax[0][2].imshow(cur_slice[...,2], cmap='gray')
+                        ax[0][2].set_title('dwi')
+                        ax[0][2].axis('off')
+                        ax[1][0].imshow(cur_slice)
+                        ax[1][0].set_title('Meshed Modalities')
+                        ax[1][0].axis('off')
+                        ax[1][1].imshow(attn_over_img)
+                        ax[1][1].set_title('Attention Over Slice')
+                        ax[1][1].axis('off')
+                        ax[1][2].imshow(attn_over_annot)
+                        ax[1][2].set_title('Attention Over GT')
+                        ax[1][2].axis('off')
                         plt.suptitle(f"Patient ID: {scan_id[0]}  Slice: {slice}\n")
-                        fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice}.jpg'), dpi=50)
+                        fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice}.jpg'), dpi=150)
                         # plt.show()
 
     return metrics
-
-def plot_attention_on_image(image, attention_map):
-    """
-    Plots an attention map on top of an image.
-
-    Args:
-        image (numpy.ndarray): The input image as a NumPy array.
-        attention_map (numpy.ndarray): The attention map as a NumPy array.
-    """
-    # Normalize the attention map to be between 0 and 1
-    attention_map = (attention_map - np.min(attention_map)) / (np.max(attention_map) - np.min(attention_map))
-
-    # Resize the attention map to match the image dimensions
-    attention_map = np.resize(attention_map, image.shape[:2])
-
-    # Create a heatmap using a colormap
-    heatmap = plt.get_cmap('viridis')(attention_map)
-
-    # Overlay the heatmap on the original image
-    overlaid_image = (heatmap[..., :3] * 0.5 + image * 0.5).clip(0, 1)
-
-    # Plot the overlaid image
-    plt.figure(figsize=(10, 6))
-    plt.subplot(1, 2, 1)
-    plt.imshow(image)
-    plt.title("Original Image")
-    plt.axis('off')
-
-    plt.subplot(1, 2, 2)
-    plt.imshow(overlaid_image)
-    plt.title("Image with Attention Map")
-    plt.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_attention_map(image, attention_map):
-  """Plots the attention map on top of the image.
-
-  Args:
-    image: The image to plot the attention map on.
-    attention_map: The attention map to plot.
-
-  Returns:
-    A tuple of the original image and the image with the attention map overlaid.
-  """
-
-  # Convert the image and attention map to NumPy arrays.
-  image = np.array(image)
-  attention_map = np.array(attention_map)
-
-  # Resize the attention map to the same size as the image.
-  attention_map = cv2.resize(attention_map, (image.shape[1], image.shape[0]))
-
-  # Normalize the attention map to the range [0, 1].
-  attention_map = attention_map / np.max(attention_map)
-
-  # Convert the attention map to a heatmap.
-  heatmap = cv2.applyColorMap(attention_map, cv2.COLORMAP_JET)
-
-  # Add the heatmap to the image.
-  overlaid_image = cv2.addWeighted(image, 0.7, heatmap, 0.3, 0)
-
-  return image, overlaid_image

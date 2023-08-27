@@ -155,15 +155,30 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 #     'device': 'cuda',
 # }
 
+# SETTINGS = {
+#     'model': {
+#             'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'ProLesClassifier 3D transformer'},  # if None default is config_name
+#     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
+#     'data_path': '',
+#     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+#     'output_name': None,  # if None default is datetime
+#     'save_results': True,
+#     'save_attn': True,
+#     'device': 'cuda',
+# }
+
 SETTINGS = {
     'model': {
-            'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer',
+            'config': 'proles_brats20_input256_PE_patch_32_pos_emb_sine_Tdepth_12_emb_768_2D_transformer_homepc',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ProLesClassifier 3D transformer'},  # if None default is config_name
+            'plot_name': 'ProLesClassifier - BraTS20'},  # if None default is config_name
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
     'data_path': '',
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
-    'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+    'output_dir': 'C:/Users/sagib/OneDrive/Desktop/Studies/Msc/Thesis/Results/ProLesClassifier',
     'output_name': None,  # if None default is datetime
     'save_results': True,
     'save_attn': True,
@@ -353,51 +368,6 @@ def main(settings):
     #             print(df_mean.round(6))
     print('Done!')
 
-def plot_attention_on_image(image, attention_map):
-    """
-    Plots an attention map on top of an image.
-
-    Args:
-        image (numpy.ndarray): The input image as a NumPy array.
-        attention_map (numpy.ndarray): The attention map as a NumPy array.
-    """
-    # Normalize the attention map to be between 0 and 1
-    attention_map = (attention_map - np.min(attention_map)) / (np.max(attention_map) - np.min(attention_map))
-
-    # Resize the attention map to match the image dimensions
-    attention_map = np.resize(attention_map, image.shape[:2])
-
-    # Create a heatmap using a colormap
-    heatmap = plt.get_cmap('viridis')(attention_map)
-
-    # Overlay the heatmap on the original image
-    overlaid_image = (heatmap[..., :3] * 0.5 + image * 0.5).clip(0, 1)
-
-    # Plot the overlaid image
-    plt.figure(figsize=(10, 6))
-    plt.subplot(1, 2, 1)
-    plt.imshow(image)
-    plt.title("Original Image")
-    plt.axis('off')
-
-    plt.subplot(1, 2, 2)
-    plt.imshow(overlaid_image)
-    plt.title("Image with Attention Map")
-    plt.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-
-# # Example usage
-# # Replace 'image_path.jpg' and 'attention_map.npy' with your actual image and attention map
-# image_path = 'image_path.jpg'
-# attention_map_path = 'attention_map.npy'
-#
-# image = plt.imread(image_path)
-# attention_map = np.load(attention_map_path)
-#
-# plot_attention_on_image(image, attention_map)
 
 if __name__ == '__main__':
     settings = SETTINGS

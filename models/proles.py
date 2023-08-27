@@ -82,15 +82,15 @@ class ProLesClassifier(nn.Module):
             out_transformer = out_transformer.reshape(f, h * w, em)
 
         out_transformer = out_transformer.permute(0,2,1)
-        if self.attention_3d:
-            relative_attention = lambda attn: attn.max(dim=1)[0][0].max(axis=0)[0].view(f, self.feat_size, self.feat_size)
-        else:
-            relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(f, self.feat_size, self.feat_size)
-        attn_map = F.softmax(relative_attention(attn), dim=1)
-        # prediction_attention_1_full_res = zoom(prediction_attention_1, 16, order=0)
+        # if self.attention_3d:
+        #     relative_attention = lambda attn: attn.max(dim=1)[0][0].max(axis=0)[0].view(f, self.feat_size, self.feat_size)
+        # else:
+        #     relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(f, self.feat_size, self.feat_size)
+        # attn_map = F.softmax(relative_attention(attn), dim=1)
+        # # prediction_attention_1_full_res = zoom(prediction_attention_1, 16, order=0)
 
         outputs_class = self.mlp_head(self.avgpool(out_transformer).squeeze())
-        return outputs_class, attn_map #out
+        return outputs_class, attn #out
 
 def build_model(args):
     device = torch.device(args.DEVICE)
