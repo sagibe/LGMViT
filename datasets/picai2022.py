@@ -14,10 +14,10 @@ import scipy
 import torch
 import SimpleITK as sitk
 
-from batchgenerators.dataloading.data_loader import DataLoader
-from monai.transforms import Compose, EnsureType
-from picai_baseline.unet.training_setup.image_reader import SimpleITKDataset
-from torch.utils.data import Dataset, DataLoader
+# from batchgenerators.dataloading.data_loader import DataLoader
+# from monai.transforms import Compose, EnsureType
+# from picai_baseline.unet.training_setup.image_reader import SimpleITKDataset
+# from torch.utils.data import Dataset, DataLoader
 
 
 class PICAI2021Dataset:

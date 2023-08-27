@@ -15,11 +15,6 @@ import scipy
 import torch
 import SimpleITK as sitk
 
-from batchgenerators.dataloading.data_loader import DataLoader
-from monai.transforms import Compose, EnsureType
-from picai_baseline.unet.training_setup.image_reader import SimpleITKDataset
-from torch.utils.data import Dataset, DataLoader
-
 
 class BraTS20Dataset:
     def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=512,
@@ -90,6 +85,12 @@ class BraTS20Dataset:
         # apply the transforms
         if self._transforms is not None:
             scan = self._transforms(scan)
+
+        if True:
+            half_seg_size = 10
+            mid_idx = cls_labels.shape[0]//2
+            labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
+            return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
         labels = [cls_labels, seg_labels]
         return tuple([scan, labels, scan_id])

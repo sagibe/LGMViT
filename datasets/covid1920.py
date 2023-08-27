@@ -15,11 +15,6 @@ import scipy
 import torch
 import SimpleITK as sitk
 
-from batchgenerators.dataloading.data_loader import DataLoader
-from monai.transforms import Compose, EnsureType
-from picai_baseline.unet.training_setup.image_reader import SimpleITKDataset
-from torch.utils.data import Dataset, DataLoader
-
 
 class Covid1920Dataset:
     def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=512,

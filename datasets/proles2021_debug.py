@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 import torch.utils.data
 import torchvision
-from pycocotools.ytvos import YTVOS
+# from pycocotools.ytvos import YTVOS
 # import datasets.transforms as T
 import os
 from PIL import Image
