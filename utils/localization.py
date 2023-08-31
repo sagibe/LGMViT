@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torchvision.transforms.functional import gaussian_blur
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 import warnings
 
@@ -225,3 +226,39 @@ def img_from_canvas(canvas: 'FigureCanvasAgg') -> np.ndarray:
     img_rgba = buffer.reshape(height, width, 4)
     rgb, alpha = np.split(img_rgba, [3], axis=2)
     return rgb.astype('uint8')
+
+def generate_blur_masks_normalized(binary_masks, kernel_size=5, sigma=None):
+    """
+    Apply Gaussian blur to a batch of binary masks and return normalized blurred masks.
+
+    Args:
+        binary_masks (torch.Tensor): Batch of binary masks with shape (..., batch_size, height, width).
+        kernel_size (int, optional): Size of the Gaussian kernel for blurring. Default is 5.
+        sigma (float, optional): Standard deviation of the Gaussian distribution for blurring. Default is 0.3 * ((kernel_size - 1) * 0.5 - 1) + 0.8.
+
+    Returns:
+        torch.Tensor: Batch of normalized blurred masks with the same shape as input binary masks.
+                      The values are between 0 and 1.
+    """
+    # assert binary_masks.ndim == 3 or (binary_masks.ndim == 4 and binary_masks.shape[0] == 1), "Input binary masks should have 3 dimensions: (batch_size, height, width) or 3 dimensions: (1, batch_size, height, width)"
+    # blurred_masks = []
+    # num_dims = binary_masks.ndim
+    # if (num_dims == 4 and binary_masks.shape[0] == 1):
+    #     binary_masks = binary_masks.squeeze(0)
+
+    blurred_masks = gaussian_blur(binary_masks, kernel_size=kernel_size, sigma=sigma)
+    # for mask in binary_masks:
+    #     # Convert mask to float tensor
+    #     mask_float = mask.float()
+    #
+    #     # Apply Gaussian blur using PyTorch's functional interface
+    #     blurred_mask = gaussian_blur(mask_float, kernel_size=kernel_size, sigma=sigma)
+    #
+    #     # Normalize blurred mask to have values between 0 and 1
+    #     blurred_mask_normalized = (blurred_mask - blurred_mask.min()) / (blurred_mask.max() - blurred_mask.min())
+    #
+    #     blurred_masks.append(blurred_mask_normalized)
+    # blurred_masks = torch.stack(blurred_masks)
+    # if num_dims == 4:
+    #     return blurred_masks.unsqueeze(0)
+    return blurred_masks

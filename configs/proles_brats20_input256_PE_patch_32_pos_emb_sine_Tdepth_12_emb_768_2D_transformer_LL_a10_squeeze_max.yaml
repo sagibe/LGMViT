@@ -19,8 +19,10 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: false
+      USE: true
       TYPE: 'kl' # options: 'kl
+      FEAT_SPATIAL_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest
+      FEAT_CHANNEL_REDUCTION: 'squeeze_max' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
       ALPHA: 10
       PATIENT_LIST: null
     SAMPLING_LOSS:

@@ -17,7 +17,8 @@ import cv2
 from mmengine.visualization import Visualizer
 
 import utils.util as utils
-from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attetntion
+from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attetntion, \
+    generate_blur_masks_normalized
 
 
 # from datasets.coco_eval import CocoEvaluator
@@ -97,8 +98,23 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             # ax2.imshow(lesion_annot[0, slice, :, :].cpu().detach().numpy())
             # plt.show()
             ################
-            localization_loss = localization_loss_params.ALPHA * localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
-                                                       torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
+            if localization_loss_params.SEG_SMOOTH_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
+                lesion_annot = generate_blur_masks_normalized(lesion_annot, kernel_size=localization_loss_params.SEG_SMOOTH_KERNEL_SIZE)
+            if localization_loss_params.TYPE == 'mse':
+                localization_loss = (localization_loss_params.ALPHA *
+                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
+                                                           torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind())))
+            # elif localization_loss_params.TYPE == 'mse_fgbg':
+            #     localization_loss = localization_loss_params.ALPHA * localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
+            #                                                torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
+            elif localization_loss_params.TYPE == 'mse_fgbg':
+                localization_loss = (localization_loss_params.ALPHA *
+                                     localization_criterion(torch.cat(utils.min_max_normalize(reduced_attn_maps[:,targets[:,0].to(bool),:,:]).unbind()),
+                                                           torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind())))
+            else:
+                localization_loss = (localization_loss_params.ALPHA *
+                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+                                                           torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=True).unbind())))
             loss = cls_loss + localization_loss
             localization_loss_value = localization_loss.item()
             metric_logger.update(localization_loss=localization_loss_value)

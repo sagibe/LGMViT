@@ -19,11 +19,10 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: true
+      USE: false
       TYPE: 'kl' # options: 'kl
       FEAT_SPATIAL_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 10
       PATIENT_LIST: null
     SAMPLING_LOSS:
@@ -48,15 +47,15 @@ MODEL:
     NUM_LAYERS: 12
     FORWARD_EXPANSION_RATIO: 4
     EMBED_SIZE: 768
-    HEADS: 12
+    HEADS: 8
     DROP_PATH: 0.1
     FORWARD_DROP_P: 0.1
     ATTENTION_3D: false
 
 DATA:
-  DATASET_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Data
+  DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: MICCAI_BraTS2020_TrainingData
-  DATA_SPLIT_FILE: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Data\MICCAI_BraTS2020_TrainingData\train_val_split_debug.json
+  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/MICCAI_BraTS2020_TrainingData/train_val_split.json
   DATA_FOLD: 0
   INPUT_SIZE: 256
   PREPROCESS:
@@ -65,7 +64,7 @@ DATA:
     CROP_PROSTATE: true # crop scan according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
-  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\ProLesClassifier
+  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/
 
 TEST:
   DATASET_PATH:
@@ -74,7 +73,7 @@ TEST:
   CHECKPOINT: 6
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\ProLesClassifier
+  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/
 
 DISTRIBUTED:
   WORLD_SIZE: 1

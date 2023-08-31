@@ -86,11 +86,11 @@ class BraTS20Dataset:
         if self._transforms is not None:
             scan = self._transforms(scan)
 
-        if True:
-            half_seg_size = 10
-            mid_idx = cls_labels.shape[0]//2
-            labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
-            return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
+        # if True:
+        #     half_seg_size = 10
+        #     mid_idx = cls_labels.shape[0]//2
+        #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
+        #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
         labels = [cls_labels, seg_labels]
         return tuple([scan, labels, scan_id])

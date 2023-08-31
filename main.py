@@ -27,15 +27,15 @@ from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
-from utils.losses import FocalLoss
+from utils.losses import FocalLoss, FGBGLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'debug',
+    'config_name': 'brats20_debug_vit',
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'ProLesClassifier',  # ProLesClassifier_covid1920
+    'wandb_proj_name': 'ProLesClassifier_brats20',  # ProLesClassifier_covid1920
     'device': 'cuda',
     'seed': 42
 }
@@ -82,7 +82,13 @@ def main(config, settings):
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
-        localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=False)
+        localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse':
+        localization_criterion = torch.nn.MSELoss(reduction="sum")
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse_fgbg':
+        localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl_fgbg':
+        localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="batchmean"), lambda_fg=0.3, lambda_bg=2)
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} localization loss type not supported")
 

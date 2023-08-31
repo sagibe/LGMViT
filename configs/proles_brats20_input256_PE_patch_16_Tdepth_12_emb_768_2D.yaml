@@ -20,9 +20,10 @@ TRAINING:
       GAMMA: 2
     LOCALIZATION_LOSS:
       USE: false
-      TYPE: 'kl' # options: 'kl
+      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
       FEAT_SPATIAL_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
+      SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 10
       PATIENT_LIST: null
     SAMPLING_LOSS:

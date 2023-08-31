@@ -347,5 +347,23 @@ def attention_softmax_2d(attn, apply_log=True):
     else:
         return torch.nn.functional.softmax((attn.view(*attn.size()[:2], -1)), dim=2).view_as(attn)
 
+def min_max_normalize(batch_maps):
+  """Applies min max normalization on a batch of 2D maps.
 
+  Args:
+    batch_maps: A 3D PyTorch tensor of shape (batch_size, height, width).
+
+  Returns:
+    A 3D PyTorch tensor of the same shape as `batch_maps` with the values
+    min-max normalized.
+  """
+
+  # Get the min and max values of each map.
+  min_values = batch_maps.amin(dim=(-2, -1), keepdim=True)
+  max_values = batch_maps.amax(dim=(-2, -1), keepdim=True)
+
+  # Normalize each map.
+  normalized_maps = (batch_maps - min_values) / (max_values - min_values)
+
+  return normalized_maps
 
