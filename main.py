@@ -31,7 +31,7 @@ from utils.losses import FocalLoss, FGBGLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 SETTINGS = {
-    'config_name': 'brats20_debug_vit',
+    'config_name': 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_a10_FR_squeeze_mean_debug',
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,

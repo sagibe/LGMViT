@@ -68,26 +68,7 @@ def extract_heatmap(featmap: torch.Tensor,
                                       f' but got {type(featmap)}')
     assert featmap.ndim == 3 or featmap.ndim == 4, f'Input dimension must be 3 or 4, ' \
                               f'but got {featmap.ndim}'
-    featmap = featmap.detach().cpu()
 
-    # if overlaid_image is not None:
-    #     if len(overlaid_image.shape) == 2:
-    #         overlaid_image = cv2.cvtColor(overlaid_image,
-    #                                       cv2.COLOR_GRAY2RGB)
-    #
-    #     if overlaid_image.shape[:2] != featmap.shape[1:]:
-    #         warnings.warn(
-    #             f'Since the spatial dimensions of '
-    #             f'overlaid_image: {overlaid_image.shape[:2]} and '
-    #             f'featmap: {featmap.shape[1:]} are not same, '
-    #             f'the feature map will be interpolated. '
-    #             f'This may cause mismatch problems ！')
-    #         if resize_shape is None:
-    #             featmap = F.interpolate(
-    #                 featmap[None],
-    #                 overlaid_image.shape[:2],
-    #                 mode='bilinear',
-    #                 align_corners=False)[0]
     if featmap.ndim == 3:
         featmap = featmap.unsqueeze(0)
     if resize_shape is not None:

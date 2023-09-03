@@ -172,16 +172,17 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 SETTINGS = {
     'model': {
-            'config': 'proles_brats20_input256_PE_patch_32_pos_emb_sine_Tdepth_12_emb_768_2D_transformer_homepc',
+            'config': 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_a10_FR_squeeze_max',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ProLesClassifier - BraTS20'},  # if None default is config_name
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
     'data_path': '',
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
-    'output_dir': 'C:/Users/sagib/OneDrive/Desktop/Studies/Msc/Thesis/Results/ProLesClassifier',
-    'output_name': None,  # if None default is datetime
+    # 'output_dir': 'C:/Users/sagib/OneDrive/Desktop/Studies/Msc/Thesis/Results/ProLesClassifier',
+    'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+    'output_name': 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_a10_FR_squeeze_max030923',  # if None default is datetime
     'save_results': True,
-    'save_attn': True,
+    'save_attn': False,
     'device': 'cuda',
 }
 
@@ -322,15 +323,15 @@ def main(settings):
         save_attn_dir = None
     test_stats = eval_test(model, data_loader_test, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH, save_attn_dir)
 
-    cur_df = cur_df.append({'Model Name': settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
+    cur_df = cur_df.append({'Model Name': settings['model']['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
                     'AUROC': test_stats.auroc, 'AUPRC': test_stats.auprc, 'Cohens Kappa': test_stats.cohen_kappa,
                     'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}, ignore_index=True)
     fpr, tpr, _ = metrics.roc_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
     lr_precision, lr_recall, _ = precision_recall_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
 
     # Plot ROC Curve
-    ax[0].plot(fpr, tpr, label=f"{settings['plot_name']}-{test_stats.auroc:.4f}")
-    ax[1].plot(lr_recall, lr_precision, label=f"{settings['plot_name']}-{test_stats.auprc:.4f}")
+    ax[0].plot(fpr, tpr, label=f"{settings['model']['plot_name']}-{test_stats.auroc:.4f}")
+    ax[1].plot(lr_recall, lr_precision, label=f"{settings['model']['plot_name']}-{test_stats.auprc:.4f}")
 
     # Plot ROC Curve and Confusion Matrix
     ax[0].set_title('ROC Curve')
