@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import precision_recall_curve
 
+from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 from datasets.covid1920 import Covid1920Dataset
 from datasets.node21 import Node21Dataset
@@ -172,15 +173,16 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 SETTINGS = {
     'model': {
-            'config': 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_debug_multi3',
+            'config': 'brats20_debug_vit',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ProLesClassifier - BraTS20'},  # if None default is config_name
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
+    'dataset_name': 'brats20',
     'data_path': '',
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
     # 'output_dir': 'C:/Users/sagib/OneDrive/Desktop/Studies/Msc/Thesis/Results/ProLesClassifier',
     'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
-    'output_name': 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_debug_multi3',  # if None default is datetime
+    'output_name': 'testtt',  # if None default is datetime
     'save_results': True,
     'save_attn': False,
     'device': 'cuda',
@@ -201,9 +203,11 @@ def main(settings):
         columns=['Model Name', 'F1 Score', 'Sensitivity', 'Specificity', 'AUROC', 'AUPRC', 'Cohens Kappa',
                  'Precision', 'Accuracy'])
     fig, ax = plt.subplots(1, 2, figsize=(15, 6))
-    with open('configs/' + settings['model']['config'] + '.yaml', "r") as yamlfile:
-        config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-    config = utils.RecursiveNamespace(**config)
+    # with open('configs/' + settings['model']['config'] + '.yaml', "r") as yamlfile:
+    #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+    config = get_default_config()
+    update_config_from_file(f"configs/{settings['dataset_name']}/{settings['model']['config'] }.yaml", config)
+    # config = utils.RecursiveNamespace(**config)
     config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['model']['exp_name'] is None: settings['model']['exp_name'] = settings['model']['config']
     # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']

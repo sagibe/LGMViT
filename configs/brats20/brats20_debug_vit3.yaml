@@ -3,7 +3,7 @@ TRAINING:
   LR_DROP: 12
   BATCH_SIZE: 1
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 50
+  EPOCHS: 5
   CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
   SAVE_CKPT_INTERVAL: 1
@@ -20,11 +20,11 @@ TRAINING:
       GAMMA: 2
     LOCALIZATION_LOSS:
       USE: true
-      TYPE: 'mse' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
+      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
       FEAT_SPATIAL_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
       SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 10000
+      ALPHA: 1000
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false
@@ -71,7 +71,7 @@ TEST:
   DATASET_PATH:
   BATCH_SIZE: 1
   CLIP_MAX_NORM: 0.1
-  CHECKPOINT: 6
+  CHECKPOINT: 'best'
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/
