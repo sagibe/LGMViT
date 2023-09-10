@@ -30,8 +30,34 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 from utils.losses import FocalLoss, FGBGLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 
+# # Single Run Mode
+# SETTINGS = {
+#     'config_name': 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a10000_FR_sqz_max_smthseg_75',
+#     'exp_name': None,  # if None default is config_name
+#     'data_fold': None,  # None to take fold number from config
+#     'use_wandb': True,
+#     'wandb_proj_name': 'ProLesClassifier_brats20',  # ProLesClassifier_covid1920
+#     'device': 'cuda',
+#     'seed': 42
+# }
+
+# Multi Run Mode
 SETTINGS = {
-    'config_name': 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_a10_FR_squeeze_mean_debug',
+    'config_name': ['proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a3_FR_sqz_max',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10_FR_sqz_max',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a100_FR_sqz_max',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a1000_FR_sqz_max',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10000_FR_sqz_max',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a10_FR_select_max_smthseg_75',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a100_FR_select_max_smthseg_75',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a1000_FR_select_max_smthseg_75',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a10000_FR_select_max_smthseg_75',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a3_FR_sqz_mean',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10_FR_sqz_mean',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a100_FR_sqz_mean',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a1000_FR_sqz_mean',
+                    'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10000_FR_sqz_mean'
+                    ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
@@ -300,31 +326,64 @@ def main(config, settings):
 
     print('hi')
 
+# # Single Run Mode
+# if __name__ == '__main__':
+#     settings = SETTINGS
+#     config = get_default_config()
+#     update_config_from_file('configs/'+settings['config_name']+'.yaml', config)
+#     config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
+#     if settings['data_fold'] is not None:
+#         config.DATA.DATA_FOLD = settings['data_fold']
+#     # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
+#     #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+#     # config = utils.RecursiveNamespace(**config)
+#     fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
+#     if settings['exp_name'] is None: settings['exp_name']=settings['config_name'] + fold_suffix
+#
+#     # W&B logger initialization
+#     if settings['use_wandb']:
+#         wandb.init(project=settings['wandb_proj_name'],
+#                    name=settings['exp_name'],
+#                    config={
+#                        "batch_size": config.TRAINING.BATCH_SIZE,
+#                        "num_epochs": config.TRAINING.EPOCHS,
+#                        "lr": config.TRAINING.LR,
+#                        "pretrain_weights": ''
+#                    })
+#
+#     if config.DATA.OUTPUT_DIR:
+#         Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+#     main(config, settings)
 
+
+# Multi Run Mode
 if __name__ == '__main__':
     settings = SETTINGS
-    config = get_default_config()
-    update_config_from_file('configs/'+settings['config_name']+'.yaml', config)
-    config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
-    if settings['data_fold'] is not None:
-        config.DATA.DATA_FOLD = settings['data_fold']
-    # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
-    #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-    # config = utils.RecursiveNamespace(**config)
-    fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
-    if settings['exp_name'] is None: settings['exp_name']=settings['config_name'] + fold_suffix
+    for config_name in settings['config_name']:
+        config = get_default_config()
+        update_config_from_file('configs/'+config_name+'.yaml', config)
+        config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
+        if settings['data_fold'] is not None:
+            config.DATA.DATA_FOLD = settings['data_fold']
+        # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
+        #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+        # config = utils.RecursiveNamespace(**config)
+        fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
+        settings['exp_name'] = config_name
 
-    # W&B logger initialization
-    if settings['use_wandb']:
-        wandb.init(project=settings['wandb_proj_name'],
-                   name=settings['exp_name'],
-                   config={
-                       "batch_size": config.TRAINING.BATCH_SIZE,
-                       "num_epochs": config.TRAINING.EPOCHS,
-                       "lr": config.TRAINING.LR,
-                       "pretrain_weights": ''
-                   })
+        # W&B logger initialization
+        if settings['use_wandb']:
+            wandb_run = wandb.init(project=settings['wandb_proj_name'],
+                       name=settings['exp_name'],
+                       config={
+                           "batch_size": config.TRAINING.BATCH_SIZE,
+                           "num_epochs": config.TRAINING.EPOCHS,
+                           "lr": config.TRAINING.LR,
+                           "pretrain_weights": ''
+                       })
 
-    if config.DATA.OUTPUT_DIR:
-        Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-    main(config, settings)
+        if config.DATA.OUTPUT_DIR:
+            Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+        main(config, settings)
+        if settings['use_wandb']:
+            wandb_run.finish()
