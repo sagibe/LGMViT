@@ -58,7 +58,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         samples = samples.squeeze(0).float().to(device)
         targets = labels[0].float().T.to(device)
         lesion_annot = labels[1].float().to(device)
-        outputs, attn = model(samples)
+        outputs, attn, bb_feat_map = model(samples)
         attn_maps = generate_spatial_attetntion(attn)
         #######
         # bs, nh, h, w = attn.shape
@@ -80,15 +80,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
 
         # localization loss
         if localization_loss_params.USE and targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
-            # scale_factor_h = attn_map_old.shape[-2] / lesion_annot.shape[-2]
-            # scale_factor_w = attn_map_old.shape[-1] / lesion_annot.shape[-1]
-            # attn_map_old = F.interpolate(attn_map_old, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w), mode='nearest')
-            # attn_map_old = F.interpolate(attn_map_old, (lesion_annot.shape[-1], lesion_annot.shape[-1]), mode='nearest')
-            reduced_attn_maps = extract_heatmap(attn_maps,
-                                                feat_interpolation=localization_loss_params.FEAT_SPATIAL_INTERPOLATION,
+            if localization_loss_params.SPATIAL_FEAT_SRC == 'attn':
+                spatial_feat_maps = attn_maps
+            elif localization_loss_params.SPATIAL_FEAT_SRC == 'bb_feat':
+                spatial_feat_maps = bb_feat_map
+            reduced_spatial_feat_maps = extract_heatmap(spatial_feat_maps,
+                                                feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                                                 channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                                                 resize_shape=lesion_annot.shape[-2:])
-            reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
+            reduced_spatial_feat_maps = reduced_spatial_feat_maps.unsqueeze(0).to(device)
             # lesion_annot = F.interpolate(lesion_annot, scale_factor=(scale_factor_h, scale_factor_w), mode='bilinear')
             # ################
             # import matplotlib.pyplot as plt
@@ -102,18 +102,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 lesion_annot = generate_blur_masks_normalized(lesion_annot, kernel_size=localization_loss_params.SEG_SMOOTH_KERNEL_SIZE)
             if localization_loss_params.TYPE == 'mse':
                 localization_loss = localization_loss_params.ALPHA * \
-                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
+                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
                                                            torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
-            # elif localization_loss_params.TYPE == 'mse_fgbg':
-            #     localization_loss = localization_loss_params.ALPHA * localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
-            #                                                torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
             elif localization_loss_params.TYPE == 'mse_fgbg':
                 localization_loss = localization_loss_params.ALPHA * \
-                                     localization_criterion(torch.cat(utils.min_max_normalize(reduced_attn_maps[:,targets[:,0].to(bool),:,:]).unbind()),
+                                     localization_criterion(torch.cat(utils.min_max_normalize(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:]).unbind()),
                                                            torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
             else:
                 localization_loss = localization_loss_params.ALPHA * \
-                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
                                                            torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()))
             loss = cls_loss + localization_loss
             localization_loss_value = localization_loss.item()
@@ -207,7 +204,7 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         for samples, labels, _ in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
-            outputs, attn = model(samples)
+            outputs, attn, bb_feat_map = model(samples)
             loss = criterion(outputs, targets)
             loss_value = loss.item()
             metrics.update(outputs, targets)
@@ -261,7 +258,7 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
             lesion_annot = labels[1].float().to(device)
-            outputs, attn = model(samples)
+            outputs, attn, _ = model(samples)
             metrics.update(outputs, targets)
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)

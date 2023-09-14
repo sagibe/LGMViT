@@ -71,16 +71,16 @@ def extract_heatmap(featmap: torch.Tensor,
 
     if featmap.ndim == 3:
         featmap = featmap.unsqueeze(0)
-    if resize_shape is not None:
-        assert feat_interpolation in [
-            'bilinear', 'nearest'], \
-            f'feat_interpolation only support "bilinear", "nearest"' \
-            f'but got {feat_interpolation}'
-        featmap = F.interpolate(
-            featmap,
-            resize_shape,
-            mode=feat_interpolation,
-            align_corners=False)
+    # if resize_shape is not None:
+    #     assert feat_interpolation in [
+    #         'bilinear', 'nearest'], \
+    #         f'feat_interpolation only support "bilinear", "nearest"' \
+    #         f'but got {feat_interpolation}'
+    #     featmap = F.interpolate(
+    #         featmap,
+    #         resize_shape,
+    #         mode=feat_interpolation,
+    #         align_corners=False)
 
     if channel_reduction is not None:
         assert channel_reduction in [
@@ -97,7 +97,19 @@ def extract_heatmap(featmap: torch.Tensor,
             feat_map = torch.max(featmap, dim=1)[0]
         else:
             feat_map = torch.mean(featmap, dim=1)
-        return feat_map
+
+        if resize_shape is not None:
+            assert feat_interpolation in [
+                'bilinear', 'nearest'], \
+                f'feat_interpolation only support "bilinear", "nearest"' \
+                f'but got {feat_interpolation}'
+            feat_map = F.interpolate(
+                feat_map.unsqueeze(0),
+                resize_shape,
+                mode=feat_interpolation,
+                align_corners=False)
+        return feat_map.squeeze(0)
+        # return feat_map
         # return convert_overlay_heatmap(feat_map, overlaid_image, alpha)
     elif topk <= 0:
         featmap_channel = featmap.shape[0]

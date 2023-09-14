@@ -20,11 +20,12 @@ TRAINING:
       GAMMA: 2
     LOCALIZATION_LOSS:
       USE: true
-      TYPE: 'mse' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      FEAT_SPATIAL_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
+      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
+      SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat', 'fusion'
+      SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
       SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 10000
+      ALPHA: 1000
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false
@@ -51,6 +52,7 @@ MODEL:
     HEADS: 12
     DROP_PATH: 0.1
     FORWARD_DROP_P: 0.1
+    USE_CLS_TOKEN: false
     ATTENTION_3D: false
 
 DATA:

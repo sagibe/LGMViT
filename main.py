@@ -31,10 +31,10 @@ from utils.losses import FocalLoss, FGBGLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
 from utils.wandb import init_wandb, wandb_logger
 
-# Single Run Mode
+# # Single Run Mode
 # SETTINGS = {
 #     'dataset_name': 'brats20',
-#     'config_name': 'brats20_debug_vit2',
+#     'config_name': 'brats20_debug_vit',
 #     'exp_name': None,  # if None default is config_name
 #     'data_fold': None,  # None to take fold number from config
 #     'use_wandb': True,
@@ -47,25 +47,29 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20',
-    # 'config_name': ['proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a3_FR_sqz_max',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10_FR_sqz_max',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a100_FR_sqz_max',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a1000_FR_sqz_max',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10000_FR_sqz_max',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a10_FR_select_max_smthseg_75',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a100_FR_select_max_smthseg_75',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a1000_FR_select_max_smthseg_75',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_kl_a10000_FR_select_max_smthseg_75',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a3_FR_sqz_mean',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10_FR_sqz_mean',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a100_FR_sqz_mean',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a1000_FR_sqz_mean',
-    #                 'proles_brats20_input256_PE_patch_16_Tdepth_12_emb_768_2D_LL_fgbgmse_a10000_FR_sqz_mean'
-    #                 ],
-    'config_name': ['brats20_debug_vit',
-                    'brats20_debug_vit2',
-                    'brats20_debug_vit3'
+    'config_name': ['vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a1_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a5_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a10_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a1000_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a10000_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a5_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a10_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1000_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a10000_FR_sqz_mean_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a10_FR_sqz_max_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_max_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_max_smthseg_75',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a1_FR_sqz_mean',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a5_FR_sqz_mean',
+                    'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a10_FR_sqz_mean',
                     ],
+    # 'config_name': ['brats20_debug_vit',
+    #                 'brats20_debug_vit2',
+    #                 'brats20_debug_vit3'
+    #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
@@ -270,45 +274,8 @@ def main(config, settings):
         if settings['use_wandb']:
             if epoch % config.TRAINING.EVAL_INTERVAL == 0:
                 wandb_logger(train_stats, val_stats, epoch=epoch)
-                # wandb.log(
-                #     {"Train/Loss": train_stats['loss'],
-                #      "Train/Classification_Loss": train_stats['cls_loss'],
-                #      "Train/Localization_Loss": train_stats['localization_loss'],
-                #      "Train/Accuracy": train_stats['acc'],
-                #      "Train/Sensitivity": train_stats['sensitivity'],
-                #      "Train/Specificity": train_stats['specificity'],
-                #      "Train/Precision": train_stats['precision'],
-                #      "Train/F1": train_stats['f1'],
-                #      "Train/AUROC": train_stats['auroc'],
-                #      "Train/AUPRC": train_stats['auprc'],
-                #      "Train/Cohens_Kappa": train_stats['cohen_kappa'],
-                #      'Train/lr': train_stats['lr'],
-                #      "Validation/Loss": val_stats['loss'],
-                #      "Validation/Accuracy": val_stats['acc'],
-                #      "Validation/Sensitivity": val_stats['sensitivity'],
-                #      "Validation/Specificity": val_stats['specificity'],
-                #      "Validation/Precision": val_stats['precision'],
-                #      "Validation/F1": val_stats['f1'],
-                #      "Validation/AUROC": val_stats['auroc'],
-                #      "Validation/AUPRC": val_stats['auprc'],
-                #      "Validation/Cohens_Kappa": val_stats['cohen_kappa'],
-                #      "epoch": epoch})
             else:
                 wandb_logger(train_stats, epoch=epoch)
-                # wandb.log(
-                #     {"Train/Loss": train_stats['loss'],
-                #      "Train/Classification_Loss": train_stats['cls_loss'],
-                #      "Train/Localization_Loss": train_stats['localization_loss'],
-                #      "Train/Accuracy": train_stats['acc'],
-                #      "Train/Sensitivity": train_stats['sensitivity'],
-                #      "Train/Specificity": train_stats['specificity'],
-                #      "Train/Precision": train_stats['precision'],
-                #      "Train/F1": train_stats['f1'],
-                #      "Train/AUROC": train_stats['auroc'],
-                #      "Train/AUPRC": train_stats['auprc'],
-                #      "Train/Cohens_Kappa": train_stats['cohen_kappa'],
-                #      'Train/lr': train_stats['lr'],
-                #      "epoch": epoch})
         lr_scheduler.step()
         if config.DATA.OUTPUT_DIR:
             # checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
