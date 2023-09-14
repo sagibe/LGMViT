@@ -36,7 +36,7 @@ MODEL:
     TYPE: sine # sine, learned, null
     Z_SIZE: 40
     FIT_MODE: interpolate # interpolate, prune
-  BACKBONE:
+  PATCH_EMBED:
     NAME: patch_embed # convnext  resnet101 , patch_embed
     RETURN_INTERM_LAYERS: true
     DILATION: false

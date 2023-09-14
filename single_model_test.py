@@ -84,7 +84,7 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 #     'data_path': '',
 #     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
 #     'folds': [0],
-#     'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
 #     'output_name': None,  # if None default is datetime
 #     'save_results': True,
 #     'save_attn': False,
@@ -149,7 +149,7 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 #     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
 #     'data_path': '',
 #     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
-#     'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
 #     'output_name': None,  # if None default is datetime
 #     'save_results': True,
 #     'save_attn': False,
@@ -160,11 +160,11 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 #     'model': {
 #             'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer',
 #             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'ProLesClassifier 3D transformer'},  # if None default is config_name
+#             'plot_name': 'LGLViT 3D transformer'},  # if None default is config_name
 #     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
 #     'data_path': '',
 #     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
-#     'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
 #     'output_name': None,  # if None default is datetime
 #     'save_results': True,
 #     'save_attn': True,
@@ -175,13 +175,13 @@ SETTINGS = {
     'model': {
             'config': 'brats20_debug_vit',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ProLesClassifier - BraTS20'},  # if None default is config_name
+            'plot_name': 'LGLViT - BraTS20'},  # if None default is config_name
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
     'dataset_name': 'brats20',
     'data_path': '',
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
-    # 'output_dir': 'C:/Users/sagib/OneDrive/Desktop/Studies/Msc/Thesis/Results/ProLesClassifier',
-    'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+    # 'output_dir': 'C:/Users/sagib/OneDrive/Desktop/Studies/Msc/Thesis/Results/LGLViT',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
     'output_name': 'testtt',  # if None default is datetime
     'save_results': True,
     'save_attn': False,
@@ -208,7 +208,7 @@ def main(settings):
     config = get_default_config()
     update_config_from_file(f"configs/{settings['dataset_name']}/{settings['model']['config'] }.yaml", config)
     # config = utils.RecursiveNamespace(**config)
-    config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
+    config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['model']['exp_name'] is None: settings['model']['exp_name'] = settings['model']['config']
     # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
 
@@ -268,7 +268,7 @@ def main(settings):
     #                                split_dict=split_dict,
     #                                fold_id=fold,
     #                                scan_set=scan_set,
-    #                                input_size=config.DATA.INPUT_SIZE,
+    #                                input_size=config.TRAINING.INPUT_SIZE,
     #                                resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
     #                                mask=config.DATA.PREPROCESS.MASK_PROSTATE,
     #                                crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
@@ -277,7 +277,7 @@ def main(settings):
     # dataset_test = Node21Dataset(data_dir,
     #                             split_dict=split_dict,
     #                             scan_set=scan_set,
-    #                             input_size=config.DATA.INPUT_SIZE,
+    #                             input_size=config.TRAINING.INPUT_SIZE,
     #                             resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
     #                             padding=config.DATA.PREPROCESS.CROP_PADDING)
 
@@ -287,7 +287,7 @@ def main(settings):
                                          split_dict=split_dict,
                                          fold_id=config.DATA.DATA_FOLD,
                                          scan_set=scan_set,
-                                         input_size=config.DATA.INPUT_SIZE,
+                                         input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          mask=config.DATA.PREPROCESS.MASK_PROSTATE,
                                          crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
@@ -295,21 +295,21 @@ def main(settings):
     elif 'node21' in config.DATA.DATASETS:
         dataset_test = Node21Dataset(data_dir,
                                          scan_set=scan_set,
-                                         input_size=config.DATA.INPUT_SIZE,
+                                         input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
     elif 'covid_19_20' in config.DATA.DATASETS:
         dataset_test = Covid1920Dataset(data_dir,
                                          scan_set=scan_set,
                                          split_dict=split_dict,
-                                         input_size=config.DATA.INPUT_SIZE,
+                                         input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
     elif 'BraTS2020' in config.DATA.DATASETS:
         dataset_test = BraTS20Dataset(data_dir,
                                          scan_set=scan_set,
                                          split_dict=split_dict,
-                                         input_size=config.DATA.INPUT_SIZE,
+                                         input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
 

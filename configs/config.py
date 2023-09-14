@@ -9,6 +9,7 @@ def get_default_config():
 
     # TRAINING
     cfg.TRAINING = edict()
+    cfg.TRAINING.INPUT_SIZE = 256
     cfg.TRAINING.LR = 0.00001
     cfg.TRAINING.LR_DROP = 12
     cfg.TRAINING.BATCH_SIZE = 1
@@ -58,11 +59,11 @@ def get_default_config():
     cfg.MODEL.POSITION_EMBEDDING.TYPE = 'sine'
     cfg.MODEL.POSITION_EMBEDDING.Z_SIZE = 40
     cfg.MODEL.POSITION_EMBEDDING.FIT_MODE = 'interpolate'
-    # MODEL.BACKBONE
-    cfg.MODEL.BACKBONE = edict()
-    cfg.MODEL.BACKBONE.NAME = 'resnet101'
-    cfg.MODEL.BACKBONE.RETURN_INTERM_LAYERS = False
-    cfg.MODEL.BACKBONE.DILATION = False
+    # MODEL.PATCH_EMBED
+    cfg.MODEL.PATCH_EMBED = edict()
+    cfg.MODEL.PATCH_EMBED.NAME = 'resnet101'
+    cfg.MODEL.PATCH_EMBED.RETURN_INTERM_LAYERS = False
+    cfg.MODEL.PATCH_EMBED.DILATION = False
     # MODEL.TRANSFORMER
     cfg.MODEL.TRANSFORMER = edict()
     cfg.MODEL.TRANSFORMER.TYPE = 'vit'
@@ -81,9 +82,8 @@ def get_default_config():
     cfg.DATA.DATASETS = 'PICAI/processed_data/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/'
     cfg.DATA.DATA_SPLIT_FILE = '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/train_val_splits.json'
     cfg.DATA.DATA_FOLD = 0
-    cfg.DATA.INPUT_SIZE = 128
     cfg.DATA.MODALITIES = 'all'  # 'all' for all available modalities. For specific modalities in a list of the desired ones (example = [])
-    cfg.DATA.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/ProLesClassifier/'
+    cfg.DATA.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/LGLViT/'
     # DATA.PREPROCESS
     cfg.DATA.PREPROCESS = edict()
     cfg.DATA.PREPROCESS.RESIZE_MODE = 'interpolate'  # options: interpolate or padding
@@ -99,7 +99,7 @@ def get_default_config():
     cfg.TEST.CHECKPOINT = 34
     cfg.TEST.NUM_WORKERS = 4
     cfg.TEST.CLS_THRESH = 0.5
-    cfg.TEST.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/ProLesClassifier/'
+    cfg.TEST.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/LGLViT/'
 
     # DISTRIBUTED
     cfg.DISTRIBUTED = edict()

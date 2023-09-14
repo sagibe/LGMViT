@@ -14,7 +14,6 @@ import os
 from PIL import Image
 import joblib
 import pickle
-from utils.multimodal_dicom_scan import MultimodalDicomScan
 
 
 class ProLes2021DatasetDebug(Dataset):

@@ -90,7 +90,7 @@ SETTINGS = {
     'data_path': '',
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
     'folds': [0, 1, 2, 3, 4],
-    'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
     'output_name': None,  # if None default is datetime
     'save_results': True,
     'save_attn': False,
@@ -120,7 +120,7 @@ def main(settings):
             # config = utils.RecursiveNamespace(**config)
             config = get_default_config()
             update_config_from_file(f"configs/{settings['dataset_name']}/{model_settings['configs'][fold]['config_name']}.yaml", config)
-            config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
+            config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
             if model_settings['configs'][fold]['exp_name'] is None: model_settings['configs'][fold]['exp_name'] = model_settings['configs'][fold]['config_name']
             # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
 
@@ -180,7 +180,7 @@ def main(settings):
                                            split_dict=split_dict,
                                            fold_id=fold,
                                            scan_set=scan_set,
-                                           input_size=config.DATA.INPUT_SIZE,
+                                           input_size=config.TRAINING.INPUT_SIZE,
                                            resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                            mask=config.DATA.PREPROCESS.MASK_PROSTATE,
                                            crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,

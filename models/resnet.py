@@ -122,18 +122,18 @@ class Resnet(nn.Module):
 
 def build_resnet(args):
     device = torch.device(args.DEVICE)
-    # feat_size = args.DATA.INPUT_SIZE // args.MODEL.PATCH_SIZE
+    # feat_size = args.TRAINING.INPUT_SIZE // args.MODEL.PATCH_SIZE
     # pos_embed = args.MODEL.POSITION_EMBEDDING.TYPE is not None
     # backbone = build_backbone(args)
-    backbone = ResNetBackbone(name=args.MODEL.BACKBONE.NAME,
+    backbone = ResNetBackbone(name=args.MODEL.PATCH_EMBED.NAME,
                               train_backbone=True,
                               return_interm_layers=False,
-                              dilation=args.MODEL.BACKBONE.DILATION,
+                              dilation=args.MODEL.PATCH_EMBED.DILATION,
                               backbone_stages=4)
 
     model = Resnet(
         backbone,
-        backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES,
+        backbone_stages=args.MODEL.PATCH_EMBED.BACKBONE_STAGES,
     )
     return model
 

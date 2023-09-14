@@ -1,4 +1,5 @@
 TRAINING:
+  INPUT_SIZE: 256
   LR: 0.00001
   LR_DROP: 12
   BATCH_SIZE: 1
@@ -39,7 +40,7 @@ MODEL:
     TYPE: sine # sine, learned, null
     Z_SIZE: 40
     FIT_MODE: interpolate # interpolate, prune
-  BACKBONE:
+  PATCH_EMBED:
     NAME: patch_embed # convnext  resnet101 , patch_embed
     RETURN_INTERM_LAYERS: true
     DILATION: false
@@ -58,14 +59,13 @@ DATA:
   DATASETS: BraTS2020/MICCAI_BraTS2020_TrainingData
   DATA_SPLIT_FILE: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Data\MICCAI_BraTS2020_TrainingData\train_val_split_debug.json
   DATA_FOLD: 0
-  INPUT_SIZE: 256
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
     MASK_PROSTATE: true # apply prostate mask on scan
     CROP_PROSTATE: true # crop scan according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
-  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\ProLesClassifier
+  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\LGLViT
 
 TEST:
   DATASET_PATH:
@@ -74,7 +74,7 @@ TEST:
   CHECKPOINT: 6
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\ProLesClassifier
+  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\LGLViT
 
 DISTRIBUTED:
   WORLD_SIZE: 1

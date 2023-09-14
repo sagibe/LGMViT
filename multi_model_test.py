@@ -60,7 +60,7 @@ SETTINGS = {
     ],
     'dataset_name': 'brats20',
     'data_path': '',
-    'output_dir': '/mnt/DATA1/Sagi/Results/ProLesClassifier/',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
     'output_name': None,  # if None default is datetime
     'save_results': True,
     'save_attn': False,
@@ -85,7 +85,7 @@ def main(settings):
     for model_settings in settings['models']:
         config = get_default_config()
         update_config_from_file(f"configs/{settings['dataset_name']}/{model_settings['config']}.yaml", config)
-        config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
+        config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
         if model_settings['exp_name'] is None: model_settings['exp_name'] = model_settings['config']
         # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
 
@@ -145,7 +145,7 @@ def main(settings):
             dataset_test = PICAI2021Dataset(data_dir,
                                            split_dict=split_dict,
                                            scan_set=scan_set,
-                                           input_size=config.DATA.INPUT_SIZE,
+                                           input_size=config.TRAINING.INPUT_SIZE,
                                            resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                            mask=config.DATA.PREPROCESS.MASK_PROSTATE,
                                            crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
@@ -155,7 +155,7 @@ def main(settings):
             dataset_test = BraTS20Dataset(data_dir,
                                           scan_set=scan_set,
                                           split_dict=split_dict,
-                                          input_size=config.DATA.INPUT_SIZE,
+                                          input_size=config.TRAINING.INPUT_SIZE,
                                           resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                           padding=config.DATA.PREPROCESS.CROP_PADDING)
 

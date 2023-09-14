@@ -35,7 +35,7 @@ MODEL:
     TYPE: sine # sine, learned, null
     Z_SIZE: 40
     FIT_MODE: interpolate # interpolate, prune
-  BACKBONE:
+  PATCH_EMBED:
     NAME: resnet152 # convnext  resnet101 , patch_embed
     RETURN_INTERM_LAYERS: true
     DILATION: false
@@ -61,7 +61,7 @@ DATA:
     CROP_PROSTATE: true # crop scan according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
-  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/
+  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGLViT/
 
 TEST:
   DATASET_PATH: /mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/
@@ -70,7 +70,7 @@ TEST:
   CHECKPOINT: 'best'
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/ProLesClassifier/
+  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGLViT/
 
 DISTRIBUTED:
   WORLD_SIZE: 1

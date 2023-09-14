@@ -125,16 +125,16 @@ class Joiner(nn.Sequential):
 def build_backbone(args):
     position_embedding = build_position_encoding(args)
     train_backbone = args.TRAINING.LR > 0
-    if 'resnet' in args.MODEL.BACKBONE.NAME:
-        backbone = ResNetBackbone(name=args.MODEL.BACKBONE.NAME,
+    if 'resnet' in args.MODEL.PATCH_EMBED.NAME:
+        backbone = ResNetBackbone(name=args.MODEL.PATCH_EMBED.NAME,
                                   train_backbone=train_backbone,
-                                  return_interm_layers=args.MODEL.BACKBONE.RETURN_INTERM_LAYERS,
-                                  dilation=args.MODEL.BACKBONE.DILATION,
-                                  backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES)
-    elif 'convnext' in args.MODEL.BACKBONE.NAME:
+                                  return_interm_layers=args.MODEL.PATCH_EMBED.RETURN_INTERM_LAYERS,
+                                  dilation=args.MODEL.PATCH_EMBED.DILATION,
+                                  backbone_stages=args.MODEL.PATCH_EMBED.BACKBONE_STAGES)
+    elif 'convnext' in args.MODEL.PATCH_EMBED.NAME:
         backbone = convnext_tiny(backbone_only=True,
-                                 backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES)
-    elif 'patch_embed' in args.MODEL.BACKBONE.NAME:
+                                 backbone_stages=args.MODEL.PATCH_EMBED.BACKBONE_STAGES)
+    elif 'patch_embed' in args.MODEL.PATCH_EMBED.NAME:
         backbone = PatchEmbedding(patch_size=args.MODEL.PATCH_SIZE,
                                   stride=args.MODEL.PATCH_SIZE,
                                   padding=0,
@@ -142,6 +142,6 @@ def build_backbone(args):
                                   embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE)
 
     model = Joiner(backbone, position_embedding)
-    if 'resnet' in args.MODEL.BACKBONE.NAME:
+    if 'resnet' in args.MODEL.PATCH_EMBED.NAME:
         model.num_channels = backbone.num_channels
     return model

@@ -89,7 +89,7 @@ class ProLesClassifier(nn.Module):
 
 def build_model(args):
     device = torch.device(args.DEVICE)
-    feat_size = args.DATA.INPUT_SIZE // args.MODEL.PATCH_SIZE
+    feat_size = args.TRAINING.INPUT_SIZE // args.MODEL.PATCH_SIZE
     pos_embed = args.MODEL.POSITION_EMBEDDING.TYPE is not None
     backbone = build_backbone(args)
 
@@ -100,7 +100,7 @@ def build_model(args):
         transformer,
         feat_size=feat_size,
         num_classes=args.MODEL.NUM_CLASSES,
-        backbone_stages=args.MODEL.BACKBONE.BACKBONE_STAGES,
+        backbone_stages=args.MODEL.PATCH_EMBED.BACKBONE_STAGES,
         embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE,
         use_pos_embed=pos_embed,
         pos_embed_fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
