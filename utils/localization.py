@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torchvision.transforms.functional import gaussian_blur
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 import warnings
 
@@ -67,38 +68,19 @@ def extract_heatmap(featmap: torch.Tensor,
                                       f' but got {type(featmap)}')
     assert featmap.ndim == 3 or featmap.ndim == 4, f'Input dimension must be 3 or 4, ' \
                               f'but got {featmap.ndim}'
-    featmap = featmap.detach().cpu()
 
-    # if overlaid_image is not None:
-    #     if len(overlaid_image.shape) == 2:
-    #         overlaid_image = cv2.cvtColor(overlaid_image,
-    #                                       cv2.COLOR_GRAY2RGB)
-    #
-    #     if overlaid_image.shape[:2] != featmap.shape[1:]:
-    #         warnings.warn(
-    #             f'Since the spatial dimensions of '
-    #             f'overlaid_image: {overlaid_image.shape[:2]} and '
-    #             f'featmap: {featmap.shape[1:]} are not same, '
-    #             f'the feature map will be interpolated. '
-    #             f'This may cause mismatch problems ！')
-    #         if resize_shape is None:
-    #             featmap = F.interpolate(
-    #                 featmap[None],
-    #                 overlaid_image.shape[:2],
-    #                 mode='bilinear',
-    #                 align_corners=False)[0]
     if featmap.ndim == 3:
         featmap = featmap.unsqueeze(0)
-    if resize_shape is not None:
-        assert feat_interpolation in [
-            'bilinear', 'nearest'], \
-            f'feat_interpolation only support "bilinear", "nearest"' \
-            f'but got {feat_interpolation}'
-        featmap = F.interpolate(
-            featmap,
-            resize_shape,
-            mode=feat_interpolation,
-            align_corners=False)
+    # if resize_shape is not None:
+    #     assert feat_interpolation in [
+    #         'bilinear', 'nearest'], \
+    #         f'feat_interpolation only support "bilinear", "nearest"' \
+    #         f'but got {feat_interpolation}'
+    #     featmap = F.interpolate(
+    #         featmap,
+    #         resize_shape,
+    #         mode=feat_interpolation,
+    #         align_corners=False)
 
     if channel_reduction is not None:
         assert channel_reduction in [
@@ -115,7 +97,19 @@ def extract_heatmap(featmap: torch.Tensor,
             feat_map = torch.max(featmap, dim=1)[0]
         else:
             feat_map = torch.mean(featmap, dim=1)
-        return feat_map
+
+        if resize_shape is not None:
+            assert feat_interpolation in [
+                'bilinear', 'nearest'], \
+                f'feat_interpolation only support "bilinear", "nearest"' \
+                f'but got {feat_interpolation}'
+            feat_map = F.interpolate(
+                feat_map.unsqueeze(0),
+                resize_shape,
+                mode=feat_interpolation,
+                align_corners=False)
+        return feat_map.squeeze(0)
+        # return feat_map
         # return convert_overlay_heatmap(feat_map, overlaid_image, alpha)
     elif topk <= 0:
         featmap_channel = featmap.shape[0]
@@ -225,3 +219,39 @@ def img_from_canvas(canvas: 'FigureCanvasAgg') -> np.ndarray:
     img_rgba = buffer.reshape(height, width, 4)
     rgb, alpha = np.split(img_rgba, [3], axis=2)
     return rgb.astype('uint8')
+
+def generate_blur_masks_normalized(binary_masks, kernel_size=5, sigma=None):
+    """
+    Apply Gaussian blur to a batch of binary masks and return normalized blurred masks.
+
+    Args:
+        binary_masks (torch.Tensor): Batch of binary masks with shape (..., batch_size, height, width).
+        kernel_size (int, optional): Size of the Gaussian kernel for blurring. Default is 5.
+        sigma (float, optional): Standard deviation of the Gaussian distribution for blurring. Default is 0.3 * ((kernel_size - 1) * 0.5 - 1) + 0.8.
+
+    Returns:
+        torch.Tensor: Batch of normalized blurred masks with the same shape as input binary masks.
+                      The values are between 0 and 1.
+    """
+    # assert binary_masks.ndim == 3 or (binary_masks.ndim == 4 and binary_masks.shape[0] == 1), "Input binary masks should have 3 dimensions: (batch_size, height, width) or 3 dimensions: (1, batch_size, height, width)"
+    # blurred_masks = []
+    # num_dims = binary_masks.ndim
+    # if (num_dims == 4 and binary_masks.shape[0] == 1):
+    #     binary_masks = binary_masks.squeeze(0)
+
+    blurred_masks = gaussian_blur(binary_masks, kernel_size=kernel_size, sigma=sigma)
+    # for mask in binary_masks:
+    #     # Convert mask to float tensor
+    #     mask_float = mask.float()
+    #
+    #     # Apply Gaussian blur using PyTorch's functional interface
+    #     blurred_mask = gaussian_blur(mask_float, kernel_size=kernel_size, sigma=sigma)
+    #
+    #     # Normalize blurred mask to have values between 0 and 1
+    #     blurred_mask_normalized = (blurred_mask - blurred_mask.min()) / (blurred_mask.max() - blurred_mask.min())
+    #
+    #     blurred_masks.append(blurred_mask_normalized)
+    # blurred_masks = torch.stack(blurred_masks)
+    # if num_dims == 4:
+    #     return blurred_masks.unsqueeze(0)
+    return blurred_masks

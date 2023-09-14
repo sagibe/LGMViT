@@ -17,7 +17,7 @@ import SimpleITK as sitk
 
 
 class BraTS20Dataset:
-    def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=512,
+    def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=256,
                  resize_mode='interpolate', padding=0):
         self.data_dir = data_dir
         self.scan_list = split_dict[scan_set]
@@ -86,11 +86,11 @@ class BraTS20Dataset:
         if self._transforms is not None:
             scan = self._transforms(scan)
 
-        if True:
-            half_seg_size = 10
-            mid_idx = cls_labels.shape[0]//2
-            labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
-            return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
+        # if True:
+        #     half_seg_size = 15
+        #     mid_idx = cls_labels.shape[0]//2
+        #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
+        #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
         labels = [cls_labels, seg_labels]
         return tuple([scan, labels, scan_id])

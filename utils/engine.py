@@ -17,7 +17,8 @@ import cv2
 from mmengine.visualization import Visualizer
 
 import utils.util as utils
-from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attetntion
+from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attetntion, \
+    generate_blur_masks_normalized
 
 
 # from datasets.coco_eval import CocoEvaluator
@@ -57,13 +58,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         samples = samples.squeeze(0).float().to(device)
         targets = labels[0].float().T.to(device)
         lesion_annot = labels[1].float().to(device)
-        outputs, attn = model(samples)
+        outputs, attn, bb_feat_map = model(samples)
         attn_maps = generate_spatial_attetntion(attn)
-        # #######
-        # relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(20, 8, 8)
-        # # attn_map_old = F.softmax(relative_attention(attn), dim=1)
+        #######
+        # bs, nh, h, w = attn.shape
+        # relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(bs, 16, 16)
+        # attn_map_old = F.softmax(relative_attention(attn), dim=1)
         # attn_map_old = relative_attention(attn)
-        # #######
+        #######
         # if attn_map_old is not None:
         #     attn_map_old = attn_map_old.unsqueeze(0)
         # sampling loss
@@ -78,16 +80,27 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
 
         # localization loss
         if localization_loss_params.USE and targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
-            # scale_factor_h = attn_map_old.shape[-2] / lesion_annot.shape[-2]
-            # scale_factor_w = attn_map_old.shape[-1] / lesion_annot.shape[-1]
-            # attn_map_old = F.interpolate(attn_map_old, scale_factor=(1 / scale_factor_h, 1 / scale_factor_w), mode='nearest')
-            # attn_map_old = F.interpolate(attn_map_old, (lesion_annot.shape[-1], lesion_annot.shape[-1]), mode='nearest')
+            reduced_attn_maps = reduced_bb_feat_maps = None
+            if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
+                # spatial_feat_maps = attn_maps
+                reduced_attn_maps = extract_heatmap(attn_maps,
+                                                            feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                            channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                                                            resize_shape=lesion_annot.shape[-2:])
+                reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
+            if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
+                # spatial_feat_maps = bb_feat_map
+                reduced_bb_feat_maps = extract_heatmap(bb_feat_map,
+                                                            feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                            channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                                                            resize_shape=lesion_annot.shape[-2:])
+                reduced_bb_feat_maps = reduced_bb_feat_maps.unsqueeze(0).to(device)
 
-            reduced_attn_maps = extract_heatmap(attn_maps,
-                                                feat_interpolation=localization_loss_params.FEAT_SPATIAL_INTERPOLATION,
-                                                channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                                                resize_shape=lesion_annot.shape[-2:])
-            reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
+            # reduced_spatial_feat_maps = extract_heatmap(spatial_feat_maps,
+            #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+            #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+            #                                     resize_shape=lesion_annot.shape[-2:])
+            # reduced_spatial_feat_maps = reduced_spatial_feat_maps.unsqueeze(0).to(device)
             # lesion_annot = F.interpolate(lesion_annot, scale_factor=(scale_factor_h, scale_factor_w), mode='bilinear')
             # ################
             # import matplotlib.pyplot as plt
@@ -97,11 +110,77 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             # ax2.imshow(lesion_annot[0, slice, :, :].cpu().detach().numpy())
             # plt.show()
             ################
-            localization_loss = localization_loss_params.ALPHA * localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
-                                                       torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
+
+            ##########################3### FUSION OPTION 1 #####################################
+            if localization_loss_params.SPATIAL_FEAT_SRC == 'attn':
+                reduced_spatial_feat_maps = reduced_attn_maps
+            elif localization_loss_params.SPATIAL_FEAT_SRC == 'bb_feat':
+                reduced_spatial_feat_maps = reduced_bb_feat_maps
+            elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion':
+                beta = localization_loss_params.FUSION_BETA
+                reduced_spatial_feat_maps = reduced_attn_maps * beta + reduced_bb_feat_maps * (1 - beta)
+
+            if localization_loss_params.SEG_SMOOTH_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
+                lesion_annot = generate_blur_masks_normalized(lesion_annot, kernel_size=localization_loss_params.SEG_SMOOTH_KERNEL_SIZE)
+            if localization_loss_params.TYPE == 'mse':
+                localization_loss = localization_loss_params.ALPHA * \
+                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
+                                                           torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
+            elif localization_loss_params.TYPE == 'mse_fgbg':
+                localization_loss = localization_loss_params.ALPHA * \
+                                     localization_criterion(torch.cat(utils.min_max_normalize(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:]).unbind()),
+                                                           torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
+            else:
+                localization_loss = localization_loss_params.ALPHA * \
+                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+                                                           torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()))
             loss = cls_loss + localization_loss
             localization_loss_value = localization_loss.item()
             metric_logger.update(localization_loss=localization_loss_value)
+            #################################################################
+
+            # ###################### FUSION OPTION 2 ############################
+            # localization_loss = 0
+            # if localization_loss_params.SPATIAL_FEAT_SRC == 'fusion':
+            #     beta = localization_loss_params.FUSION_BETA
+            #     lamda_attn = beta
+            #     lamda_bb_feat = 1 - beta
+            # else:
+            #     lamda_attn = lamda_bb_feat = 1
+            # if localization_loss_params.SEG_SMOOTH_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
+            #     lesion_annot = generate_blur_masks_normalized(lesion_annot, kernel_size=localization_loss_params.SEG_SMOOTH_KERNEL_SIZE)
+            # if localization_loss_params.TYPE == 'mse':
+            #     if reduced_attn_maps:
+            #         localization_loss += localization_loss_params.ALPHA * lamda_attn * \
+            #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
+            #                                                    torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
+            #     if reduced_bb_feat_maps:
+            #         localization_loss += localization_loss_params.ALPHA * lamda_bb_feat * \
+            #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_bb_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
+            #                                                    torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
+            # elif localization_loss_params.TYPE == 'mse_fgbg':
+            #     if reduced_attn_maps:
+            #         localization_loss = localization_loss_params.ALPHA * lamda_attn * \
+            #                              localization_criterion(torch.cat(utils.min_max_normalize(reduced_attn_maps[:,targets[:,0].to(bool),:,:]).unbind()),
+            #                                                    torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
+            #     if reduced_bb_feat_maps:
+            #         localization_loss = localization_loss_params.ALPHA * lamda_bb_feat * \
+            #                              localization_criterion(torch.cat(utils.min_max_normalize(reduced_bb_feat_maps[:,targets[:,0].to(bool),:,:]).unbind()),
+            #                                                    torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
+            # else:
+            #     if reduced_attn_maps is not None:
+            #         localization_loss += localization_loss_params.ALPHA * lamda_attn * \
+            #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+            #                                                    torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()))
+            #     if reduced_bb_feat_maps is not None:
+            #         localization_loss += localization_loss_params.ALPHA * lamda_bb_feat * \
+            #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_bb_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+            #                                                    torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()))
+            # loss = cls_loss + localization_loss
+            # localization_loss_value = localization_loss.item()
+            # metric_logger.update(localization_loss=localization_loss_value)
+            # ##########################################################################
+
         else:
             loss = cls_loss
 
@@ -191,7 +270,7 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         for samples, labels, _ in metric_logger.log_every(data_loader, print_freq, header):
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
-            outputs, attn = model(samples)
+            outputs, attn, bb_feat_map = model(samples)
             loss = criterion(outputs, targets)
             loss_value = loss.item()
             metrics.update(outputs, targets)
@@ -245,7 +324,7 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
             lesion_annot = labels[1].float().to(device)
-            outputs, attn = model(samples)
+            outputs, attn, _ = model(samples)
             metrics.update(outputs, targets)
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)

@@ -27,18 +27,57 @@ from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
-from utils.losses import FocalLoss
+from utils.losses import FocalLoss, FGBGLoss
 from utils.multimodal_dicom_scan import MultimodalDicomScan
+from utils.wandb import init_wandb, wandb_logger
 
+# Single Run Mode
 SETTINGS = {
-    'config_name': 'debug',
+    'dataset_name': 'brats21',
+    'config_name': 'vit_B16_2D_ap_brats21_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75',
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'ProLesClassifier',  # ProLesClassifier_covid1920
+    'wandb_group': None,
+    'wandb_proj_name': 'ProLesClassifier_brats21',  # ProLesClassifier_covid1920 ProLesClassifier_brats20
     'device': 'cuda',
     'seed': 42
 }
+
+# # Multi Run Mode
+# SETTINGS = {
+#     'dataset_name': 'brats20',
+#     'config_name': ['vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a1_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a5_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a10_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a1000_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a10000_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a5_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a10_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1000_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a10000_FR_sqz_mean_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a10_FR_sqz_max_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_max_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_max_smthseg_75',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a1_FR_sqz_mean',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a5_FR_sqz_mean',
+#                     'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a10_FR_sqz_mean',
+#                     ],
+#     # 'config_name': ['brats20_debug_vit',
+#     #                 'brats20_debug_vit2',
+#     #                 'brats20_debug_vit3'
+#     #                 ],
+#     'exp_name': None,  # if None default is config_name
+#     'data_fold': None,  # None to take fold number from config
+#     'use_wandb': True,
+#     'wandb_proj_name': 'ProLesClassifier_brats20',  # ProLesClassifier_covid1920
+#     'wandb_group': None,
+#     'device': 'cuda',
+#     'seed': 42
+# }
 
 def main(config, settings):
     utils.init_distributed_mode(config)
@@ -82,7 +121,13 @@ def main(config, settings):
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
-        localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=False)
+        localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse':
+        localization_criterion = torch.nn.MSELoss(reduction="sum")
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse_fgbg':
+        localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl_fgbg':
+        localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="batchmean"), lambda_fg=0.3, lambda_bg=2)
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} localization loss type not supported")
 
@@ -171,6 +216,19 @@ def main(config, settings):
                                        input_size=config.DATA.INPUT_SIZE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'BraTS2021' in config.DATA.DATASETS:
+        dataset_train = BraTS20Dataset(data_dir,
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.DATA.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = BraTS20Dataset(data_dir,
+                                       scan_set='val',
+                                       split_dict=split_dict,
+                                       input_size=config.DATA.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
 
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
@@ -228,44 +286,9 @@ def main(config, settings):
                 config.TRAINING.CLIP_MAX_NORM, config.TRAINING.CLS_THRESH)
         if settings['use_wandb']:
             if epoch % config.TRAINING.EVAL_INTERVAL == 0:
-                wandb.log(
-                    {"Train/Loss": train_stats['loss'],
-                     "Train/Classification_Loss": train_stats['cls_loss'],
-                     "Train/Localization_Loss": train_stats['localization_loss'],
-                     "Train/Accuracy": train_stats['acc'],
-                     "Train/Sensitivity": train_stats['sensitivity'],
-                     "Train/Specificity": train_stats['specificity'],
-                     "Train/Precision": train_stats['precision'],
-                     "Train/F1": train_stats['f1'],
-                     "Train/AUROC": train_stats['auroc'],
-                     "Train/AUPRC": train_stats['auprc'],
-                     "Train/Cohens_Kappa": train_stats['cohen_kappa'],
-                     'Train/lr': train_stats['lr'],
-                     "Validation/Loss": val_stats['loss'],
-                     "Validation/Accuracy": val_stats['acc'],
-                     "Validation/Sensitivity": val_stats['sensitivity'],
-                     "Validation/Specificity": val_stats['specificity'],
-                     "Validation/Precision": val_stats['precision'],
-                     "Validation/F1": val_stats['f1'],
-                     "Validation/AUROC": val_stats['auroc'],
-                     "Validation/AUPRC": val_stats['auprc'],
-                     "Validation/Cohens_Kappa": val_stats['cohen_kappa'],
-                     "epoch": epoch})
+                wandb_logger(train_stats, val_stats, epoch=epoch)
             else:
-                wandb.log(
-                    {"Train/Loss": train_stats['loss'],
-                     "Train/Classification_Loss": train_stats['cls_loss'],
-                     "Train/Localization_Loss": train_stats['localization_loss'],
-                     "Train/Accuracy": train_stats['acc'],
-                     "Train/Sensitivity": train_stats['sensitivity'],
-                     "Train/Specificity": train_stats['specificity'],
-                     "Train/Precision": train_stats['precision'],
-                     "Train/F1": train_stats['f1'],
-                     "Train/AUROC": train_stats['auroc'],
-                     "Train/AUPRC": train_stats['auprc'],
-                     "Train/Cohens_Kappa": train_stats['cohen_kappa'],
-                     'Train/lr': train_stats['lr'],
-                     "epoch": epoch})
+                wandb_logger(train_stats, epoch=epoch)
         lr_scheduler.step()
         if config.DATA.OUTPUT_DIR:
             # checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
@@ -294,31 +317,54 @@ def main(config, settings):
 
     print('hi')
 
-
+# Single Run Mode
 if __name__ == '__main__':
     settings = SETTINGS
     config = get_default_config()
-    update_config_from_file('configs/'+settings['config_name']+'.yaml', config)
+    update_config_from_file(f"configs/{settings['dataset_name']}/{settings['config_name']}.yaml", config)
     config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['data_fold'] is not None:
         config.DATA.DATA_FOLD = settings['data_fold']
-    # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
-    #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-    # config = utils.RecursiveNamespace(**config)
     fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
-    if settings['exp_name'] is None: settings['exp_name']=settings['config_name'] + fold_suffix
+    if settings['exp_name'] is None: settings['exp_name'] = settings['config_name'] + fold_suffix
 
     # W&B logger initialization
     if settings['use_wandb']:
-        wandb.init(project=settings['wandb_proj_name'],
-                   name=settings['exp_name'],
-                   config={
-                       "batch_size": config.TRAINING.BATCH_SIZE,
-                       "num_epochs": config.TRAINING.EPOCHS,
-                       "lr": config.TRAINING.LR,
-                       "pretrain_weights": ''
-                   })
-
+        wandb_run = init_wandb(settings['wandb_proj_name'], settings['exp_name'], settings['wandb_group'], cfg=config)
     if config.DATA.OUTPUT_DIR:
         Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
     main(config, settings)
+
+
+# # Multi Run Mode
+# if __name__ == '__main__':
+#     settings = SETTINGS
+#     for config_name in settings['config_name']:
+#         config = get_default_config()
+#         update_config_from_file(f"configs/{settings['dataset_name']}/{config_name}.yaml", config)
+#         config.MODEL.BACKBONE.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
+#         if settings['data_fold'] is not None:
+#             config.DATA.DATA_FOLD = settings['data_fold']
+#         # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
+#         #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+#         # config = utils.RecursiveNamespace(**config)
+#         fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
+#         settings['exp_name'] = config_name
+#
+#         # W&B logger initialization
+#         if settings['use_wandb']:
+#             wandb_run = init_wandb(settings['wandb_proj_name'], settings['exp_name'], settings['wandb_group'], cfg=config)
+#             # wandb_run = wandb.init(project=settings['wandb_proj_name'],
+#             #            name=settings['exp_name'],
+#             #            config={
+#             #                "batch_size": config.TRAINING.BATCH_SIZE,
+#             #                "num_epochs": config.TRAINING.EPOCHS,
+#             #                "lr": config.TRAINING.LR,
+#             #                "pretrain_weights": ''
+#             #            })
+#
+#         if config.DATA.OUTPUT_DIR:
+#             Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+#         main(config, settings)
+#         if settings['use_wandb']:
+#             wandb_run.finish()
