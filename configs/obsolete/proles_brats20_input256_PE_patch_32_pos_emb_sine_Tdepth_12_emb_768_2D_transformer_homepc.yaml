@@ -52,7 +52,7 @@ MODEL:
 
 DATA:
   DATASET_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Data
-  DATASETS: MICCAI_BraTS2020_TrainingData
+  DATASETS: BraTS2020/MICCAI_BraTS2020_TrainingData
   DATA_SPLIT_FILE: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Data\MICCAI_BraTS2020_TrainingData\train_val_split_debug.json
   DATA_FOLD: 0
   INPUT_SIZE: 256

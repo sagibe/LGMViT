@@ -21,7 +21,7 @@ TRAINING:
     LOCALIZATION_LOSS:
       USE: true
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat'      SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest
+      SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat'
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
       SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
@@ -57,8 +57,8 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
-  DATASETS: MICCAI_BraTS2020_TrainingData
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/MICCAI_BraTS2020_TrainingData/train_val_split.json
+  DATASETS: BraTS2020/MICCAI_BraTS2020_TrainingData
+  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020/train_val_split.json
   DATA_FOLD: 0
   INPUT_SIZE: 256
   PREPROCESS:
