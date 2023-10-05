@@ -34,21 +34,21 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 SETTINGS = {
     'models': [
         {
-            'config': 'brats20_debug_vit',
+            'config': 'vit_B16_2D_ap_brats20_input256_baseline',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-16 2D transformer debug1'},  # if None default is config_name
+            'plot_name': 'ViT-B'},  # if None default is config_name
         {
-            'config': 'brats20_debug_vit2',
+            'config': 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-16 2D transformer debug2'},  # if None default is config_name
+            'plot_name': 'ViT-B + Attention-Based LGL'},  # if None default is config_name
         {
-            'config': 'brats20_debug_vit3',
+            'config': 'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-16 2D transformer debug3'},  # if None default is config_name
-        # {
-        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_15',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ProLesCalssifier - Localization Loss'},  # if None default is config_name
+            'plot_name': 'ViT-B + Backbone-Based LGL'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ViT-B + Fusion LGL'},  # if None default is config_name
         # {
         #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_15_SL_PNR_3_FNR_0_5',
         #     'exp_name': None,  # if None default is config_name
@@ -60,8 +60,8 @@ SETTINGS = {
     ],
     'dataset_name': 'brats20',
     'data_path': '',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
-    'output_name': None,  # if None default is datetime
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/Metrics/',
+    'output_name': 'for_presentaraion3',  # if None default is datetime
     'save_results': True,
     'save_attn': False,
     'device': 'cuda',

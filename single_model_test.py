@@ -173,7 +173,7 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 SETTINGS = {
     'model': {
-            'config': 'brats20_debug_vit',
+            'config': 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'LGLViT - BraTS20'},  # if None default is config_name
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/processed_data_t2w_bias_corr_resgist_t2w_hist_stnd_normalized/fold_0/val/',
@@ -181,7 +181,7 @@ SETTINGS = {
     'data_path': '',
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
     # 'output_dir': 'C:/Users/sagib/OneDrive/Desktop/Studies/Msc/Thesis/Results/LGLViT',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/Metrics/',
     'output_name': 'testtt',  # if None default is datetime
     'save_results': True,
     'save_attn': False,

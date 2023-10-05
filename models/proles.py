@@ -116,7 +116,7 @@ def build_model(args):
     #     weight_dict["loss_dice"] = args.dice_loss_coef
     # # TODO this is a hack
     # if args.aux_loss:
-    #     aux_weight_dict = {}
+    #     aux_weight_d ict = {}
     #     for i in range(args.dec_layers - 1):
     #         aux_weight_dict.update({k + f'_{i}': v for k, v in weight_dict.items()})
     #     weight_dict.update(aux_weight_dict)
