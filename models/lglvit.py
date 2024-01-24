@@ -3,13 +3,13 @@ from scipy.ndimage import zoom
 from torch import nn
 import torch.nn.functional as F
 
-from models.layers.backbone import build_backbone
+from models.layers.patch_embedding import build_patch_embedding
 from models.layers.transformer import build_transformer
 
 
-class ProLesClassifier(nn.Module):
+class VisionTransformerLGL(nn.Module):
     """ This is the VisTR module that performs video object detection """
-    def __init__(self, backbone, transformer, feat_size, num_classes=2, backbone_stages=4,
+    def __init__(self, patch_embed, transformer, feat_size, num_classes=2, backbone_stages=4,
                  embed_dim=2048, use_pos_embed=True, pos_embed_fit_mode='interpolate', attention_3d=True):
         """ Initializes the model.
         Parameters:
@@ -24,11 +24,11 @@ class ProLesClassifier(nn.Module):
         super().__init__()
         self.feat_size = feat_size
         self.attention_3d = attention_3d
-        self.backbone = backbone
+        self.patch_embed = patch_embed
         self.backbone_stages = backbone_stages
         self.use_pos_embed = use_pos_embed
         self.pos_embed_fit_mode = pos_embed_fit_mode
-        # self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.avgpool = nn.AvgPool1d(feat_size*feat_size)
         self.transformer = transformer
         self.mlp_head = nn.Sequential(
@@ -52,8 +52,8 @@ class ProLesClassifier(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
-        features, pos = self.backbone(samples, use_pos_embed=self.use_pos_embed)
-        src = features[-1]
+        embeds, pos = self.patch_embed(samples, use_pos_embed=self.use_pos_embed)
+        src = embeds[-1]
         f, em, h, w = src.size()
         src_proj = src
         src_proj = src_proj.flatten(-2).permute(0, 2, 1)
@@ -91,12 +91,12 @@ def build_model(args):
     device = torch.device(args.DEVICE)
     feat_size = args.TRAINING.INPUT_SIZE // args.MODEL.PATCH_SIZE
     pos_embed = args.MODEL.POSITION_EMBEDDING.TYPE is not None
-    backbone = build_backbone(args)
+    patch_embed = build_patch_embedding(args)
 
     transformer = build_transformer(args)
 
-    model = ProLesClassifier(
-        backbone,
+    model = VisionTransformerLGL(
+        patch_embed,
         transformer,
         feat_size=feat_size,
         num_classes=args.MODEL.NUM_CLASSES,

@@ -19,7 +19,7 @@ from datasets.covid1920 import Covid1920Dataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
 
-from models.proles import build_model
+from models.lglvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import train_one_epoch, eval_epoch
@@ -45,7 +45,7 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats21',
+    'dataset_name': 'brats20',
     # 'config_name': ['vit_B16_2D_ap_brats20_input256_baseline',
     #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75',
     #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1000_FR_sqz_max_smthseg_75',
@@ -60,13 +60,13 @@ SETTINGS = {
     #                 'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a10_FR_sqz_mean_LR_drop_20',
     #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_99_kl_a100_FR_sqz_mean_smthseg_75_LR_drop_20'
     #                 ],
-    'config_name': ['vit_B16_2D_ap_brats21_input256_baseline',
-                    'vit_B16_2D_ap_brats21_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
-                    'vit_B16_2D_ap_brats21_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
-                    'vit_B16_2D_ap_brats21_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51'
-                    ],
-    # 'config_name': ['brats20_debug_vit'
+    # 'config_name': ['vit_B16_2D_ap_brats21_input256_baseline',
+    #                 'vit_B16_2D_ap_brats21_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_ap_brats21_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_ap_brats21_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51'
     #                 ],
+    'config_name': ['brats20_debug_vit'
+                    ],
     # 'config_name': ['brats20_debug_vit',
     #                 'brats20_debug_vit2',
     #                 'brats20_debug_vit3'
@@ -74,7 +74,7 @@ SETTINGS = {
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'LGLViT_brats21',  # ProLesClassifier_covid1920
+    'wandb_proj_name': 'LGLViT_brats20',  # ProLesClassifier_covid1920
     'wandb_group': None,
     'device': 'cuda',
     'seed': 42
@@ -355,14 +355,6 @@ if __name__ == '__main__':
         # W&B logger initialization
         if settings['use_wandb']:
             wandb_run = init_wandb(settings['wandb_proj_name'], settings['exp_name'], settings['wandb_group'], cfg=config)
-            # wandb_run = wandb.init(project=settings['wandb_proj_name'],
-            #            name=settings['exp_name'],
-            #            config={
-            #                "batch_size": config.TRAINING.BATCH_SIZE,
-            #                "num_epochs": config.TRAINING.EPOCHS,
-            #                "lr": config.TRAINING.LR,
-            #                "pretrain_weights": ''
-            #            })
 
         if config.DATA.OUTPUT_DIR:
             Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)

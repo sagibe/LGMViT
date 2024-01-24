@@ -13,7 +13,7 @@ from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 # from datasets.picai2022 import prepare_datagens
 
-from models.proles import build_model
+from models.lglvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import eval_test

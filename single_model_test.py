@@ -24,7 +24,7 @@ from datasets.covid1920 import Covid1920Dataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
 
-from models.proles import build_model
+from models.lglvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import eval_test
