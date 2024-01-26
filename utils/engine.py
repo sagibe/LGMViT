@@ -18,7 +18,7 @@ from mmengine.visualization import Visualizer
 
 import utils.util as utils
 from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attetntion, \
-    generate_blur_masks_normalized
+    generate_blur_masks_normalized, generate_spatial_bb_map
 
 
 # from datasets.coco_eval import CocoEvaluator
@@ -27,7 +27,7 @@ from utils.localization import extract_heatmap, generate_heatmap_over_img, gener
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localization_criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, localization_loss_params: dict, sampling_loss_params: dict,
-                    max_norm: float = 0, cls_thresh: float = 0.5):
+                    max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False):
     model.train()
     criterion.train()
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
@@ -58,8 +58,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         samples = samples.squeeze(0).float().to(device)
         targets = labels[0].float().T.to(device)
         lesion_annot = labels[1].float().to(device)
-        outputs, attn, bb_feat_map = model(samples)
-        attn_maps = generate_spatial_attetntion(attn)
+        outputs, attn, bb_feats = model(samples)
+        if use_cls_token:
+            attn_maps = generate_spatial_attetntion(attn, mode='cls_token')
+            bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
+            # bb_feat_map = bb_feats[:, :, 1:].reshape(bs, em, h, w)
+        else:
+            attn_maps = generate_spatial_attetntion(attn, mode='max_pool')
+            bb_feat_map = generate_spatial_bb_map(bb_feats, mode='max_pool')
         #######
         # bs, nh, h, w = attn.shape
         # relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(bs, 16, 16)

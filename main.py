@@ -65,7 +65,10 @@ SETTINGS = {
     #                 'vit_B16_2D_ap_brats21_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_ap_brats21_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51'
     #                 ],
-    'config_name': ['brats20_debug_vit'
+    # 'config_name': ['brats20_debug_vit'
+    #                 ],
+    'config_name': ['vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51_cls_token_240125',
+                    'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51_test240125'
                     ],
     # 'config_name': ['brats20_debug_vit',
     #                 'brats20_debug_vit2',
@@ -279,7 +282,8 @@ def main(config, settings):
             localization_loss_params=config.TRAINING.LOSS.LOCALIZATION_LOSS,
             sampling_loss_params=config.TRAINING.LOSS.SAMPLING_LOSS,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
-            cls_thresh=config.TRAINING.CLS_THRESH
+            cls_thresh=config.TRAINING.CLS_THRESH,
+            use_cls_token=config.TRAINING.USE_CLS_TOKEN
         )
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(

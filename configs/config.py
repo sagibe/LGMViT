@@ -24,6 +24,7 @@ def get_default_config():
     cfg.TRAINING.EVAL = False
     cfg.TRAINING.NUM_WORKERS = 4
     cfg.TRAINING.CLS_THRESH = 0.5
+    cfg.TRAINING.USE_CLS_TOKEN = False
     #cfg.TRAINING.LOSS
     cfg.TRAINING.LOSS = edict()
     cfg.TRAINING.LOSS.TYPE = 'bce'

@@ -2,6 +2,7 @@ import torch
 from scipy.ndimage import zoom
 from torch import nn
 import torch.nn.functional as F
+from einops import repeat
 
 from models.layers.patch_embedding import build_patch_embedding
 from models.layers.transformer import build_transformer
@@ -10,7 +11,7 @@ from models.layers.transformer import build_transformer
 class VisionTransformerLGL(nn.Module):
     """ This is the VisTR module that performs video object detection """
     def __init__(self, patch_embed, transformer, feat_size, num_classes=2, backbone_stages=4,
-                 embed_dim=2048, use_pos_embed=True, pos_embed_fit_mode='interpolate', attention_3d=True):
+                 embed_dim=2048, use_cls_token=False, use_pos_embed=True, pos_embed_fit_mode='interpolate', attention_3d=True):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbones to be used. See backbones.py
@@ -26,6 +27,7 @@ class VisionTransformerLGL(nn.Module):
         self.attention_3d = attention_3d
         self.patch_embed = patch_embed
         self.backbone_stages = backbone_stages
+        self.use_cls_token = use_cls_token
         self.use_pos_embed = use_pos_embed
         self.pos_embed_fit_mode = pos_embed_fit_mode
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
@@ -54,16 +56,23 @@ class VisionTransformerLGL(nn.Module):
         """
         embeds, pos = self.patch_embed(samples, use_pos_embed=self.use_pos_embed)
         src = embeds[-1]
-        f, em, h, w = src.size()
+        bs, em, h, w = src.size()
         src_proj = src
         src_proj = src_proj.flatten(-2).permute(0, 2, 1)
 
+        if self.use_cls_token:
+            cls_tokens = repeat(self.cls_token, '() n e -> b n e', b=bs)
+            src_proj = torch.cat([cls_tokens, src_proj], dim=1)
+
+        x = src_proj
         if self.use_pos_embed:
             pos_last = pos[-1]
             pos_last = pos_last.flatten(1, 2)
-            x = src_proj + pos_last
-        else:
-            x = src_proj
+            if self.use_cls_token:
+                x[:, 1:, :] += pos_last
+            else:
+                x = src_proj + pos_last
+
             ###############
         # # x = torch.cat([self.cls_token.expand(f, -1, -1), x], dim=1)
         # out_transformer, attn_map = self.transformer(x)
@@ -79,13 +88,15 @@ class VisionTransformerLGL(nn.Module):
         out_transformer, attn = self.transformer(x)
 
         if self.attention_3d:
-            out_transformer = out_transformer.reshape(f, h * w, em)
+            out_transformer = out_transformer.reshape(bs, h * w, em)
 
         out_transformer = out_transformer.permute(0,2,1)
-        backbone_feat_maps = out_transformer.reshape(f, em, h, w)
 
-        outputs_class = self.mlp_head(self.avgpool(out_transformer).squeeze())
-        return outputs_class, attn, backbone_feat_maps
+        if self.use_cls_token:
+            outputs_class = self.mlp_head(out_transformer[:, :, 0])
+        else:
+            outputs_class = self.mlp_head(self.avgpool(out_transformer).squeeze())
+        return outputs_class, attn, out_transformer
 
 def build_model(args):
     device = torch.device(args.DEVICE)
@@ -102,6 +113,7 @@ def build_model(args):
         num_classes=args.MODEL.NUM_CLASSES,
         backbone_stages=args.MODEL.PATCH_EMBED.BACKBONE_STAGES,
         embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE,
+        use_cls_token=args.TRAINING.USE_CLS_TOKEN,
         use_pos_embed=pos_embed,
         pos_embed_fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
         attention_3d=args.MODEL.TRANSFORMER.ATTENTION_3D

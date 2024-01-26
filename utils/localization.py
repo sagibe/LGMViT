@@ -6,9 +6,28 @@ from torchvision.transforms.functional import gaussian_blur
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 import warnings
 
-def generate_spatial_attetntion(attn):
-    bs, nh, feat_size = attn.shape[0], attn.shape[1], int(np.sqrt(attn.shape[2]))
-    return attn.max(dim=-2)[0].view(bs, nh, feat_size, feat_size)
+def generate_spatial_attetntion(attn, mode='max_pool'):
+    bs, nh = attn.shape[0], attn.shape[1]
+    if mode == 'max_pool':
+        feat_size = int(np.sqrt(attn.shape[2]))
+        spat_attn = attn.max(dim=-2)[0].view(bs, nh, feat_size, feat_size)
+    elif mode == 'cls_token':
+        feat_size = int(np.sqrt(attn.shape[2]-1))
+        spat_attn = attn[:, :, 0, 1:].view(bs, nh, feat_size, feat_size)
+    else:
+        raise ValueError(f"{mode} spatial attention type not supported")
+    return spat_attn
+
+def generate_spatial_bb_map(bb_feats, mode='max_pool'):
+    bs, em = bb_feats.shape[0], bb_feats.shape[1]
+    if mode == 'max_pool':
+        feat_size = int(np.sqrt(bb_feats.shape[2]))
+    elif mode == 'cls_token':
+        feat_size = int(np.sqrt(bb_feats.shape[2] - 1))
+        bb_feats = bb_feats[:, :, 1:]
+    else:
+        raise ValueError(f"{mode} spatial attention type not supported")
+    return bb_feats.reshape(bs, em, feat_size, feat_size)
 
 def extract_heatmap(featmap: torch.Tensor,
                  feat_interpolation = 'bilinear',
