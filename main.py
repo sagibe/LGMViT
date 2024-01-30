@@ -65,11 +65,12 @@ SETTINGS = {
     #                 'vit_B16_2D_ap_brats21_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_ap_brats21_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51'
     #                 ],
-    # 'config_name': ['brats20_debug_vit'
-    #                 ],
-    'config_name': ['vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51_cls_token_240125',
-                    'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51_test240125'
+    'config_name': ['brats20_debug_vit'
                     ],
+    # 'config_name': ['vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a100_FR_sqz_mean_smthseg_51_cls_token',
+    #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a300_FR_sqz_mean_smthseg_51_cls_token',
+    #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a500_FR_sqz_mean_smthseg_51_cls_token'
+    #                 ],
     # 'config_name': ['brats20_debug_vit',
     #                 'brats20_debug_vit2',
     #                 'brats20_debug_vit3'

@@ -49,7 +49,7 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x, return_attention=False):
+    def forward(self, x, return_attention=False,  store_layers_attn=False):
         # x: B, N, C
         # mask: [B, N, ] torch.bool
         B, N, C = x.shape
@@ -60,6 +60,8 @@ class Attention(nn.Module):
 
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
+        if store_layers_attn:
+            self.attn_maps = attn
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
@@ -214,8 +216,8 @@ class TransformerEncoderBlock(nn.Sequential):
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         # self.patch_embed = PatchEmbedding(patch_size=16, stride=16, padding=0, in_chans=3, embed_dim=embed_size)
 
-    def forward(self, x, return_attention=False):
-        out_attn, attn_map = self.attn(self.norm1(x))
+    def forward(self, x, return_attention=False, store_layers_attn=False):
+        out_attn, attn_map = self.attn(self.norm1(x), store_layers_attn=store_layers_attn)
         x = x + self.drop_path(out_attn)
         # x = x + self.drop_path(self.attn(self.norm1(x)))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
@@ -230,7 +232,7 @@ def _get_clones(module, N):
 class TransformerEncoder(nn.Module):
 
     def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0.,
-                 norm_layer=nn.LayerNorm, num_layers=6, norm_output=None, return_attention=False):
+                 norm_layer=nn.LayerNorm, num_layers=6, norm_output=None, return_attention=False, store_layers_attn=False):
         super().__init__()
         encoder_layer = TransformerEncoderBlock(embed_size=embed_size,
                                                 num_heads=num_heads,
@@ -240,20 +242,28 @@ class TransformerEncoder(nn.Module):
                                                 norm_layer=norm_layer)
         self.layers = _get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
+        self.store_layers_attn = store_layers_attn
         self.norm_output = norm_output
 
     def forward(self, src):
         output = src
         for idx, layer in enumerate(self.layers):
             if idx < self.num_layers - 1:
-                output = layer(output)
+                output = layer(output, store_layers_attn=self.store_layers_attn)
             else:
-                output, attn = layer(output, return_attention=True)
+                output, attn = layer(output, return_attention=True, store_layers_attn=self.store_layers_attn)
+        # for idx, layer in enumerate(self.layers):
+        #     output, layer_attn = layer(output, return_attention=True)
+        #     if idx == 0:
+        #         attn = layer_attn.unsqueeze(1)
+        #     else:
+        #         attn = torch.cat([attn, layer_attn.unsqueeze(1)], dim=1)
         if self.norm_output is not None:
             output = self.norm_output(output)
         return output, attn
 
 def build_transformer(args):
+    store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'relevance_map'
     if args.MODEL.TRANSFORMER.TYPE == 'max_vit':
         return MaxViT(
                 num_classes=2,
@@ -276,7 +286,8 @@ def build_transformer(args):
             forward_drop_p=args.MODEL.TRANSFORMER.FORWARD_DROP_P,
             norm_layer=nn.LayerNorm,
             num_layers=args.MODEL.TRANSFORMER.NUM_LAYERS,
-            norm_output=None
+            norm_output=None,
+            store_layers_attn=store_layers_attn
         )
     # return TransformerEncoder(
     #     d_model=args.hidden_dim,

@@ -11,7 +11,8 @@ from models.layers.transformer import build_transformer
 class VisionTransformerLGL(nn.Module):
     """ This is the VisTR module that performs video object detection """
     def __init__(self, patch_embed, transformer, feat_size, num_classes=2, backbone_stages=4,
-                 embed_dim=2048, use_cls_token=False, use_pos_embed=True, pos_embed_fit_mode='interpolate', attention_3d=True):
+                 embed_dim=2048, use_cls_token=False, use_pos_embed=True, pos_embed_fit_mode='interpolate',
+                 attention_3d=True, store_layers_attn=False):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbones to be used. See backbones.py
@@ -29,6 +30,7 @@ class VisionTransformerLGL(nn.Module):
         self.backbone_stages = backbone_stages
         self.use_cls_token = use_cls_token
         self.use_pos_embed = use_pos_embed
+        self.store_layers_attn = store_layers_attn
         self.pos_embed_fit_mode = pos_embed_fit_mode
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.avgpool = nn.AvgPool1d(feat_size*feat_size)
@@ -116,7 +118,7 @@ def build_model(args):
         use_cls_token=args.TRAINING.USE_CLS_TOKEN,
         use_pos_embed=pos_embed,
         pos_embed_fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
-        attention_3d=args.MODEL.TRANSFORMER.ATTENTION_3D
+        attention_3d=args.MODEL.TRANSFORMER.ATTENTION_3D,
     )
     return model
 

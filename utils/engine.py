@@ -17,8 +17,8 @@ import cv2
 from mmengine.visualization import Visualizer
 
 import utils.util as utils
-from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attetntion, \
-    generate_blur_masks_normalized, generate_spatial_bb_map
+from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attention, \
+    generate_blur_masks_normalized, generate_spatial_bb_map, generate_relevance
 
 
 # from datasets.coco_eval import CocoEvaluator
@@ -59,13 +59,13 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         targets = labels[0].float().T.to(device)
         lesion_annot = labels[1].float().to(device)
         outputs, attn, bb_feats = model(samples)
-        if use_cls_token:
-            attn_maps = generate_spatial_attetntion(attn, mode='cls_token')
-            bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
-            # bb_feat_map = bb_feats[:, :, 1:].reshape(bs, em, h, w)
-        else:
-            attn_maps = generate_spatial_attetntion(attn, mode='max_pool')
-            bb_feat_map = generate_spatial_bb_map(bb_feats, mode='max_pool')
+        # if use_cls_token:
+        #     relevance_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh)
+        #     attn_maps = generate_spatial_attention(attn, mode='cls_token')
+        #     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
+        # else:
+        #     attn_maps = generate_spatial_attention(attn, mode='max_pool')
+        #     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='max_pool')
         #######
         # bs, nh, h, w = attn.shape
         # relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(bs, 16, 16)
@@ -76,6 +76,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         #     attn_map_old = attn_map_old.unsqueeze(0)
         # sampling loss
         if sampling_loss_params.USE:
+            # attn_maps = generate_spatial_attention(attn, mode='cls_token')
             outputs, targets, sampled_idx = sample_loss_inputs(outputs, targets,
                                                   pos_neg_ratio=sampling_loss_params.POS_NEG_RATIO,
                                                   full_neg_scan_ratio=sampling_loss_params.FULL_NEG_SCAN_RATIO)
@@ -89,6 +90,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             reduced_attn_maps = reduced_bb_feat_maps = None
             if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
                 # spatial_feat_maps = attn_maps
+                if use_cls_token:
+                    attn_maps = generate_spatial_attention(attn, mode='cls_token')
+                else:
+                    attn_maps = generate_spatial_attention(attn, mode='max_pool')
                 reduced_attn_maps = extract_heatmap(attn_maps,
                                                             feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                                                             channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
@@ -96,12 +101,17 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
             if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                 # spatial_feat_maps = bb_feat_map
+                if use_cls_token:
+                    bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
+                else:
+                    bb_feat_map = generate_spatial_bb_map(bb_feats, mode='max_pool')
                 reduced_bb_feat_maps = extract_heatmap(bb_feat_map,
                                                             feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                                                             channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                                                             resize_shape=lesion_annot.shape[-2:])
                 reduced_bb_feat_maps = reduced_bb_feat_maps.unsqueeze(0).to(device)
-
+            if localization_loss_params.SPATIAL_FEAT_SRC in ['relevance_map']:
+                relevance_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh)
             # reduced_spatial_feat_maps = extract_heatmap(spatial_feat_maps,
             #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
             #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
@@ -125,6 +135,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion':
                 beta = localization_loss_params.FUSION_BETA
                 reduced_spatial_feat_maps = reduced_attn_maps * beta + reduced_bb_feat_maps * (1 - beta)
+            elif localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
+                reduced_spatial_feat_maps = relevance_maps
 
             if localization_loss_params.SEG_SMOOTH_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
                 lesion_annot = generate_blur_masks_normalized(lesion_annot, kernel_size=localization_loss_params.SEG_SMOOTH_KERNEL_SIZE)
@@ -133,9 +145,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                      localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
                                                            torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()))
             elif localization_loss_params.TYPE == 'mse_fgbg':
-                localization_loss = localization_loss_params.ALPHA * \
-                                     localization_criterion(torch.cat(utils.min_max_normalize(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:]).unbind()),
-                                                           torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
+                if localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
+                    localization_loss = localization_loss_params.ALPHA * \
+                                         localization_criterion(torch.cat(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:].unbind()),
+                                                               torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
+                else:
+                    localization_loss = localization_loss_params.ALPHA * \
+                                         localization_criterion(torch.cat(utils.min_max_normalize(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:]).unbind()),
+                                                               torch.cat(lesion_annot[:,targets[:,0].to(bool),:,:].unbind()))
             else:
                 localization_loss = localization_loss_params.ALPHA * \
                                      localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
@@ -345,7 +362,7 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
             if save_attn_dir:
                 save_dir = os.path.join(save_attn_dir, 'attn_maps')
                 os.makedirs(save_dir, exist_ok=True)
-                attn_maps = generate_spatial_attetntion(attn)
+                attn_maps = generate_spatial_attention(attn)
                 for slice in range(samples.shape[0]):
                     cur_slice = samples[slice].permute(1, 2, 0).cpu().numpy()
                     cur_annot = lesion_annot[0][slice].cpu().numpy()
