@@ -2,14 +2,16 @@
 Various positional encodings for the transformer.
 Modified from DETR (https://github.com/facebookresearch/detr)
 """
+import numpy as np
 import math
 import torch
 from torch import nn
+import einops
 
 from utils.util import NestedTensor
 
 # position encoding for 3 dims
-class PositionEmbeddingSine(nn.Module):
+class PositionalEncodingSine3D(nn.Module):
     """
     This is a more standard version of the position embedding, very similar to the one
     used by the Attention is all you need paper, generalized to work on images.
@@ -43,29 +45,9 @@ class PositionEmbeddingSine(nn.Module):
             y_embed = y_embed / (y_embed[:, :, -1:, :] + eps) * self.scale
             x_embed = x_embed / (x_embed[:, :, :, -1:] + eps) * self.scale
 
-        # dim_t = torch.arange(self.embed_size // 3 + ((self.embed_size // 3) % 2), dtype=torch.float32, device=scan.device)
-        # dim_t = self.temperature ** (2 * (dim_t // 2) / (self.embed_size // 3))
 
         dim_t = torch.arange(embed// 3 + ((embed // 3) % 2), dtype=torch.float32, device=scan.device)
         dim_t = self.temperature ** (2 * (dim_t // 2) / (embed // 3))
-
-
-        # #####
-        # pos_x = x_embed[:, :, :, :, None] / dim_t
-        # pos_x = torch.stack((pos_x[:, :, :, :, 0::2].sin(), pos_x[:, :, :, :, 1::2].cos()), dim=5).flatten(4)
-        # if self.embed_size % 3 == 2:
-        #     pos_y = y_embed[:, :, :, :, None] / dim_t[:-1]
-        #     pos_y = torch.stack((pos_y[:, :, :, :, 2::2].sin(), pos_y[:, :, :, :, 1::2].cos()), dim=5).flatten(4)
-        # else:
-        #     pos_y = y_embed[:, :, :, :, None] / dim_t
-        #     pos_y = torch.stack((pos_y[:, :, :, :, 0::2].sin(), pos_y[:, :, :, :, 1::2].cos()), dim=5).flatten(4)
-        # if self.embed_size % 3 > 0:
-        #     pos_z = z_embed[:, :, :, :, None] / dim_t[:-1]
-        #     pos_z = torch.stack((pos_z[:, :, :, :, 2::2].sin(), pos_z[:, :, :, :, 1::2].cos()), dim=5).flatten(4)
-        # else:
-        #     pos_z = z_embed[:, :, :, :, None] / dim_t
-        #     pos_z = torch.stack((pos_z[:, :, :, :, 0::2].sin(), pos_z[:, :, :, :, 1::2].cos()), dim=5).flatten(4)
-        # #####
 
         pos_x = x_embed[:, :, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, :, None] / dim_t
@@ -91,63 +73,56 @@ class PositionEmbeddingSine(nn.Module):
 
         return pos
 
-class PositionEmbeddingLearned(nn.Module):
+class PositionalEncodingSine2D(nn.Module):
+    def __init__(self, embed_size):
+        """
+        :param channels: The last dimension of the tensor you want to apply pos emb to.
+        """
+        super(PositionalEncodingSine2D, self).__init__()
+        self.org_channels = embed_size
+        channels = int(np.ceil(embed_size / 4) * 2)
+        self.channels = channels
+        inv_freq = 1.0 / (10000 ** (torch.arange(0, channels, 2).float() / channels))
+        self.register_buffer("inv_freq", inv_freq)
+        self.register_buffer("cached_penc", None, persistent=False)
+
+    def forward(self, tensor):
+        """
+        :param tensor: A 4d tensor of size (batch_size, x, y, ch)
+        :return: Positional Encoding Matrix of size (batch_size, x, y, ch)
+        """
+        if len(tensor.shape) != 4:
+            raise RuntimeError("The input tensor has to be 4d!")
+
+        if self.cached_penc is not None and self.cached_penc.shape == tensor.shape:
+            return self.cached_penc
+
+        self.cached_penc = None
+        batch_size, x, y, orig_ch = tensor.shape
+        pos_x = torch.arange(x, device=tensor.device, dtype=self.inv_freq.dtype)
+        pos_y = torch.arange(y, device=tensor.device, dtype=self.inv_freq.dtype)
+        sin_inp_x = torch.einsum("i,j->ij", pos_x, self.inv_freq)
+        sin_inp_y = torch.einsum("i,j->ij", pos_y, self.inv_freq)
+        emb_x = get_emb(sin_inp_x).unsqueeze(1)
+        emb_y = get_emb(sin_inp_y)
+        emb = torch.zeros(
+            (x, y, self.channels * 2),
+            device=tensor.device,
+            dtype=tensor.dtype,
+        )
+        emb[:, :, : self.channels] = emb_x
+        emb[:, :, self.channels : 2 * self.channels] = emb_y
+
+        self.cached_penc = emb[None, :, :, :orig_ch].repeat(tensor.shape[0], 1, 1, 1).permute(0, 2, 3, 1)
+        return self.cached_penc
+
+def get_emb(sin_inp):
     """
-    Absolute pos embedding, learned.
+    Gets a base embedding for one dimension with sin and cos intertwined
     """
-    def __init__(self, num_pos_feats=256):
-        super().__init__()
-        self.row_embed = nn.Embedding(50, num_pos_feats)
-        self.col_embed = nn.Embedding(50, num_pos_feats)
-        self.dep_embed = nn.Embedding(50, num_pos_feats)
-        self.reset_parameters()
+    emb = torch.stack((sin_inp.sin(), sin_inp.cos()), dim=-1)
+    return torch.flatten(emb, -2, -1)
 
-    def reset_parameters(self):
-        nn.init.uniform_(self.row_embed.weight)
-        nn.init.uniform_(self.col_embed.weight)
-        nn.init.uniform_(self.dep_embed.weight)
-
-    def forward(self, scan: NestedTensor):
-        d, em, h, w = scan.size()
-        i = torch.arange(w, device=scan.device)
-        j = torch.arange(h, device=scan.device)
-        # k = torch.arange(d, device=scan.device)
-        x_emb = self.col_embed(i)
-        y_emb = self.row_embed(j)
-        # z_emb = self.dep_embed(k)
-        pos = torch.cat([
-            x_emb.unsqueeze(0).repeat(h, 1, 1),
-            y_emb.unsqueeze(1).repeat(1, w, 1),
-            # z_emb.unsqueeze(2).repeat(1, 1, d),
-        ], dim=-1).permute(2, 0, 1).unsqueeze(0).repeat(scan.shape[0], 1, 1, 1)
-        return pos
-
-
-import torch.nn as nn
-
-
-# class LearnedPositionalEmbedding3D(nn.Module):
-#     def __init__(self, embedding_dim, max_depth=40, max_height=256, max_width=256):
-#         super().__init__()
-#         self.embedding_dim = embedding_dim
-#         self.depth_embedding = nn.Embedding(max_depth, embedding_dim)
-#         self.height_embedding = nn.Embedding(max_height, embedding_dim)
-#         self.width_embedding = nn.Embedding(max_width, embedding_dim)
-#         self.position_embeddings = nn.Parameter(torch.zeros(1, embedding_dim))
-#
-#     def forward(self, inputs):
-#         inputs = inputs.permute(0,2,3,1).unsqueeze(0)
-#         batch_size, depth, height, width, channels = inputs.shape
-#         depth_positions = torch.arange(depth, device=inputs.device, dtype=torch.long).repeat(batch_size, height, width, 1).transpose(2, 3)
-#         height_positions = torch.arange(height, device=inputs.device, dtype=torch.long).repeat(batch_size, depth, width, 1).transpose(2, 3)
-#         width_positions = torch.arange(width, device=inputs.device, dtype=torch.long).repeat(batch_size, depth, height, 1)
-#         depth_embeddings = self.depth_embedding(depth_positions)
-#         height_embeddings = self.height_embedding(height_positions)
-#         width_embeddings = self.width_embedding(width_positions)
-#         position_embeddings = self.position_embeddings.unsqueeze(0).unsqueeze(1).unsqueeze(2).unsqueeze(3)
-#         embeddings = depth_embeddings + height_embeddings + width_embeddings + position_embeddings
-#         embeddings = embeddings.permute(0, 4, 1, 2, 3)
-#         return embeddings
 
 class LearnedPositionalEmbedding3D(nn.Module):
     """
@@ -188,19 +163,40 @@ class LearnedPositionalEmbedding3D(nn.Module):
         return pos
 
 
+class LearnedPositionalEncoding2D(nn.Module):
+  def __init__(self, embed_size, img_size=256, patch_size=16):
+    super().__init__()
+    num_patches = (img_size // patch_size) ** 2
+    self.width = self.height = img_size // patch_size
+    self.pos_embedding = nn.Parameter(torch.randn(num_patches, embed_size))
+  def forward(self, x):
+    batch_size = x.shape[0]
+    pos = self.pos_embedding.data.reshape(self.width, self.height, -1)
+    pos = einops.repeat(pos, 'w h e -> b w h e', b=batch_size)
+    return pos
+
 
 def build_position_encoding(args):
     # N_steps = args.MODEL.TRANSFORMER.EMBED_SIZE // 3
     # modulo = args.MODEL.TRANSFORMER.EMBED_SIZE % 3
-    if args.MODEL.POSITION_EMBEDDING.TYPE in ('v2', 'sine'):
-        # TODO find a better way of exposing other arguments
-        position_embedding = PositionEmbeddingSine(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,
-                                                   z_size=args.MODEL.POSITION_EMBEDDING.Z_SIZE,
-                                                   fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
-                                                   normalize=True,
-                                                   device=args.DEVICE)
-    elif args.MODEL.POSITION_EMBEDDING.TYPE in ('v3', 'learned'):
-        position_embedding = LearnedPositionalEmbedding3D(embedding_dim=args.MODEL.TRANSFORMER.EMBED_SIZE)
+    if args.MODEL.POSITION_EMBEDDING.TYPE == 'sine':
+        if args.MODEL.TRANSFORMER.ATTENTION_3D:
+            position_embedding = PositionalEncodingSine3D(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,
+                                                       z_size=args.MODEL.POSITION_EMBEDDING.Z_SIZE,
+                                                       fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
+                                                       normalize=True,
+                                                       device=args.DEVICE)
+        else:
+            position_embedding = PositionalEncodingSine2D(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE)
+
+    elif args.MODEL.POSITION_EMBEDDING.TYPE == 'learned':
+        if args.MODEL.TRANSFORMER.ATTENTION_3D:
+            position_embedding = LearnedPositionalEmbedding3D(embedding_dim=args.MODEL.TRANSFORMER.EMBED_SIZE)
+        else:
+            position_embedding = LearnedPositionalEncoding2D(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,
+                                                             img_size=args.TRAINING.INPUT_SIZE,
+                                                             patch_size=args.MODEL.PATCH_SIZE
+                                                             )
     elif args.MODEL.POSITION_EMBEDDING.TYPE is None:
         position_embedding = None
     else:

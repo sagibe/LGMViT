@@ -4,7 +4,7 @@ TRAINING:
   LR_DROP: 20
   BATCH_SIZE: 1
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 5
+  EPOCHS: 50
   CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
   SAVE_CKPT_INTERVAL: 1
@@ -14,7 +14,6 @@ TRAINING:
   EVAL: false
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  USE_CLS_TOKEN: true
   LOSS:
     TYPE: 'bce' # options: 'bce', 'focal'
     FOCAL_PARAMS:
@@ -23,12 +22,12 @@ TRAINING:
     LOCALIZATION_LOSS:
       USE: true
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', 'relevance_map'
-      FUSION_BETA: 0.95
+      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion'
+      FUSION_BETA: 0.9
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
       SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 1000
+      ALPHA: 100
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false
@@ -61,7 +60,7 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: BraTS2020/MICCAI_BraTS2020_TrainingData
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020/train_val_split_debug.json
+  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020/train_val_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding

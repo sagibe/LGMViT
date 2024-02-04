@@ -3,8 +3,6 @@ from scipy.ndimage import zoom
 from torch import nn
 import torch.nn.functional as F
 
-from models.layers.backbone import build_backbone
-from models.layers.transformer import build_transformer
 import torchvision
 from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict

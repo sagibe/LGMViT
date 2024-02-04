@@ -13,7 +13,7 @@ from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 # from datasets.picai2022 import prepare_datagens
 
-from models.proles import build_model
+from models.lglvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import eval_test
@@ -22,7 +22,7 @@ from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
-from utils.localization import generate_spatial_attetntion, extract_heatmap, generate_heatmap_over_img, \
+from utils.localization import generate_spatial_attention, extract_heatmap, generate_heatmap_over_img, \
     generate_blur_masks_normalized
 
 SETTINGS = {
@@ -167,7 +167,7 @@ def main(settings):
         outputs_1, attn_1, _ = model_1(samples)
         preds_1 = (sigmoid(outputs_1) > 0.5) * 1
         preds_1_bools = preds_1 > 0
-        attn_maps_1 = generate_spatial_attetntion(attn_1)
+        attn_maps_1 = generate_spatial_attention(attn_1)
         reduced_attn_maps_1 = extract_heatmap(attn_maps_1,
                                             feat_interpolation='bilinear',
                                             channel_reduction='squeeze_mean',
@@ -178,7 +178,7 @@ def main(settings):
         outputs_2, attn_2, _ = model_2(samples)
         preds_2 = (sigmoid(outputs_2) > 0.5) * 1
         preds_2_bools = preds_2 > 0
-        attn_maps_2 = generate_spatial_attetntion(attn_2)
+        attn_maps_2 = generate_spatial_attention(attn_2)
         #############################
         attn_maps_2_h0 = extract_heatmap(attn_maps_2[:,0,...].unsqueeze(1),
                                             feat_interpolation='bilinear',

@@ -14,6 +14,7 @@ TRAINING:
   EVAL: false
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
+  USE_CLS_TOKEN: false
   LOSS:
     TYPE: 'bce' # options: 'bce', 'focal'
     FOCAL_PARAMS:
@@ -22,11 +23,12 @@ TRAINING:
     LOCALIZATION_LOSS:
       USE: true
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat'
+      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion'
+      FUSION_BETA: 0.95
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 100
+      SEG_SMOOTH_KERNEL_SIZE: 51  # gaussian smoothing kernel size on the gt segmentation
+      ALPHA: 200
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false

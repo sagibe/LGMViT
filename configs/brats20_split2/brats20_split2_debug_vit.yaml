@@ -22,9 +22,9 @@ TRAINING:
       GAMMA: 2
     LOCALIZATION_LOSS:
       USE: true
-      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', 'relevance_map'
-      FUSION_BETA: 0.95
+      TYPE: 'mse_fgbg' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
+      SPATIAL_FEAT_SRC: 'relevance_map'  # options: 'attn', 'bb_feat', 'fusion', 'relevance_map'
+      FUSION_BETA: 0.99
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
       SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
@@ -60,8 +60,8 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
-  DATASETS: BraTS2020/MICCAI_BraTS2020_TrainingData
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020/train_val_split_debug.json
+  DATASETS: BraTS2020_split2/MICCAI_BraTS2020_TrainingData
+  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020_split2/train_val_split_debug.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding

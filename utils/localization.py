@@ -6,9 +6,28 @@ from torchvision.transforms.functional import gaussian_blur
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 import warnings
 
-def generate_spatial_attetntion(attn):
-    bs, nh, feat_size = attn.shape[0], attn.shape[1], int(np.sqrt(attn.shape[2]))
-    return attn.max(dim=-2)[0].view(bs, nh, feat_size, feat_size)
+def generate_spatial_attention(attn, mode='max_pool'):
+    bs, nh = attn.shape[0], attn.shape[1]
+    if mode == 'max_pool':
+        feat_size = int(np.sqrt(attn.shape[2]))
+        spat_attn = attn.max(dim=-2)[0].view(bs, nh, feat_size, feat_size)
+    elif mode == 'cls_token':
+        feat_size = int(np.sqrt(attn.shape[2]-1))
+        spat_attn = attn[:, :, 0, 1:].view(bs, nh, feat_size, feat_size)
+    else:
+        raise ValueError(f"{mode} spatial attention type not supported")
+    return spat_attn
+
+def generate_spatial_bb_map(bb_feats, mode='max_pool'):
+    bs, em = bb_feats.shape[0], bb_feats.shape[1]
+    if mode == 'max_pool':
+        feat_size = int(np.sqrt(bb_feats.shape[2]))
+    elif mode == 'cls_token':
+        feat_size = int(np.sqrt(bb_feats.shape[2] - 1))
+        bb_feats = bb_feats[:, :, 1:]
+    else:
+        raise ValueError(f"{mode} spatial attention type not supported")
+    return bb_feats.reshape(bs, em, feat_size, feat_size)
 
 def extract_heatmap(featmap: torch.Tensor,
                  feat_interpolation = 'bilinear',
@@ -255,3 +274,64 @@ def generate_blur_masks_normalized(binary_masks, kernel_size=5, sigma=None):
     # if num_dims == 4:
     #     return blurred_masks.unsqueeze(0)
     return blurred_masks
+
+def generate_relevance(model, outputs, index=None, bin_thresh=0.5):
+    # a batch of samples
+    batch_size = outputs.shape[0]
+    # output = model(input, register_hook=True)
+    if index == None:
+        # index = np.argmax(output.cpu().data.numpy(), axis=-1)
+        index = torch.sigmoid(outputs) > bin_thresh
+        index = index.long().T
+        index = torch.tensor(index)
+
+    one_hot = torch.sum(outputs)
+    # one_hot = np.zeros((batch_size, 2), dtype=np.float32)
+    # one_hot[torch.arange(batch_size), index.data.cpu().numpy()] = 1
+    # one_hot = torch.from_numpy(one_hot).requires_grad_(True)
+    # one_hot = torch.sum(one_hot.to(input.device) * output)
+    model.zero_grad()
+
+    num_tokens = model.transformer.layers[0].attn.attn_maps.shape[-1]
+    R = torch.eye(num_tokens, num_tokens).cuda()
+    R = R.unsqueeze(0).expand(batch_size, num_tokens, num_tokens)
+    for i, blk in enumerate(model.transformer.layers):
+        grad = torch.autograd.grad(one_hot, [blk.attn.attn_maps], retain_graph=True)[0]
+        cam = blk.attn.attn_maps
+        cam = avg_heads(cam, grad)
+        R = R + apply_self_attention_rules(R, cam)
+    # for layer in range(attn.shape[1]):
+    #     cur_attn = attn[:, layer]
+    #     grad = torch.autograd.grad(one_hot, [cur_attn], retain_graph=True)[0]
+    #     # cam = blk.attn.get_attention_map()
+    #     cam = avg_heads(cur_attn, grad)
+    #     R = R + apply_self_attention_rules(R, cam)
+    relevance = R[:, 0, 1:]
+    return upscale_relevance(relevance).permute(1,0,2,3)
+
+def avg_heads(cam, grad):
+    cam = cam.reshape(-1, cam.shape[-3], cam.shape[-2], cam.shape[-1])
+    grad = grad.reshape(-1, cam.shape[-3], grad.shape[-2], grad.shape[-1])
+    cam = grad * cam
+    cam = cam.clamp(min=0).mean(dim=1)
+    return cam
+
+# rule 6 from paper
+def apply_self_attention_rules(R_ss, cam_ss):
+    R_ss_addition = torch.matmul(cam_ss, R_ss)
+    return R_ss_addition
+
+def upscale_relevance(relevance):
+    # relevance = relevance.reshape(-1, 1, 14, 14)
+    relevance = relevance.reshape(-1, 1, 16, 16)
+    relevance = torch.nn.functional.interpolate(relevance, scale_factor=16, mode='bilinear')
+
+    # normalize between 0 and 1
+    relevance = relevance.reshape(relevance.shape[0], -1)
+    min = relevance.min(1, keepdim=True)[0]
+    max = relevance.max(1, keepdim=True)[0]
+    relevance = (relevance - min) / (max - min)
+
+    # relevance = relevance.reshape(-1, 1, 224, 224)
+    relevance = relevance.reshape(-1, 1, 256, 256)
+    return relevance
