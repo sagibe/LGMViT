@@ -45,7 +45,7 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats20',
+    'dataset_name': 'brats20_split3',
     # 'config_name': ['vit_B16_2D_ap_brats20_input256_baseline',
     #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75',
     #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1000_FR_sqz_max_smthseg_75',
@@ -53,23 +53,30 @@ SETTINGS = {
     #                 'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a10_FR_sqz_mean',
     #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_99_kl_a100_FR_sqz_mean_smthseg_75'
     #                 ],
-    # 'config_name': ['vit_B16_2D_ap_brats20_input256_baseline_LR_drop_20',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75_LR_drop_20',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1000_FR_sqz_max_smthseg_75_LR_drop_20',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_75_LR_drop_20',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a10_FR_sqz_mean_LR_drop_20',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_99_kl_a100_FR_sqz_mean_smthseg_75_LR_drop_20'
+    # 'config_name': ['brats20_debug_vit'
     #                 ],
-    # 'config_name': ['vit_B16_2D_ap_brats21_input256_baseline',
-    #                 'vit_B16_2D_ap_brats21_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_ap_brats21_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_ap_brats21_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51'
+    # 'config_name': ['vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_baseline',
+    #                 'vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_baseline',
+    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51'
     #                 ],
-    'config_name': ['brats20_debug_vit'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split2_input256_baseline',
+    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
+    #                 ],
+    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline'
                     ],
-    # 'config_name': ['vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a100_FR_sqz_mean_smthseg_51_cls_token',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a300_FR_sqz_mean_smthseg_51_cls_token',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a500_FR_sqz_mean_smthseg_51_cls_token'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
     # 'config_name': ['brats20_debug_vit',
     #                 'brats20_debug_vit2',

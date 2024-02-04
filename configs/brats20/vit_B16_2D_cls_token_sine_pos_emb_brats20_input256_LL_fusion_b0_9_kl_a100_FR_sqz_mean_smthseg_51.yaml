@@ -22,7 +22,8 @@ TRAINING:
     LOCALIZATION_LOSS:
       USE: true
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'bb_feat'  # options: 'attn', 'bb_feat'
+      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion'
+      FUSION_BETA: 0.9
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
       SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
