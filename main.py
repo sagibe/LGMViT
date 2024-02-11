@@ -46,23 +46,19 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20_split3',
-    # 'config_name': ['vit_B16_2D_ap_brats20_input256_baseline',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a1000_FR_sqz_max_smthseg_75',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_75',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_attn_fgbgmse_a10_FR_sqz_mean',
-    #                 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_99_kl_a100_FR_sqz_mean_smthseg_75'
-    #                 ],
+    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_rse_d2_a100'
+                    ],
     # 'config_name': ['brats20_debug_vit'
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_baseline',
-    #                 'vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_sine_pos_emb_brats20_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_baseline',
-    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_learned_pos_emb_brats20_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_01_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_05_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_1_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_25_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_5_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_75_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_9_kl_a100_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_99_kl_a100_FR_sqz_mean_smthseg_51'
     #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split2_input256_baseline',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
@@ -70,12 +66,14 @@ SETTINGS = {
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
-    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline'
-                    ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
+    # 'config_name': ['brats20_split2_debug_vit'
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1000_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10000_FR_sqz_mean_smthseg_51'
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
     # 'config_name': ['brats20_debug_vit',
@@ -104,6 +102,28 @@ def main(config, settings):
 
     # model = build_resnet(config)
     model = build_model(config)
+    #######################
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_S1':
+        # shallow imputation without X
+        model.imp = nn.Conv2d(1, 1, 32, stride=16, padding=8)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_S2':
+        # shallow imputation with X as additional input
+        model.imp = nn.Conv2d(4, 1, 32, stride=16, padding=8)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_D1':
+        # deep imputation without X
+        model.imp_conv1 = nn.Conv2d(1, 1, 7, stride=2, padding=3)
+        model.imp_conv2 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+        model.imp_conv3 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+        model.imp_conv4 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+        # model.imp_conv5 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_D2':
+        # deep imputation with X as residual input
+        model.imp_conv1 = nn.Conv2d(4, 4, 7, stride=2, padding=3)
+        model.imp_conv2 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
+        model.imp_conv3 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
+        model.imp_conv4 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
+        # model.imp_conv5 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
+    #######################
     model.to(device)
 
     model_without_ddp = model
@@ -140,6 +160,8 @@ def main(config, settings):
         localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
     elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl_fgbg':
         localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="batchmean"), lambda_fg=0.3, lambda_bg=2)
+    elif 'res' in config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE:
+        localization_criterion = nn.L1Loss(reduction='none')
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} localization loss type not supported")
 
