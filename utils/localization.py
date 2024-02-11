@@ -275,6 +275,61 @@ def generate_blur_masks_normalized(binary_masks, kernel_size=5, sigma=None):
     #     return blurred_masks.unsqueeze(0)
     return blurred_masks
 
+def generate_res_learned_masks(model,binary_masks,input=None, mode='S1'):
+    target_map_pos_org = (binary_masks > 0).float().permute(1, 0, 2, 3)
+    if mode=='res_S1':
+        input_imp = target_map_pos_org
+        target_map_trans = model.imp(input_imp)
+    elif mode=='res_S2':
+        # input_imp = target_map_pos_org
+        input_imp = torch.cat((target_map_pos_org, input), 1)
+        target_map_trans = model.imp(input_imp)
+    elif mode == 'res_D1':
+        input_imp = target_map_pos_org
+        H1 = torch.relu(model.imp_conv1(input_imp))
+        H2 = torch.relu(model.imp_conv2(H1))
+        H3 = torch.relu(model.imp_conv3(H2))
+        target_map_trans = torch.relu(model.imp_conv4(H3))
+        # target_map_trans = model.imp_conv5(H4)
+    elif mode == 'res_D2':
+        input_imp = torch.cat((target_map_pos_org, input), 1)
+        H1 = torch.relu(model.imp_conv1(input_imp))
+        H2 = torch.relu(model.imp_conv2(H1))
+        H3 = torch.relu(model.imp_conv3(H2))
+        target_map_trans = torch.relu(model.imp_conv4(H3))
+        # target_map_trans = model.imp_conv5(H4)
+
+    # learned_masks = torch.squeeze(target_map_trans)
+    learned_masks = target_map_trans - torch.min(target_map_trans)
+    learned_masks = learned_masks / (torch.max(learned_masks) + 1e-6)
+
+    return learned_masks.permute(1,0,2,3)
+
+# def resize_binary_masks(masks, target_size):
+#     if len(target_size) > 2:
+#         raise ValueError("Number elemets in target_size should be 1 or 2 but got {}".format(target_size))
+#     elif len(target_size) == 1:
+#         width = height = target_size
+#     else:
+#         width = target_size[0]
+#         height = target_size[1]
+#
+#     if len(masks.shape) > 4 or len(masks.shape) < 2:
+#         raise ValueError("Number dimensions of masks should be 2 or 3 or 4 but got {}".format(len(masks.shape)))
+#     elif len(masks.shape) == 2:
+#         masks = masks.unsqueeze(0).unsqueeze(0)
+#     elif len(masks.shape) == 3:
+#         masks = masks.unsqueeze(0)
+#     masks_resized = torch.nn.functional.interpolate(masks, (width, height), mode='nearest')
+#     # for idx in range(masks_resized.shape[0]):
+#     #     # cur_mask = np.uint8(masks[idx]) * 255
+#     #     cur_mask = np.uint8(masks[idx].cpu().numpy()) * 255
+#     #     cur_mask = cv2.resize(cur_mask, (width, height), interpolation=cv2.INTER_NEAREST)
+#     #     masks_resized[idx] = torch.from_numpy(cur_mask).type(torch.FloatTensor) / 255
+#
+#     return masks_resized
+
+
 def generate_relevance(model, outputs, index=None, bin_thresh=0.5):
     # a batch of samples
     batch_size = outputs.shape[0]
@@ -335,3 +390,43 @@ def upscale_relevance(relevance):
     # relevance = relevance.reshape(-1, 1, 224, 224)
     relevance = relevance.reshape(-1, 1, 256, 256)
     return relevance
+
+def BF_solver(X, Y):
+    epsilon = 1e-4
+
+    with torch.no_grad():
+        x = torch.flatten(X)
+        y = torch.flatten(Y)
+        g_idx = (y<0).nonzero(as_tuple=True)[0]
+        le_idx = (y>0).nonzero(as_tuple=True)[0]
+        len_g = len(g_idx)
+        len_le = len(le_idx)
+        a = 0
+        a_ct = 0.0
+        for idx in g_idx:
+            v = x[idx] + epsilon # to avoid miss the constraint itself
+            v_ct = 0.0
+            for c_idx in g_idx:
+                v_ct += (v>x[c_idx]).float()/len_g
+            for c_idx in le_idx:
+                v_ct += (v<=x[c_idx]).float()/len_le
+            if v_ct>a_ct:
+                a = v
+                a_ct = v_ct
+                # print('New best solution found, a=', a, ', # of constraints matches:', a_ct)
+        for idx in le_idx:
+            v = x[idx]
+            v_ct = 0.0
+            for c_idx in g_idx:
+                v_ct += (v>x[c_idx]).float()/len_g
+            for c_idx in le_idx:
+                v_ct += (v<=x[c_idx]).float()/len_le
+            if v_ct>a_ct:
+                a = v
+                a_ct = v_ct
+                # print('New best solution found, a=', a, ', # of constraints matches:', a_ct)
+
+    # print('optimal solution for batch, a=', a)
+    # print('final threshold a is assigned as:', am)
+
+    return torch.tensor([a]).cuda()
