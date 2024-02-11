@@ -25,7 +25,7 @@ TRAINING:
       SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat'
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'select_max' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      SEG_SMOOTH_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
+      GT_SEG_PROCESS_KERNEL_SIZE: 75  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 10
       PATIENT_LIST: null
     SAMPLING_LOSS:

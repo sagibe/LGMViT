@@ -239,7 +239,7 @@ def img_from_canvas(canvas: 'FigureCanvasAgg') -> np.ndarray:
     rgb, alpha = np.split(img_rgba, [3], axis=2)
     return rgb.astype('uint8')
 
-def generate_blur_masks_normalized(binary_masks, kernel_size=5, sigma=None):
+def generate_gauss_blur_annotations(binary_masks, kernel_size=5, sigma=None):
     """
     Apply Gaussian blur to a batch of binary masks and return normalized blurred masks.
 
@@ -275,29 +275,50 @@ def generate_blur_masks_normalized(binary_masks, kernel_size=5, sigma=None):
     #     return blurred_masks.unsqueeze(0)
     return blurred_masks
 
-def generate_res_learned_masks(model,binary_masks,input=None, mode='S1'):
+def generate_learned_processed_annotations(model,binary_masks,input=None, mode='learned_s1'):
     target_map_pos_org = (binary_masks > 0).float().permute(1, 0, 2, 3)
-    if mode=='res_S1':
+    if mode=='learned_s1' or mode=='learned_l1':
         input_imp = target_map_pos_org
         target_map_trans = model.imp(input_imp)
-    elif mode=='res_S2':
+    elif mode=='learned_s2':
         # input_imp = target_map_pos_org
         input_imp = torch.cat((target_map_pos_org, input), 1)
         target_map_trans = model.imp(input_imp)
-    elif mode == 'res_D1':
+    elif mode == 'learned_d1':
         input_imp = target_map_pos_org
         H1 = torch.relu(model.imp_conv1(input_imp))
         H2 = torch.relu(model.imp_conv2(H1))
         H3 = torch.relu(model.imp_conv3(H2))
         target_map_trans = torch.relu(model.imp_conv4(H3))
         # target_map_trans = model.imp_conv5(H4)
-    elif mode == 'res_D2':
+    elif mode == 'learned_d2':
         input_imp = torch.cat((target_map_pos_org, input), 1)
         H1 = torch.relu(model.imp_conv1(input_imp))
         H2 = torch.relu(model.imp_conv2(H1))
         H3 = torch.relu(model.imp_conv3(H2))
         target_map_trans = torch.relu(model.imp_conv4(H3))
         # target_map_trans = model.imp_conv5(H4)
+    elif mode == 'learned_l2':
+        # input_imp = target_map_pos_org
+        # H1 = torch.relu(model.imp_conv1(input_imp))
+        # H2 = torch.relu(model.imp_conv2(H1))
+        # target_map_trans = torch.relu(model.imp_conv3(H2))
+
+        input_imp = target_map_pos_org
+        H1 = model.imp_conv1(input_imp)
+        target_map_trans = model.imp_conv2(H1)
+    elif mode == 'learned_l3':
+        # input_imp = target_map_pos_org
+        # H1 = torch.relu(model.imp_conv1(input_imp))
+        # H2 = torch.relu(model.imp_conv2(H1))
+        # target_map_trans = torch.relu(model.imp_conv3(H2))
+
+        input_imp = target_map_pos_org
+        H1 = model.imp_conv1(input_imp)
+        H2 = model.imp_conv2(H1)
+        target_map_trans = model.imp_conv3(H2)
+    else:
+        raise ValueError(f"{mode} mode type not supported")
 
     # learned_masks = torch.squeeze(target_map_trans)
     learned_masks = target_map_trans - torch.min(target_map_trans)
