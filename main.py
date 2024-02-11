@@ -19,7 +19,7 @@ from datasets.covid1920 import Covid1920Dataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
 
-from models.lglvit import build_model
+from models.lgmvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import train_one_epoch, eval_epoch
@@ -38,14 +38,14 @@ from utils.wandb import init_wandb, wandb_logger
 #     'data_fold': None,  # None to take fold number from config
 #     'use_wandb': True,
 #     'wandb_group': None,
-#     'wandb_proj_name': 'LGLViT_brats20',  # ProLesClassifier_covid1920 ProLesClassifier_brats20
+#     'wandb_proj_name': 'LGMViT_brats20',  # ProLesClassifier_covid1920 ProLesClassifier_brats20
 #     'device': 'cuda',
 #     'seed': 42
 # }
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats20_split3',
+    'dataset_name': 'brats20',
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_rse_d2_a100'
     #                 ],
@@ -66,7 +66,7 @@ SETTINGS = {
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
-    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51'
+    'config_name': ['brats20_debug_vit'
                     ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10_FR_sqz_mean_smthseg_51',
@@ -83,7 +83,7 @@ SETTINGS = {
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'LGLViT_brats20',  # ProLesClassifier_covid1920
+    'wandb_proj_name': 'LGMViT_brats20',  # ProLesClassifier_covid1920
     'wandb_group': None,
     'device': 'cuda',
     'seed': 42

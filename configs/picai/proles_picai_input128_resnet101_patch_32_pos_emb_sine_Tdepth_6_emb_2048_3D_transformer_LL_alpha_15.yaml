@@ -62,7 +62,7 @@ DATA:
     CROP_PROSTATE: true # crop scan according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
-  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGLViT/
+  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
 
 TEST:
   DATASET_PATH: #  if empty will take picai validation set according to fold
@@ -71,7 +71,7 @@ TEST:
   CHECKPOINT: 'best'
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGLViT/
+  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
 
 DISTRIBUTED:
   WORLD_SIZE: 1

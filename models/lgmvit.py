@@ -8,7 +8,7 @@ from models.layers.patch_embedding import build_patch_embedding
 from models.layers.transformer import build_transformer
 
 
-class VisionTransformerLGL(nn.Module):
+class VisionTransformerLGM(nn.Module):
     """ This is the VisTR module that performs video object detection """
     def __init__(self, patch_embed, transformer, feat_size, num_classes=2, backbone_stages=4,
                  embed_dim=2048, use_cls_token=False, use_pos_embed=True, pos_embed_fit_mode='interpolate',
@@ -108,7 +108,7 @@ def build_model(args):
 
     transformer = build_transformer(args)
 
-    model = VisionTransformerLGL(
+    model = VisionTransformerLGM(
         patch_embed,
         transformer,
         feat_size=feat_size,

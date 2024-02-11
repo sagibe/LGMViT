@@ -65,7 +65,7 @@ DATA:
     CROP_PROSTATE: true # crop scan according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
-  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\LGLViT
+  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\LGMViT
 
 TEST:
   DATASET_PATH:
@@ -74,7 +74,7 @@ TEST:
   CHECKPOINT: 6
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\LGLViT
+  OUTPUT_DIR: C:\Users\sagib\OneDrive\Desktop\Studies\Msc\Thesis\Models\LGMViT
 
 DISTRIBUTED:
   WORLD_SIZE: 1

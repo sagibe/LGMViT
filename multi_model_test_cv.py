@@ -21,7 +21,7 @@ from sklearn.metrics import precision_recall_curve
 from configs.config import get_default_config, update_config_from_file
 # from datasets.picai2022 import prepare_datagens
 
-from models.lglvit import build_model
+from models.lgmvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import eval_test
@@ -90,7 +90,7 @@ SETTINGS = {
     'data_path': '',
     # 'data_path': '/mnt/DATA1/Sagi/Data/Prostate_MRI/sheba_2021_lesion_annotated/train/processed_data/scans_data/',
     'folds': [0, 1, 2, 3, 4],
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/',
     'output_name': None,  # if None default is datetime
     'save_results': True,
     'save_attn': False,

@@ -84,7 +84,7 @@ def get_default_config():
     cfg.DATA.DATA_SPLIT_FILE = '/mnt/DATA1/Sagi/Data/Prostate_MRI/processed_data/picai/train_val_splits.json'
     cfg.DATA.DATA_FOLD = 0
     cfg.DATA.MODALITIES = 'all'  # 'all' for all available modalities. For specific modalities in a list of the desired ones (example = [])
-    cfg.DATA.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/LGLViT/'
+    cfg.DATA.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/LGMViT/'
     # DATA.PREPROCESS
     cfg.DATA.PREPROCESS = edict()
     cfg.DATA.PREPROCESS.RESIZE_MODE = 'interpolate'  # options: interpolate or padding
@@ -100,7 +100,7 @@ def get_default_config():
     cfg.TEST.CHECKPOINT = 34
     cfg.TEST.NUM_WORKERS = 4
     cfg.TEST.CLS_THRESH = 0.5
-    cfg.TEST.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/LGLViT/'
+    cfg.TEST.OUTPUT_DIR = '/mnt/DATA2/Sagi/Models/LGMViT/'
 
     # DISTRIBUTED
     cfg.DISTRIBUTED = edict()

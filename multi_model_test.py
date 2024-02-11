@@ -22,7 +22,7 @@ from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 # from datasets.picai2022 import prepare_datagens
 
-from models.lglvit import build_model
+from models.lgmvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import eval_test
@@ -40,15 +40,15 @@ SETTINGS = {
         {
             'config': 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B + Attention-Based LGL'},  # if None default is config_name
+            'plot_name': 'ViT-B + Attention-Based LGM'},  # if None default is config_name
         {
             'config': 'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B + Backbone-Based LGL'},  # if None default is config_name
+            'plot_name': 'ViT-B + Backbone-Based LGM'},  # if None default is config_name
         {
             'config': 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B + Fusion LGL'},  # if None default is config_name
+            'plot_name': 'ViT-B + Fusion LGM'},  # if None default is config_name
         # {
         #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_15_SL_PNR_3_FNR_0_5',
         #     'exp_name': None,  # if None default is config_name
@@ -60,7 +60,7 @@ SETTINGS = {
     ],
     'dataset_name': 'brats20',
     'data_path': '',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/Metrics/',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
     'output_name': 'for_presentaraion3',  # if None default is datetime
     'save_results': True,
     'save_attn': False,

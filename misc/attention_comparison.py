@@ -13,7 +13,7 @@ from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 # from datasets.picai2022 import prepare_datagens
 
-from models.lglvit import build_model
+from models.lgmvit import build_model
 import utils.util as utils
 from models.resnet import build_resnet
 from utils.engine import eval_test
@@ -37,7 +37,7 @@ SETTINGS = {
     'dataset_name': 'brats20',
     'data_path': '/mnt/DATA1/Sagi/Data/BraTS2020/MICCAI_BraTS2020_TrainingData',
     'data_split_file': '/mnt/DATA1/Sagi/Data/BraTS2020/train_val_split.json',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGLViT/attn_comparison/',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/attn_comparison/',
     'output_name': None,  # if None default is datetime
     'save_results': True,
 
@@ -316,7 +316,7 @@ def main(settings):
                 # ax[0][0].set_title('ViT-B')
                 # ax[0][0].axis('off')
                 # ax[0][1].imshow(attn_over_slice_w_aanot_2)
-                # ax[0][1].set_title('ViT-B + LGL')
+                # ax[0][1].set_title('ViT-B + LGM')
                 # ax[0][1].axis('off')
                 # ax[1][0].imshow(attn_over_annot_1)
                 # # ax[1][0].imshow(attn_over_pred_mask_1)
@@ -324,7 +324,7 @@ def main(settings):
                 # ax[1][0].axis('off')
                 # ax[1][1].imshow(attn_over_annot_2)
                 # # ax[1][1].imshow(attn_over_pred_mask_2)
-                # # ax[1][1].set_title('ViT-B + LGL')
+                # # ax[1][1].set_title('ViT-B + LGM')
                 # ax[1][1].axis('off')
                 # plt.suptitle(f"Patient ID: {scan_id[0]}\nSlice: {slice_num+str_idx+1}")
                 # plt.tight_layout()
