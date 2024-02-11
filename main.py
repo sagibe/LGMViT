@@ -46,9 +46,9 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20_split3',
-    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_rse_d2_a100'
-                    ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_rse_d2_a100'
+    #                 ],
     # 'config_name': ['brats20_debug_vit'
     #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_01_kl_a100_FR_sqz_mean_smthseg_51',
@@ -66,8 +66,8 @@ SETTINGS = {
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
-    # 'config_name': ['brats20_split2_debug_vit'
-    #                 ],
+    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51'
+                    ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a200_FR_sqz_mean_smthseg_51',

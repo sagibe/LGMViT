@@ -5,11 +5,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 import cv2
-
-import monai
-import nibabel as nib
 import numpy as np
-import skimage
 import scipy
 import torch
 import SimpleITK as sitk

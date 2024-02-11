@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from torch import sigmoid
 import matplotlib.pyplot as plt
 import cv2
-from mmengine.visualization import Visualizer
+# from mmengine.visualization import Visualizer
 
 import utils.util as utils
 from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attention, \

@@ -7,10 +7,7 @@ import matplotlib.pyplot as plt
 import cv2
 import pandas as pd
 
-import monai
-import nibabel as nib
 import numpy as np
-import skimage
 import scipy
 import torch
 import SimpleITK as sitk

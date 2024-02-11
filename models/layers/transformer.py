@@ -2,7 +2,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from monai.networks.layers import trunc_normal_
 from timm.models.layers import DropPath
 from typing import Sequence
 from torch import Tensor
