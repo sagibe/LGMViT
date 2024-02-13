@@ -23,7 +23,7 @@ from datasets.picai2022 import PICAI2021Dataset
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
 from utils.localization import generate_spatial_attention, extract_heatmap, generate_heatmap_over_img, \
-    generate_blur_masks_normalized
+    generate_gauss_blur_annotations
 
 SETTINGS = {
     'model_1': {
@@ -242,7 +242,7 @@ def main(settings):
                 attn_over_slice_w_aanot_2 = generate_heatmap_over_img(cur_attn_heatmap_2, cur_slice_w_annot.copy(), alpha=0.3)
 
                 # #################################
-                # cur_annot_smooth = generate_blur_masks_normalized(torch.from_numpy(cur_annot).unsqueeze(0), 75).squeeze().numpy()
+                # cur_annot_smooth = generate_gauss_blur_annotations(torch.from_numpy(cur_annot).unsqueeze(0), 75).squeeze().numpy()
                 # fig, ax = plt.subplots(2, 3, figsize=(10, 7))
                 # ax[0][0].imshow((utils.min_max_normalize(samples[slice_num,0,:,:].unsqueeze(0))*255).squeeze().cpu().numpy(), cmap='gray')
                 # ax[0][0].set_title('t2w')
@@ -272,7 +272,7 @@ def main(settings):
                 # ###################################
 
                 #################################
-                cur_annot_smooth = generate_blur_masks_normalized(torch.from_numpy(cur_annot).unsqueeze(0), 75).squeeze().numpy()
+                cur_annot_smooth = generate_gauss_blur_annotations(torch.from_numpy(cur_annot).unsqueeze(0), 75).squeeze().numpy()
                 fig, ax = plt.subplots(2, 3, figsize=(10, 7))
                 # ax[0][0].imshow((utils.min_max_normalize(attn_maps_2[slice_num,0,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
                 ax[0][0].imshow((utils.min_max_normalize(attn_maps_2_h0[slice_num].unsqueeze(0))*255).squeeze().detach().cpu().numpy())

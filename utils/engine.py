@@ -18,7 +18,7 @@ import cv2
 
 import utils.util as utils
 from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attention, \
-    generate_blur_masks_normalized, generate_spatial_bb_map, generate_relevance, BF_solver, generate_res_learned_masks
+    generate_gauss_blur_annotations, generate_spatial_bb_map, generate_relevance, BF_solver, generate_learned_processed_annotations
 
 
 # from datasets.coco_eval import CocoEvaluator
@@ -104,6 +104,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                                                 feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                                                                 channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                                                                 resize_shape=lesion_annot.shape[-2:])
+                    # reduced_attn_maps = extract_heatmap(attn_maps,
+                    #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                    #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                    #                                     resize_shape=attn_maps.shape[-2:])
                 reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
             if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                 # spatial_feat_maps = bb_feat_map
@@ -148,12 +152,20 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 width = height = reduced_spatial_feat_maps.shape[-1]
                 # lesion_annot_org_ds = resize_binary_masks(lesion_annot, target_size=(width, height))
                 lesion_annot_org_ds = torch.nn.functional.interpolate(lesion_annot, (width, height), mode='nearest')
-            if 'res' not in localization_loss_params.TYPE or localization_loss_params.TYPE == 'res_gauss':
-                if localization_loss_params.SEG_SMOOTH_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
-                    lesion_annot = generate_blur_masks_normalized(lesion_annot, kernel_size=localization_loss_params.SEG_SMOOTH_KERNEL_SIZE)
-            else:
-                lesion_annot = generate_res_learned_masks(model, lesion_annot, samples, mode=localization_loss_params.TYPE)
-                # lesion_annot_res_trans = generate_res_learned_masks(model, lesion_annot, samples, mode=localization_loss_params.TYPE)
+
+            if localization_loss_params.GT_SEG_PROCESS_METHOD == 'gauss' and localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0:
+                lesion_annot = generate_gauss_blur_annotations(lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
+            elif 'learned' in localization_loss_params.GT_SEG_PROCESS_METHOD:
+                lesion_annot = generate_learned_processed_annotations(model, lesion_annot, samples, mode=localization_loss_params.GT_SEG_PROCESS_METHOD)
+
+            # if 'res' not in localization_loss_params.TYPE or localization_loss_params.TYPE == 'res_gauss':
+            #     if localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0 and localization_loss_params.GT_SEG_PROCESS_METHOD == 'gauss':
+            #         lesion_annot = generate_gauss_blur_annotations(lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
+            #     elif 'learned' in localization_loss_params.GT_SEG_PROCESS_METHOD:
+            #         lesion_annot = generate_learned_processed_annotations(model, lesion_annot, samples, mode=localization_loss_params.TYPE)
+            # else:
+            #     lesion_annot = generate_learned_processed_annotations(model, lesion_annot, samples, mode=localization_loss_params.TYPE)
+            #     # lesion_annot_res_trans = generate_learned_processed_annotations(model, lesion_annot, samples, mode=localization_loss_params.TYPE)
             if localization_loss_params.TYPE == 'mse':
                 localization_loss = localization_loss_params.ALPHA * \
                                      localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=False).unbind()),
@@ -208,8 +220,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             #     lamda_bb_feat = 1 - beta
             # else:
             #     lamda_attn = lamda_bb_feat = 1
-            # if localization_loss_params.SEG_SMOOTH_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
-            #     lesion_annot = generate_blur_masks_normalized(lesion_annot, kernel_size=localization_loss_params.SEG_SMOOTH_KERNEL_SIZE)
+            # if localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
+            #     lesion_annot = generate_gauss_blur_annotations(lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
             # if localization_loss_params.TYPE == 'mse':
             #     if reduced_attn_maps:
             #         localization_loss += localization_loss_params.ALPHA * lamda_attn * \

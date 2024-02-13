@@ -45,29 +45,32 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats20',
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_rse_d2_a100'
+    'dataset_name': 'brats20_split3',
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a300_FR_sqz_mean_smthseg_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a400_FR_sqz_mean_smthseg_51'
     #                 ],
     # 'config_name': ['brats20_debug_vit'
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_01_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_05_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_1_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_25_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_5_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_75_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_9_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_99_kl_a100_FR_sqz_mean_smthseg_51'
-    #                 ],
+    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_3',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_7',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_25',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_51',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_25_7',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_51_25',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_25_7_3',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_51_25_7',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds1_25',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds2_25_7',
+                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds3_25_7_3'
+                    ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split2_input256_baseline',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
-    'config_name': ['brats20_debug_vit'
-                    ],
+    # 'config_name': ['brats20_split3_debug_vit'
+    #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
@@ -103,26 +106,59 @@ def main(config, settings):
     # model = build_resnet(config)
     model = build_model(config)
     #######################
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_S1':
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S1':
         # shallow imputation without X
         model.imp = nn.Conv2d(1, 1, 32, stride=16, padding=8)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_S2':
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S2':
         # shallow imputation with X as additional input
         model.imp = nn.Conv2d(4, 1, 32, stride=16, padding=8)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_D1':
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D1':
         # deep imputation without X
         model.imp_conv1 = nn.Conv2d(1, 1, 7, stride=2, padding=3)
         model.imp_conv2 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
         model.imp_conv3 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
         model.imp_conv4 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
         # model.imp_conv5 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'res_D2':
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D2':
         # deep imputation with X as residual input
         model.imp_conv1 = nn.Conv2d(4, 4, 7, stride=2, padding=3)
         model.imp_conv2 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
         model.imp_conv3 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
         model.imp_conv4 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
         # model.imp_conv5 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d1', 'learned_ds1']:
+        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d1' else 4
+        kernel_size = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+        padding = kernel_size // 2
+        model.imp = nn.Conv2d(input_dims, 1, kernel_size, stride=1, padding=padding)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d2', 'learned_ds2']:
+        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d2' else 4
+        if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
+            kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
+        else:
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+            kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
+        padding_l1 = kernel_size_l1 // 2
+        padding_l2 = kernel_size_l2 // 2
+        model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
+        model.imp_conv2 = nn.Conv2d(input_dims, 1, kernel_size_l2, stride=1, padding=padding_l2)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d3', 'learned_ds3']:
+        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d3' else 4
+        if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
+            kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
+            kernel_size_l3 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[2]
+        else:
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+            kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
+            kernel_size_l3 = (kernel_size_l2 // 2) // 2 * 2 + 1
+        padding_l1 = kernel_size_l1 // 2
+        padding_l2 = kernel_size_l2 // 2
+        padding_l3 = kernel_size_l3 // 2
+        model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
+        model.imp_conv2 = nn.Conv2d(input_dims, input_dims, kernel_size_l2, stride=1, padding=padding_l2)
+        model.imp_conv3 = nn.Conv2d(input_dims, 1, kernel_size_l3, stride=1, padding=padding_l3)
     #######################
     model.to(device)
 
