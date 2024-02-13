@@ -27,8 +27,8 @@ TRAINING:
       FUSION_BETA: 0.99
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      GT_SEG_PROCESS_METHOD: 'learned_l2' # options: 'None', 'gauss', 'learned_s1', 'learned_s2', 'learned_d1', 'learned_d2', 'learned_l1'
-      GT_SEG_PROCESS_KERNEL_SIZE: 25  # gaussian smoothing kernel size on the gt segmentation
+      GT_SEG_PROCESS_METHOD: 'learned_d2' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
+      GT_SEG_PROCESS_KERNEL_SIZE:  [51, 25]  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 1000
       PATIENT_LIST: null
     SAMPLING_LOSS:

@@ -4,7 +4,7 @@ TRAINING:
   LR_DROP: 20
   BATCH_SIZE: 1
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 50
+  EPOCHS: 25
   CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
   SAVE_CKPT_INTERVAL: 1
@@ -27,9 +27,9 @@ TRAINING:
       FUSION_BETA: 0.95
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      GT_SEG_PROCESS_METHOD: 'learned_d1' # options: 'gauss', 'learned_s1', 'learned_s2', 'learned_d1', 'learned_d2'
+      GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
       GT_SEG_PROCESS_KERNEL_SIZE: 51  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 500
+      ALPHA: 300
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false

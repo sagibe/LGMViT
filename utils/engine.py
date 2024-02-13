@@ -104,6 +104,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                                                 feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                                                                 channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                                                                 resize_shape=lesion_annot.shape[-2:])
+                    # reduced_attn_maps = extract_heatmap(attn_maps,
+                    #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                    #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                    #                                     resize_shape=attn_maps.shape[-2:])
                 reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
             if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                 # spatial_feat_maps = bb_feat_map

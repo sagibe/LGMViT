@@ -275,45 +275,48 @@ def generate_gauss_blur_annotations(binary_masks, kernel_size=5, sigma=None):
     #     return blurred_masks.unsqueeze(0)
     return blurred_masks
 
-def generate_learned_processed_annotations(model,binary_masks,input=None, mode='learned_s1'):
+def generate_learned_processed_annotations(model,binary_masks,input=None, mode='learned_S1'):
     target_map_pos_org = (binary_masks > 0).float().permute(1, 0, 2, 3)
-    if mode=='learned_s1' or mode=='learned_l1':
+    if mode in ['learned_S1', 'learned_d1']:
         input_imp = target_map_pos_org
         target_map_trans = model.imp(input_imp)
-    elif mode=='learned_s2':
+    elif mode in ['learned_S2', 'learned_ds1']:
         # input_imp = target_map_pos_org
         input_imp = torch.cat((target_map_pos_org, input), 1)
         target_map_trans = model.imp(input_imp)
-    elif mode == 'learned_d1':
-        input_imp = target_map_pos_org
+    elif mode in ['learned_D1', 'learned_D2']:
+        if mode == 'learned_D1':
+            input_imp = target_map_pos_org
+        else:
+            input_imp = torch.cat((target_map_pos_org, input), 1)
         H1 = torch.relu(model.imp_conv1(input_imp))
         H2 = torch.relu(model.imp_conv2(H1))
         H3 = torch.relu(model.imp_conv3(H2))
         target_map_trans = torch.relu(model.imp_conv4(H3))
         # target_map_trans = model.imp_conv5(H4)
-    elif mode == 'learned_d2':
-        input_imp = torch.cat((target_map_pos_org, input), 1)
-        H1 = torch.relu(model.imp_conv1(input_imp))
-        H2 = torch.relu(model.imp_conv2(H1))
-        H3 = torch.relu(model.imp_conv3(H2))
-        target_map_trans = torch.relu(model.imp_conv4(H3))
-        # target_map_trans = model.imp_conv5(H4)
-    elif mode == 'learned_l2':
+    elif mode in ['learned_d2', 'learned_ds2']:
+        if mode == 'learned_d2':
+            input_imp = target_map_pos_org
+        else:
+            input_imp = torch.cat((target_map_pos_org, input), 1)
+
         # input_imp = target_map_pos_org
         # H1 = torch.relu(model.imp_conv1(input_imp))
         # H2 = torch.relu(model.imp_conv2(H1))
         # target_map_trans = torch.relu(model.imp_conv3(H2))
 
-        input_imp = target_map_pos_org
         H1 = model.imp_conv1(input_imp)
         target_map_trans = model.imp_conv2(H1)
-    elif mode == 'learned_l3':
+    elif mode in ['learned_d3', 'learned_ds3']:
+        if mode == 'learned_d2':
+            input_imp = target_map_pos_org
+        else:
+            input_imp = torch.cat((target_map_pos_org, input), 1)
         # input_imp = target_map_pos_org
         # H1 = torch.relu(model.imp_conv1(input_imp))
         # H2 = torch.relu(model.imp_conv2(H1))
         # target_map_trans = torch.relu(model.imp_conv3(H2))
 
-        input_imp = target_map_pos_org
         H1 = model.imp_conv1(input_imp)
         H2 = model.imp_conv2(H1)
         target_map_trans = model.imp_conv3(H2)
