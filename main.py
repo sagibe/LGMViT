@@ -14,8 +14,10 @@ import random
 from pathlib import Path
 import utils.transforms as T
 from configs.config import get_default_config, update_config_from_file
+from datasets.atlasR2 import AtlasR2Dataset
 from datasets.brats20 import BraTS20Dataset
 from datasets.covid1920 import Covid1920Dataset
+from datasets.isles22 import Isles22Dataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
 
@@ -45,32 +47,44 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats20_split3',
+    'dataset_name': 'isles22',
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a300_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a400_FR_sqz_mean_smthseg_51'
     #                 ],
     # 'config_name': ['brats20_debug_vit'
     #                 ],
-    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_3',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_25',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_51',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_25_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_51_25',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_25_7_3',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_51_25_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds1_25',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds2_25_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds3_25_7_3'
-                    ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_3',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_25',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_25_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_51_25',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_25_7_3',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_51_25_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds1_25',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds2_25_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds3_25_7_3'
+    #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split2_input256_baseline',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
-    # 'config_name': ['brats20_split3_debug_vit'
+    # 'config_name': ['vit_B16_2D_cls_token_atlasR2_split4_input256_baseline',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_attn_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_bb_feat_kl_a500_gtproc_gauss_51'
     #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_isles22_input128_baseline',
+    #                 'vit_B16_2D_cls_token_isles22_input128_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_isles22_input128_lgm_attn_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128_lgm_bb_feat_kl_a500_gtproc_gauss_51'
+    #                 ],
+    'config_name': ['isles22_debug_vit'
+                    ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10_FR_sqz_mean_smthseg_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
@@ -79,14 +93,15 @@ SETTINGS = {
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10000_FR_sqz_mean_smthseg_51'
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
     #                 ],
-    # 'config_name': ['brats20_debug_vit',
-    #                 'brats20_debug_vit2',
-    #                 'brats20_debug_vit3'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_D2',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_D1',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_S2',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_S1'
     #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'LGMViT_brats20',  # ProLesClassifier_covid1920
+    'wandb_proj_name': 'LGMViT_isles22',  # LGMViT_brats20 LGMViT_atlasR2
     'wandb_group': None,
     'device': 'cuda',
     'seed': 42
@@ -294,6 +309,34 @@ def main(config, settings):
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
         dataset_val = BraTS20Dataset(data_dir,
+                                       scan_set='val',
+                                       split_dict=split_dict,
+                                       input_size=config.TRAINING.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'ATLAS_R2_0' in config.DATA.DATASETS:
+        dataset_train = AtlasR2Dataset(data_dir,
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.TRAINING.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = AtlasR2Dataset(data_dir,
+                                       scan_set='val',
+                                       split_dict=split_dict,
+                                       input_size=config.TRAINING.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'isles2022' in config.DATA.DATASETS:
+        dataset_train = Isles22Dataset(data_dir,
+                                         modality='dwi',
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.TRAINING.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = Isles22Dataset(data_dir,
+                                       modality='dwi',
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,

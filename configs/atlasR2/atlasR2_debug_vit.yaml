@@ -61,8 +61,8 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
-  DATASETS: BraTS2020_split3/MICCAI_BraTS2020_TrainingData
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020_split3/train_val_split_debug.json
+  DATASETS: ATLAS_R2_0/Training/
+  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/ATLAS_R2_0/train_val_split_debug.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding

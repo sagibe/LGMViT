@@ -12,10 +12,11 @@ import torch
 import SimpleITK as sitk
 
 
-class BraTS20Dataset:
-    def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=256,
+class Isles22Dataset:
+    def __init__(self, data_dir, modality='dwi', split_dict=None, transforms=None, scan_set='', input_size=256,
                  resize_mode='interpolate', padding=0):
         self.data_dir = data_dir
+        self.modality = modality
         self.scan_list = split_dict[scan_set]
         # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
 
@@ -29,42 +30,35 @@ class BraTS20Dataset:
 
     def __getitem__(self, idx):
         scan_id = self.scan_list[idx]
-        t1_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_t1.nii')
-        t2_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_t2.nii')
-        flair_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_flair.nii')
-        seg_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_seg.nii')
+        if self.modality == 'flair':
+            modality_path = os.path.join(self.data_dir, scan_id, 'ses-0001', 'anat', f'{scan_id}_ses-0001_FLAIR.nii.gz')
+        else:
+            modality_path = os.path.join(self.data_dir, scan_id, 'ses-0001', 'dwi', f'{scan_id}_ses-0001_{self.modality}.nii.gz')
 
-        t1 = sitk.GetArrayFromImage(sitk.ReadImage(t1_path)).astype(np.float32)
-        t2 = sitk.GetArrayFromImage(sitk.ReadImage(t2_path)).astype(np.float32)
-        flair = sitk.GetArrayFromImage(sitk.ReadImage(flair_path)).astype(np.float32)
+        seg_path = os.path.join(self.data_dir, 'derivatives', scan_id, 'ses-0001', f'{scan_id}_ses-0001_msk.nii.gz')
+
+        modality = sitk.GetArrayFromImage(sitk.ReadImage(modality_path)).astype(np.float32)
+
         seg_labels = sitk.GetArrayFromImage(sitk.ReadImage(seg_path)).astype(np.float32)
         seg_labels = (seg_labels > 0).astype(int)
         cls_labels = (np.sum(np.squeeze(seg_labels), axis=(1, 2)) > 0).astype(int)
 
-        t1 = min_max_norm(t1)
-        t2 = min_max_norm(t2)
-        flair = min_max_norm(flair)
+        modality = min_max_norm(modality)
         # scan = np.stack((scan, scan, scan), axis=1)
         # scan = cv2.resize(scan, (self.input_size, self.input_size), interpolation=cv2.INTER_CUBIC)
         # scan = scan.transpose(2,0,1)
         # scan = np.expand_dims(scan, 0)
 
-        if self.input_size != t1.shape[1]:
-            if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < t1.shape[1]):
-                t1 = resize_scan(t1, size=self.input_size)
-                t2 = resize_scan(t2, size=self.input_size)
-                flair = resize_scan(flair, size=self.input_size)
+        if self.input_size != modality.shape[1]:
+            if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < modality.shape[1]):
+                modality = resize_scan(modality, size=self.input_size)
             elif self.resize_mode == 'padding':
-                padding = self.input_size - t1.shape[1]
+                padding = self.input_size - modality.shape[1]
                 side_pad = padding//2
                 if padding % 2 == 0:
-                    t1 = np.pad(t1, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
-                    t2 = np.pad(t2, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
-                    flair = np.pad(flair, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
+                    modality = np.pad(modality, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
                 else:
-                    t1 = np.pad(t1, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
-                    t2 = np.pad(t2, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
-                    flair = np.pad(flair, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
+                    modality = np.pad(modality, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
             scale_factor_h = self.input_size / seg_labels.shape[-2]
             scale_factor_w = self.input_size / seg_labels.shape[-1]
             seg_labels = scipy.ndimage.zoom(seg_labels, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
@@ -76,7 +70,7 @@ class BraTS20Dataset:
         # ax[2].imshow(img_dwi[slice,:,:], cmap='gray')
         # plt.show()
 
-        scan = np.stack([t1, t2, flair], axis=1)
+        scan = np.stack([modality, modality, modality], axis=1)
 
         # apply the transforms
         if self._transforms is not None:
@@ -89,8 +83,8 @@ class BraTS20Dataset:
         #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
         # if True:
-        #     str_idx = 50
-        #     seg_size = 50
+        #     str_idx = 0
+        #     seg_size = 190
         #     labels = [cls_labels[str_idx:str_idx+seg_size], seg_labels[str_idx:str_idx+seg_size]]
         #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
 
