@@ -403,6 +403,7 @@ def apply_self_attention_rules(R_ss, cam_ss):
 def upscale_relevance(relevance):
     # relevance = relevance.reshape(-1, 1, 14, 14)
     relevance = relevance.reshape(-1, 1, 16, 16)
+    # relevance = relevance.reshape(-1, 1, 8, 8)
     relevance = torch.nn.functional.interpolate(relevance, scale_factor=16, mode='bilinear')
 
     # normalize between 0 and 1
@@ -413,6 +414,7 @@ def upscale_relevance(relevance):
 
     # relevance = relevance.reshape(-1, 1, 224, 224)
     relevance = relevance.reshape(-1, 1, 256, 256)
+    # relevance = relevance.reshape(-1, 1, 128, 128)
     return relevance
 
 def BF_solver(X, Y):

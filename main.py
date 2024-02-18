@@ -77,22 +77,28 @@ SETTINGS = {
     #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_attn_kl_a500_gtproc_gauss_51',
     #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_bb_feat_kl_a500_gtproc_gauss_51'
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_isles22_input128_baseline',
-    #                 'vit_B16_2D_cls_token_isles22_input128_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_isles22_input128_res_d2_a10',
-    #                 'vit_B16_2D_cls_token_isles22_input128_lgm_attn_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_isles22_input128_lgm_bb_feat_kl_a500_gtproc_gauss_51'
+    # 'config_name': ['vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a100'
     #                 ],
-    'config_name': ['isles22_debug_vit'
+    # 'config_name': ['vit_B16_2D_cls_token_isles22_input128dwi_baseline',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_lgm_attn_kl_a1000_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_lgm_bb_feat_kl_a1000_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_lgm_fusion_b0_8_kl_a1000_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a100',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a100',
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_isles22_input128dwi_lgm_fusion_b0_99_kl_a500_gtproc_gauss_51'
+    #                 ],
+    'config_name': ['vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a1',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a5',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a10',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a25',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a50',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a200',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a500',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a1000',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a2000',
+                    'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a10000'
                     ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1000_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10000_FR_sqz_mean_smthseg_51'
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
-    #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_D2',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_D1',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_S2',
@@ -101,9 +107,10 @@ SETTINGS = {
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'LGMViT_isles22',  # LGMViT_brats20 LGMViT_atlasR2
+    'wandb_proj_name': 'LGMViT_isles22',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22
     'wandb_group': None,
     'device': 'cuda',
+    'save_ckpt_interval': 10,
     'seed': 42
 }
 
@@ -459,6 +466,8 @@ if __name__ == '__main__':
         config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
         if settings['data_fold'] is not None:
             config.DATA.DATA_FOLD = settings['data_fold']
+        if settings['save_ckpt_interval'] is not None:
+            config.TRAINING.SAVE_CKPT_INTERVAL = settings['save_ckpt_interval']
         # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
         #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
         # config = utils.RecursiveNamespace(**config)

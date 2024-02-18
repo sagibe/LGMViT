@@ -1,10 +1,10 @@
 TRAINING:
-  INPUT_SIZE: 256
-  LR: 0.00001
+  INPUT_SIZE: 128
+  LR: 0.00005
   LR_DROP: 20
   BATCH_SIZE: 1
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 5
+  EPOCHS: 50
   CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
   SAVE_CKPT_INTERVAL: 1
@@ -21,15 +21,15 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: false
-      TYPE: 'mse_fgbg' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'relevance_map'  # options: 'attn', 'bb_feat', 'fusion', 'relevance_map'
-      FUSION_BETA: 0.95
+      USE: true
+      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', 'res_gauss', 'res_gauss', 'res_S1', 'res_S2,'res_D1', 'res_D2
+      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', 'relevance_map'
+      FUSION_BETA: 0.7
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      GT_SEG_PROCESS_METHOD: null # options: 'None', 'gauss', 'learned_S1', 'learned_S2'
-      GT_SEG_PROCESS_KERNEL_SIZE: 0  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 10
+      GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2'
+      GT_SEG_PROCESS_KERNEL_SIZE: 51  # gaussian smoothing kernel size on the gt segmentation
+      ALPHA: 1000
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false
@@ -61,8 +61,8 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
-  DATASETS: ATLAS_R2_0_split4/Training/
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/ATLAS_R2_0_split4/train_val_split_bug_fix2.json
+  DATASETS: isles2022
+  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/isles2022/train_val_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
