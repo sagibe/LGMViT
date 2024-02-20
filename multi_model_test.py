@@ -15,7 +15,7 @@ from pathlib import Path
 import utils.transforms as T
 from sklearn import metrics
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 from sklearn.metrics import precision_recall_curve
 
 from configs.config import get_default_config, update_config_from_file
@@ -34,35 +34,35 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 SETTINGS = {
     'models': [
         {
-            'config': 'vit_B16_2D_ap_brats20_input256_baseline',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline_tvt',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B'},  # if None default is config_name
+            'plot_name': 'ViT-B Baseline'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a200_FR_sqz_mean_smthseg_51',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_attn_kl_a500_FR_sqz_mean_smthseg_51_tvt',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B + Attention-Based LGM'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_ap_brats20_input256_LL_bb_feat_kl_a200_FR_sqz_mean_smthseg_51',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_bb_feat_kl_a500_FR_sqz_mean_smthseg_51_tvt',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B + Backbone-Based LGM'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_ap_brats20_input256_LL_fusion_option1_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51_tvt',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B + Fusion LGM'},  # if None default is config_name
         # {
-        #     'config': 'proles_picai_input128_resnet101_patch_32_pos_emb_sine_Tdepth_6_emb_2048_3D_transformer_LL_alpha_15_SL_PNR_3_FNR_0_5',
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100_tvt',
         #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ProLesCalssifier - Localization and Sampling Loss'},  # if None default is config_name
-        # {
-        #     'config': 'resnet101',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'Resnet101'},  # if None default is config_name
+        #     'plot_name': 'RobustVit'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_rse_d2_a10_tvt',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'RES D2'},  # if None default is config_name
     ],
-    'dataset_name': 'brats20',
+    'dataset_name': 'brats20_split3',
     'data_path': '',
     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
-    'output_name': 'for_presentaraion3',  # if None default is datetime
-    'save_results': True,
+    'output_name': None, # 'for_presentaraion3',  # if None default is datetime
+    'save_results': False,
     'save_attn': False,
     'device': 'cuda',
 }
@@ -140,7 +140,7 @@ def main(settings):
             data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
             with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
                 split_dict = json.load(f)
-            scan_set = 'val'
+            scan_set = 'test'
         if 'picai' in config.DATA.DATASETS:
             dataset_test = PICAI2021Dataset(data_dir,
                                            split_dict=split_dict,
@@ -173,9 +173,13 @@ def main(settings):
             save_attn_dir = None
         test_stats = eval_test(model, data_loader_test, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH, save_attn_dir)
 
-        cur_df = cur_df.append({'Model Name': model_settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
+        # cur_df = cur_df.concat({'Model Name': model_settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
+        #                 'AUROC': test_stats.auroc, 'AUPRC': test_stats.auprc, 'Cohens Kappa': test_stats.cohen_kappa,
+        #                 'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}, ignore_index=True)
+        cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': model_settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
                         'AUROC': test_stats.auroc, 'AUPRC': test_stats.auprc, 'Cohens Kappa': test_stats.cohen_kappa,
-                        'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}, ignore_index=True)
+                        'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}])
+                            ], ignore_index=True)
         fpr, tpr, _ = metrics.roc_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
         lr_precision, lr_recall, _ = precision_recall_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
 

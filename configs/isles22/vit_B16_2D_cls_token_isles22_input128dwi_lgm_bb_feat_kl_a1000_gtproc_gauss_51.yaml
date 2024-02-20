@@ -62,7 +62,7 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: isles2022
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/isles2022/train_val_split.json
+  DATA_SPLIT_FILE: datasets/data_splits/isles22/train_val_test_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding

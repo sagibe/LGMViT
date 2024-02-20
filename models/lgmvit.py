@@ -100,26 +100,81 @@ class VisionTransformerLGM(nn.Module):
             outputs_class = self.mlp_head(self.avgpool(out_transformer).squeeze())
         return outputs_class, attn, out_transformer
 
-def build_model(args):
-    device = torch.device(args.DEVICE)
-    feat_size = args.TRAINING.INPUT_SIZE // args.MODEL.PATCH_SIZE
-    pos_embed = args.MODEL.POSITION_EMBEDDING.TYPE is not None
-    patch_embed = build_patch_embedding(args)
+def build_model(config):
+    device = torch.device(config.DEVICE)
+    feat_size = config.TRAINING.INPUT_SIZE // config.MODEL.PATCH_SIZE
+    pos_embed = config.MODEL.POSITION_EMBEDDING.TYPE is not None
+    patch_embed = build_patch_embedding(config)
 
-    transformer = build_transformer(args)
+    transformer = build_transformer(config)
 
     model = VisionTransformerLGM(
         patch_embed,
         transformer,
         feat_size=feat_size,
-        num_classes=args.MODEL.NUM_CLASSES,
-        backbone_stages=args.MODEL.PATCH_EMBED.BACKBONE_STAGES,
-        embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE,
-        use_cls_token=args.TRAINING.USE_CLS_TOKEN,
+        num_classes=config.MODEL.NUM_CLASSES,
+        backbone_stages=config.MODEL.PATCH_EMBED.BACKBONE_STAGES,
+        embed_dim=config.MODEL.TRANSFORMER.EMBED_SIZE,
+        use_cls_token=config.TRAINING.USE_CLS_TOKEN,
         use_pos_embed=pos_embed,
-        pos_embed_fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
-        attention_3d=args.MODEL.TRANSFORMER.ATTENTION_3D,
+        pos_embed_fit_mode=config.MODEL.POSITION_EMBEDDING.FIT_MODE,
+        attention_3d=config.MODEL.TRANSFORMER.ATTENTION_3D,
     )
+
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S1':
+        # shallow imputation without X
+        model.imp = nn.Conv2d(1, 1, 32, stride=16, padding=8)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S2':
+        # shallow imputation with X as additional input
+        model.imp = nn.Conv2d(4, 1, 32, stride=16, padding=8)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D1':
+        # deep imputation without X
+        model.imp_conv1 = nn.Conv2d(1, 1, 7, stride=2, padding=3)
+        model.imp_conv2 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+        model.imp_conv3 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+        model.imp_conv4 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+        # model.imp_conv5 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D2':
+        # deep imputation with X as residual input
+        model.imp_conv1 = nn.Conv2d(4, 4, 7, stride=2, padding=3)
+        model.imp_conv2 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
+        model.imp_conv3 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
+        model.imp_conv4 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
+        # model.imp_conv5 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d1', 'learned_ds1']:
+        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d1' else 4
+        kernel_size = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+        padding = kernel_size // 2
+        model.imp = nn.Conv2d(input_dims, 1, kernel_size, stride=1, padding=padding)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d2', 'learned_ds2']:
+        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d2' else 4
+        if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
+            kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
+        else:
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+            kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
+        padding_l1 = kernel_size_l1 // 2
+        padding_l2 = kernel_size_l2 // 2
+        model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
+        model.imp_conv2 = nn.Conv2d(input_dims, 1, kernel_size_l2, stride=1, padding=padding_l2)
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d3', 'learned_ds3']:
+        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d3' else 4
+        if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
+            kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
+            kernel_size_l3 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[2]
+        else:
+            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+            kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
+            kernel_size_l3 = (kernel_size_l2 // 2) // 2 * 2 + 1
+        padding_l1 = kernel_size_l1 // 2
+        padding_l2 = kernel_size_l2 // 2
+        padding_l3 = kernel_size_l3 // 2
+        model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
+        model.imp_conv2 = nn.Conv2d(input_dims, input_dims, kernel_size_l2, stride=1, padding=padding_l2)
+        model.imp_conv3 = nn.Conv2d(input_dims, 1, kernel_size_l3, stride=1, padding=padding_l3)
+
     return model
 
     # # matcher = build_matcher(args)

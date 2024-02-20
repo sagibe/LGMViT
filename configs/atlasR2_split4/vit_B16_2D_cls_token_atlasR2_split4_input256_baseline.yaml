@@ -62,7 +62,7 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: ATLAS_R2_0_split4/Training/
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/ATLAS_R2_0_split4/train_val_split.json
+  DATA_SPLIT_FILE: datasets/data_splits/atlasR2_split4/train_val_test_splitR.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
