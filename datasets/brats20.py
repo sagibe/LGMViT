@@ -98,7 +98,7 @@ class BraTS20Dataset:
         return tuple([scan, labels, scan_id])
         # return tuple([img_concat, seg_labels if self.get_seg_labels else cls_labels])
 
-def resize_scan(scan, size=128):
+def resize_scan(scan, size=256):
     # zoom_factor = (1, size/scan.shape[1], size/scan.shape[2])
     # scan_rs = scipy.ndimage.zoom(scan,zoom_factor)
     scan_rs = np.zeros((len(scan), size, size))

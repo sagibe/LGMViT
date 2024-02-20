@@ -14,8 +14,11 @@ import random
 from pathlib import Path
 import utils.transforms as T
 from configs.config import get_default_config, update_config_from_file
+from datasets.atlasR2 import AtlasR2Dataset
 from datasets.brats20 import BraTS20Dataset
 from datasets.covid1920 import Covid1920Dataset
+from datasets.isles22 import Isles22Dataset
+from datasets.lits17 import LiTS17Dataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
 
@@ -46,49 +49,71 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20_split3',
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a300_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a400_FR_sqz_mean_smthseg_51'
+    # 'config_name': ['vit_B16_2D_cls_token_lits17_bs16_input512_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51'
     #                 ],
-    # 'config_name': ['brats20_debug_vit'
-    #                 ],
-    'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_3',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_25',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_51',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_25_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_51_25',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_25_7_3',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_51_25_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds1_25',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds2_25_7',
-                    'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds3_25_7_3'
+    'config_name': ['brats20_split3_debug_vit'
                     ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split2_input256_baseline',
-    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_bb_feat_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_fusion_b0_95_kl_a100_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split2_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_3',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_25',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_25_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_51_25',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_25_7_3',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_51_25_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds1_25',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds2_25_7',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds3_25_7_3'
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline_tvt',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_attn_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_bb_feat_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10'
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_atlasR2_split4_input256_baseline',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_attn_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_bb_feat_kl_a500_gtproc_gauss_51'
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51_tvt_sagi_test'
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_isles22_input128dwi_baseline',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_lgm_attn_kl_a1000_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_lgm_bb_feat_kl_a1000_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_lgm_fusion_b0_8_kl_a1000_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a100',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a100',
     #                 ],
     # 'config_name': ['brats20_split3_debug_vit'
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a200_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a1000_FR_sqz_mean_smthseg_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_fusion_b0_95_kl_a10000_FR_sqz_mean_smthseg_51'
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_LL_relevance_b0_95_fgbgmse_a4_smthseg_0'
+    # 'config_name': ['vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a1',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a5',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a10',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a25',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a50',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a100',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a200',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a500',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a1000',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a2000',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a5000',
+    #                 'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a10000',
     #                 ],
-    # 'config_name': ['brats20_debug_vit',
-    #                 'brats20_debug_vit2',
-    #                 'brats20_debug_vit3'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_D2',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_D1',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_S2',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_S1'
     #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'LGMViT_brats20',  # ProLesClassifier_covid1920
+    'wandb_proj_name': 'LGMViT_brats20',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17
     'wandb_group': None,
     'device': 'cuda',
+    'save_ckpt_interval': 10,
     'seed': 42
 }
 
@@ -105,61 +130,61 @@ def main(config, settings):
 
     # model = build_resnet(config)
     model = build_model(config)
-    #######################
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S1':
-        # shallow imputation without X
-        model.imp = nn.Conv2d(1, 1, 32, stride=16, padding=8)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S2':
-        # shallow imputation with X as additional input
-        model.imp = nn.Conv2d(4, 1, 32, stride=16, padding=8)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D1':
-        # deep imputation without X
-        model.imp_conv1 = nn.Conv2d(1, 1, 7, stride=2, padding=3)
-        model.imp_conv2 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-        model.imp_conv3 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-        model.imp_conv4 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-        # model.imp_conv5 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D2':
-        # deep imputation with X as residual input
-        model.imp_conv1 = nn.Conv2d(4, 4, 7, stride=2, padding=3)
-        model.imp_conv2 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
-        model.imp_conv3 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
-        model.imp_conv4 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
-        # model.imp_conv5 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d1', 'learned_ds1']:
-        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d1' else 4
-        kernel_size = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
-        padding = kernel_size // 2
-        model.imp = nn.Conv2d(input_dims, 1, kernel_size, stride=1, padding=padding)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d2', 'learned_ds2']:
-        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d2' else 4
-        if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
-            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
-            kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
-        else:
-            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
-            kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
-        padding_l1 = kernel_size_l1 // 2
-        padding_l2 = kernel_size_l2 // 2
-        model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
-        model.imp_conv2 = nn.Conv2d(input_dims, 1, kernel_size_l2, stride=1, padding=padding_l2)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d3', 'learned_ds3']:
-        input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d3' else 4
-        if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
-            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
-            kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
-            kernel_size_l3 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[2]
-        else:
-            kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
-            kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
-            kernel_size_l3 = (kernel_size_l2 // 2) // 2 * 2 + 1
-        padding_l1 = kernel_size_l1 // 2
-        padding_l2 = kernel_size_l2 // 2
-        padding_l3 = kernel_size_l3 // 2
-        model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
-        model.imp_conv2 = nn.Conv2d(input_dims, input_dims, kernel_size_l2, stride=1, padding=padding_l2)
-        model.imp_conv3 = nn.Conv2d(input_dims, 1, kernel_size_l3, stride=1, padding=padding_l3)
-    #######################
+    # #######################
+    # if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S1':
+    #     # shallow imputation without X
+    #     model.imp = nn.Conv2d(1, 1, 32, stride=16, padding=8)
+    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S2':
+    #     # shallow imputation with X as additional input
+    #     model.imp = nn.Conv2d(4, 1, 32, stride=16, padding=8)
+    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D1':
+    #     # deep imputation without X
+    #     model.imp_conv1 = nn.Conv2d(1, 1, 7, stride=2, padding=3)
+    #     model.imp_conv2 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+    #     model.imp_conv3 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+    #     model.imp_conv4 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+    #     # model.imp_conv5 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
+    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D2':
+    #     # deep imputation with X as residual input
+    #     model.imp_conv1 = nn.Conv2d(4, 4, 7, stride=2, padding=3)
+    #     model.imp_conv2 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
+    #     model.imp_conv3 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
+    #     model.imp_conv4 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
+    #     # model.imp_conv5 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
+    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d1', 'learned_ds1']:
+    #     input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d1' else 4
+    #     kernel_size = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+    #     padding = kernel_size // 2
+    #     model.imp = nn.Conv2d(input_dims, 1, kernel_size, stride=1, padding=padding)
+    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d2', 'learned_ds2']:
+    #     input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d2' else 4
+    #     if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
+    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
+    #         kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
+    #     else:
+    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+    #         kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
+    #     padding_l1 = kernel_size_l1 // 2
+    #     padding_l2 = kernel_size_l2 // 2
+    #     model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
+    #     model.imp_conv2 = nn.Conv2d(input_dims, 1, kernel_size_l2, stride=1, padding=padding_l2)
+    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d3', 'learned_ds3']:
+    #     input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d3' else 4
+    #     if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
+    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
+    #         kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
+    #         kernel_size_l3 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[2]
+    #     else:
+    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
+    #         kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
+    #         kernel_size_l3 = (kernel_size_l2 // 2) // 2 * 2 + 1
+    #     padding_l1 = kernel_size_l1 // 2
+    #     padding_l2 = kernel_size_l2 // 2
+    #     padding_l3 = kernel_size_l3 // 2
+    #     model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
+    #     model.imp_conv2 = nn.Conv2d(input_dims, input_dims, kernel_size_l2, stride=1, padding=padding_l2)
+    #     model.imp_conv3 = nn.Conv2d(input_dims, 1, kernel_size_l3, stride=1, padding=padding_l3)
+    # #######################
     model.to(device)
 
     model_without_ddp = model
@@ -299,6 +324,47 @@ def main(config, settings):
                                        input_size=config.TRAINING.INPUT_SIZE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'ATLAS_R2_0' in config.DATA.DATASETS:
+        dataset_train = AtlasR2Dataset(data_dir,
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.TRAINING.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = AtlasR2Dataset(data_dir,
+                                       scan_set='val',
+                                       split_dict=split_dict,
+                                       input_size=config.TRAINING.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'isles2022' in config.DATA.DATASETS:
+        dataset_train = Isles22Dataset(data_dir,
+                                         modality='dwi',
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.TRAINING.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = Isles22Dataset(data_dir,
+                                       modality='dwi',
+                                       scan_set='val',
+                                       split_dict=split_dict,
+                                       input_size=config.TRAINING.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+    elif 'LiTS17' in config.DATA.DATASETS:
+        dataset_train = LiTS17Dataset(data_dir,
+                                         scan_set='train',
+                                         split_dict=split_dict,
+                                         input_size=config.TRAINING.INPUT_SIZE,
+                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+        dataset_val = LiTS17Dataset(data_dir,
+                                       scan_set='val',
+                                       split_dict=split_dict,
+                                       input_size=config.TRAINING.INPUT_SIZE,
+                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
 
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
@@ -416,6 +482,8 @@ if __name__ == '__main__':
         config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
         if settings['data_fold'] is not None:
             config.DATA.DATA_FOLD = settings['data_fold']
+        if settings['save_ckpt_interval'] is not None:
+            config.TRAINING.SAVE_CKPT_INTERVAL = settings['save_ckpt_interval']
         # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
         #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
         # config = utils.RecursiveNamespace(**config)

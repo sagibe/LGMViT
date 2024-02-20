@@ -60,7 +60,7 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: BraTS2020_split3/MICCAI_BraTS2020_TrainingData
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020_split3/train_val_split.json
+  DATA_SPLIT_FILE: datasets/data_splits/brats20_split3/train_val_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding

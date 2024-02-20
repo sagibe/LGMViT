@@ -27,7 +27,7 @@ TRAINING:
       FUSION_BETA: 0.95
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      GT_SEG_PROCESS_METHOD: null # options: 'None', 'gauss', 'learned_S1', 'learned_S2'
+      GT_SEG_PROCESS_METHOD: gauss # options: 'None', 'gauss', 'learned_S1', 'learned_S2'
       GT_SEG_PROCESS_KERNEL_SIZE: 0  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 100
       PATIENT_LIST: null
@@ -62,7 +62,7 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: BraTS2020_split3/MICCAI_BraTS2020_TrainingData
-  DATA_SPLIT_FILE: /mnt/DATA1/Sagi/Data/BraTS2020_split3/train_val_split.json
+  DATA_SPLIT_FILE: datasets/data_splits/brats20_split3/train_val_test_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
