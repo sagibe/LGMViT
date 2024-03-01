@@ -22,14 +22,14 @@ TRAINING:
       GAMMA: 2
     LOCALIZATION_LOSS:
       USE: true
-      TYPE: res
-      SPATIAL_FEAT_SRC: attn
-      FUSION_BETA: 0.95
+      TYPE: kl
+      SPATIAL_FEAT_SRC: fusion
+      FUSION_BETA: 0.75
       SPATIAL_FEAT_INTERPOLATION: bilinear
       FEAT_CHANNEL_REDUCTION: squeeze_mean
-      GT_SEG_PROCESS_METHOD: learned_D2
+      GT_SEG_PROCESS_METHOD: gauss
       GT_SEG_PROCESS_KERNEL_SIZE: 51
-      ALPHA: 25
+      ALPHA: 2000
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false
