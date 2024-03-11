@@ -211,7 +211,9 @@ class TransformerEncoderBlock(nn.Sequential):
         self.norm1 = norm_layer(embed_size)
         self.attn = Attention(embed_size, num_heads=num_heads)
         self.norm2 = norm_layer(embed_size)
-        self.mlp = Mlp(in_features=embed_size, hidden_features=forward_expansion, drop=forward_drop_p)
+        # self.mlp = Mlp(in_features=embed_size, hidden_features=forward_expansion, drop=forward_drop_p)
+        mlp_hidden_dim = int(embed_size * forward_expansion)
+        self.mlp = Mlp(in_features=embed_size, hidden_features=mlp_hidden_dim, drop=forward_drop_p)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         # self.patch_embed = PatchEmbedding(patch_size=16, stride=16, padding=0, in_chans=3, embed_dim=embed_size)
 
@@ -230,8 +232,8 @@ def _get_clones(module, N):
 
 class TransformerEncoder(nn.Module):
 
-    def __init__(self, embed_size=768, num_heads=8, drop_path=0., forward_expansion=4, forward_drop_p=0.,
-                 norm_layer=nn.LayerNorm, num_layers=6, norm_output=None, return_attention=False, store_layers_attn=False):
+    def __init__(self, embed_size=768, num_heads=12, drop_path=0., forward_expansion=4, forward_drop_p=0.,
+                 norm_layer=nn.LayerNorm, num_layers=12, norm_output=None, return_attention=False, store_layers_attn=False):
         super().__init__()
         encoder_layer = TransformerEncoderBlock(embed_size=embed_size,
                                                 num_heads=num_heads,
@@ -262,7 +264,8 @@ class TransformerEncoder(nn.Module):
         return output, attn
 
 def build_transformer(args):
-    store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'relevance_map'
+    # store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'relevance_map'
+    store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD == 'relevance_map'
     if args.MODEL.TRANSFORMER.TYPE == 'max_vit':
         return MaxViT(
                 num_classes=2,

@@ -89,8 +89,8 @@ class BraTS20Dataset:
         #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
         # if True:
-        #     str_idx = 50
-        #     seg_size = 50
+        #     str_idx = 0
+        #     seg_size = 25
         #     labels = [cls_labels[str_idx:str_idx+seg_size], seg_labels[str_idx:str_idx+seg_size]]
         #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
 

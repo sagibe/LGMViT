@@ -2,6 +2,7 @@
 Train and eval functions used in main.py
 Modified from DETR (https://github.com/facebookresearch/detr)
 """
+import numbers
 import numpy as np
 import math
 import os
@@ -27,7 +28,7 @@ from utils.localization import extract_heatmap, generate_heatmap_over_img, gener
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localization_criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, localization_loss_params: dict, sampling_loss_params: dict,
-                    max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False):
+                    max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False, lrp=None):
     model.train()
     criterion.train()
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
@@ -90,25 +91,46 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             reduced_attn_maps = reduced_bb_feat_maps = None
             if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
                 # spatial_feat_maps = attn_maps
-                if use_cls_token:
-                    attn_maps = generate_spatial_attention(attn, mode='cls_token')
-                else:
-                    attn_maps = generate_spatial_attention(attn, mode='max_pool')
-                if 'res' in localization_loss_params.TYPE:
-                    reduced_attn_maps = extract_heatmap(attn_maps,
-                                                        feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                                                        channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                                                        resize_shape=attn_maps.shape[-2:])
-                else:
-                    reduced_attn_maps = extract_heatmap(attn_maps,
-                                                                feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                                                                channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                                                                resize_shape=lesion_annot.shape[-2:])
-                    # reduced_attn_maps = extract_heatmap(attn_maps,
-                    #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                    #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                    #                                     resize_shape=attn_maps.shape[-2:])
-                reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
+                if localization_loss_params.ATTENTION_METHOD == 'raw_attn':
+                    if use_cls_token:
+                        attn_maps = generate_spatial_attention(attn, mode='cls_token')
+                    else:
+                        attn_maps = generate_spatial_attention(attn, mode='max_pool')
+                    if 'res' in localization_loss_params.TYPE:
+                        reduced_attn_maps = extract_heatmap(attn_maps,
+                                                            feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                            channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                                                            resize_shape=attn_maps.shape[-2:])
+                    else:
+                        reduced_attn_maps = extract_heatmap(attn_maps,
+                                                            feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                            channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                                                            resize_shape=lesion_annot.shape[-2:])
+                        # reduced_attn_maps = extract_heatmap(attn_maps,
+                        #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                        #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                        #                                     resize_shape=attn_maps.shape[-2:])
+                    reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
+                elif localization_loss_params.ATTENTION_METHOD == 'relevance_map':
+                    reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh).to(device)
+                elif localization_loss_params.ATTENTION_METHOD == 'lrp':
+                    # reduced_attn_maps = []
+                    reduced_attn_maps = lrp.generate_LRP(samples, method='full' ,start_layer=1, index=None).unsqueeze(0)
+                    # reduced_attn_maps = reduced_attn_maps.reshape(samples.shape[0], 1, 16, 16)
+                    # for sample in samples:
+                    #     reduced_attn_maps = lrp.generate_LRP(sample.unsqueeze(0), start_layer=1, index=None)
+                    #     reduced_attn_maps = reduced_attn_maps.reshape(samples.shape[0], 1, 16, 16)
+                    #     reduced_attn_maps.append(reduced_attn_maps)
+                elif localization_loss_params.ATTENTION_METHOD == 'rollout':
+                    reduced_attn_maps = lrp.generate_LRP(samples, method='rollout', start_layer=1, index=None)
+                    feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
+                    reduced_attn_maps = reduced_attn_maps.reshape(bs, feat_size, feat_size).unsqueeze(0)
+                    reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // feat_size, mode='bilinear')
+                elif localization_loss_params.ATTENTION_METHOD == 'beyond_attn':
+                    reduced_attn_maps = lrp.generate_LRP(samples, method='transformer_attribution', start_layer=1, index=None)
+                    feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
+                    reduced_attn_maps = reduced_attn_maps.reshape(bs, feat_size, feat_size).unsqueeze(0)
+                    reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // feat_size, mode='bilinear')
             if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                 # spatial_feat_maps = bb_feat_map
                 if use_cls_token:
@@ -124,8 +146,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 #                                             channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                 #                                             resize_shape=attn_maps.shape[-2:])
                 reduced_bb_feat_maps = reduced_bb_feat_maps.unsqueeze(0).to(device)
-            if localization_loss_params.SPATIAL_FEAT_SRC in ['relevance_map']:
-                relevance_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh)
+            # if localization_loss_params.SPATIAL_FEAT_SRC in ['relevance_map']:
+            #     attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh)
             # reduced_spatial_feat_maps = extract_heatmap(spatial_feat_maps,
             #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
             #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
@@ -148,9 +170,13 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 reduced_spatial_feat_maps = reduced_bb_feat_maps
             elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion':
                 beta = localization_loss_params.FUSION_BETA
+                # if isinstance(localization_loss_params.FUSION_BETA, numbers.Number): # BETA CHANGE
+                #     beta = localization_loss_params.FUSION_BETA
+                # else:
+                #     beta = model.beta
                 reduced_spatial_feat_maps = reduced_attn_maps * beta + reduced_bb_feat_maps * (1 - beta)
-            elif localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
-                reduced_spatial_feat_maps = relevance_maps
+            # elif localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
+            #     reduced_spatial_feat_maps = relevance_maps
 
             if 'res' in localization_loss_params.TYPE:
                 width = height = reduced_spatial_feat_maps.shape[-1]
