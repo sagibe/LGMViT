@@ -169,11 +169,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             elif localization_loss_params.SPATIAL_FEAT_SRC == 'bb_feat':
                 reduced_spatial_feat_maps = reduced_bb_feat_maps
             elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion':
-                beta = localization_loss_params.FUSION_BETA
-                # if isinstance(localization_loss_params.FUSION_BETA, numbers.Number): # BETA CHANGE
-                #     beta = localization_loss_params.FUSION_BETA
-                # else:
-                #     beta = model.beta
+                if isinstance(localization_loss_params.FUSION_BETA, numbers.Number):
+                    beta = localization_loss_params.FUSION_BETA
+                else:
+                    beta = model.beta
                 reduced_spatial_feat_maps = reduced_attn_maps * beta + reduced_bb_feat_maps * (1 - beta)
             # elif localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
             #     reduced_spatial_feat_maps = relevance_maps

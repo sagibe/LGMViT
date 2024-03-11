@@ -154,7 +154,7 @@ SETTINGS = {
     #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
-    'use_wandb': True,
+    'use_wandb': False,
     'wandb_proj_name': 'LGMViT_brats20',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17
     'wandb_group': None,
     'device': 'cuda',
