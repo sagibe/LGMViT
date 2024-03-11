@@ -24,7 +24,9 @@ from datasets.node21 import Node21Dataset
 
 from models.lgmvit import build_model
 import utils.util as utils
+from models.lgmvit_LRP import build_model_with_LRP
 from models.resnet import build_resnet
+from utils.ViT_explanation_generator import LRP
 from utils.engine import train_one_epoch, eval_epoch
 from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
@@ -49,35 +51,78 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20_split3',
-    # 'config_name': ['vit_B16_2D_cls_token_lits17_bs16_input512_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51'
-    #                 ],
     'config_name': ['brats20_split3_debug_vit'
                     ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_3',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_7',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_25',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d1_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_25_7',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d2_51_25',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_25_7_3',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_d3_51_25_7',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds1_25',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds2_25_7',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_learned_ds3_25_7_3'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a100_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a250_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a750_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a1000_gtproc_gauss_51',
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline_tvt',
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_5_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_25_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_1_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_05_kl_a500_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_75_kl_a500_gtproc_gauss_51',
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a100_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a200_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a300_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a400_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a600_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a700_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a800_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a900_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a1000_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a100_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a200_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a400_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a600_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a700_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a800_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a900_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a1000_gtproc_gauss_51'
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a500_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a200_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a300_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a400_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a600_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a700_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a800_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a900_gtproc_gauss_51',
+                    # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a1000_gtproc_gauss_51',
+                    # ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline',
+    #                 # 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_75_kl_a500_gtproc_gauss_51',
+    #                 # 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_attn_kl_a500_gtproc_gauss_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_bb_feat_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10'
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_atlasR2_split4_input256_baseline',
-    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_res_d2_a10',
-    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_attn_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_atlasR2_split4_input256_lgm_bb_feat_kl_a500_gtproc_gauss_51'
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a1',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a5',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a50',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a250',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a500',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a1000',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a2000',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a5000',
     #                 ],
+    # # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a1',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a5',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a50',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a100',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a250',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a500',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a1000',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a2000',
+    # #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a5000',
+    # #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51_tvt_sagi_test'
     #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_isles22_input128dwi_baseline',
@@ -113,7 +158,7 @@ SETTINGS = {
     'wandb_proj_name': 'LGMViT_brats20',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17
     'wandb_group': None,
     'device': 'cuda',
-    'save_ckpt_interval': 10,
+    'save_ckpt_interval': 5,
     'seed': 42
 }
 
@@ -129,62 +174,12 @@ def main(config, settings):
     random.seed(seed)
 
     # model = build_resnet(config)
-    model = build_model(config)
-    # #######################
-    # if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S1':
-    #     # shallow imputation without X
-    #     model.imp = nn.Conv2d(1, 1, 32, stride=16, padding=8)
-    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S2':
-    #     # shallow imputation with X as additional input
-    #     model.imp = nn.Conv2d(4, 1, 32, stride=16, padding=8)
-    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D1':
-    #     # deep imputation without X
-    #     model.imp_conv1 = nn.Conv2d(1, 1, 7, stride=2, padding=3)
-    #     model.imp_conv2 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-    #     model.imp_conv3 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-    #     model.imp_conv4 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-    #     # model.imp_conv5 = nn.Conv2d(1, 1, 3, stride=2, padding=1)
-    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_D2':
-    #     # deep imputation with X as residual input
-    #     model.imp_conv1 = nn.Conv2d(4, 4, 7, stride=2, padding=3)
-    #     model.imp_conv2 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
-    #     model.imp_conv3 = nn.Conv2d(4, 4, 3, stride=2, padding=1)
-    #     model.imp_conv4 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
-    #     # model.imp_conv5 = nn.Conv2d(4, 1, 3, stride=2, padding=1)
-    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d1', 'learned_ds1']:
-    #     input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d1' else 4
-    #     kernel_size = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
-    #     padding = kernel_size // 2
-    #     model.imp = nn.Conv2d(input_dims, 1, kernel_size, stride=1, padding=padding)
-    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d2', 'learned_ds2']:
-    #     input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d2' else 4
-    #     if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
-    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
-    #         kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
-    #     else:
-    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
-    #         kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
-    #     padding_l1 = kernel_size_l1 // 2
-    #     padding_l2 = kernel_size_l2 // 2
-    #     model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
-    #     model.imp_conv2 = nn.Conv2d(input_dims, 1, kernel_size_l2, stride=1, padding=padding_l2)
-    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD in ['learned_d3', 'learned_ds3']:
-    #     input_dims = 1 if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_d3' else 4
-    #     if isinstance(config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE, list):
-    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[0]
-    #         kernel_size_l2 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[1]
-    #         kernel_size_l3 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE[2]
-    #     else:
-    #         kernel_size_l1 = config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_KERNEL_SIZE
-    #         kernel_size_l2 = (kernel_size_l1 // 2) // 2 * 2 + 1
-    #         kernel_size_l3 = (kernel_size_l2 // 2) // 2 * 2 + 1
-    #     padding_l1 = kernel_size_l1 // 2
-    #     padding_l2 = kernel_size_l2 // 2
-    #     padding_l3 = kernel_size_l3 // 2
-    #     model.imp_conv1 = nn.Conv2d(input_dims, input_dims, kernel_size_l1, stride=1, padding=padding_l1)
-    #     model.imp_conv2 = nn.Conv2d(input_dims, input_dims, kernel_size_l2, stride=1, padding=padding_l2)
-    #     model.imp_conv3 = nn.Conv2d(input_dims, 1, kernel_size_l3, stride=1, padding=padding_l3)
-    # #######################
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn']:
+        model = build_model_with_LRP(config)
+        lrp = LRP(model)
+    else:
+        model = build_model(config)
+        lrp=None
     model.to(device)
 
     model_without_ddp = model
@@ -231,27 +226,6 @@ def main(config, settings):
         T.ToTensor()
     ])
     # Data loading
-    # data_list = None
-    # if config.DATA.DATA_LIST:
-    #     with open(config.DATA.DATA_LIST, 'r') as f:
-    #         data_list = json.load(f)
-    # if config.DATA.DATASET == 'proles2021_debug':
-    #     dataset_train = ProLes2021DatasetDebug(data_path=config.DATA.DATASET_PATH, modalities=config.DATA.MODALITIES, scan_set='train', use_mask=True, transforms=transforms)
-    #     # if config.distributed:
-    #     #     sampler_train = DistributedSampler(dataset_train)
-    #     # else:
-    #     #     sampler_train = RandomSampler(dataset_train)
-    #     #
-    #     # batch_sampler_train = BatchSampler(sampler_train, config.batch_size, drop_last=True)
-    #     # data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.num_workers)
-    # elif config.DATA.DATASET == 'picai2022':
-    # data_dirs = []
-    # datasets = config.DATA.DATASETS
-    # if not isinstance(datasets, list):
-    #     datasets = [datasets]
-    # for dataset in datasets:
-    #     data_dirs.append(os.path.join(config.DATA.DATASET_DIR, dataset))
-
     data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
     with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
         split_dict = json.load(f)
@@ -415,7 +389,8 @@ def main(config, settings):
             sampling_loss_params=config.TRAINING.LOSS.SAMPLING_LOSS,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
             cls_thresh=config.TRAINING.CLS_THRESH,
-            use_cls_token=config.TRAINING.USE_CLS_TOKEN
+            use_cls_token=config.TRAINING.USE_CLS_TOKEN,
+            lrp=lrp
         )
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(

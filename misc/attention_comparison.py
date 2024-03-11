@@ -27,16 +27,16 @@ from utils.localization import generate_spatial_attention, extract_heatmap, gene
 
 SETTINGS = {
     'model_1': {
-            'config': 'vit_B16_2D_ap_brats20_input256_baseline_LR_drop_20',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B16 Baseline'},  # if None default is config_name
+            'plot_name': 'ViT-B '},  # if None default is config_name
     'model_2': {
-        'config': 'vit_B16_2D_ap_brats20_input256_LL_attn_kl_a100_FR_sqz_mean_smthseg_75_LR_drop_20',
+        'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
         'exp_name': None,  # if None default is config_name
-        'plot_name': 'ViT-B16 Localization Loss'},  # if None default is config_name
-    'dataset_name': 'brats20',
-    'data_path': '/mnt/DATA1/Sagi/Data/BraTS2020/MICCAI_BraTS2020_TrainingData',
-    'data_split_file': '/mnt/DATA1/Sagi/Data/BraTS2020/train_val_split.json',
+        'plot_name': 'LGM-ViT'},  # if None default is config_name
+    'dataset_name': 'brats20_split3',
+    'data_path': '/mnt/DATA1/Sagi/Data/BraTS2020_split3/MICCAI_BraTS2020_TrainingData/',
+    'data_split_file': '../datasets/data_splits/brats20_split3/train_val_test_split.json',
     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/attn_comparison/',
     'output_name': None,  # if None default is datetime
     'save_results': True,
@@ -139,7 +139,7 @@ def main(settings):
                                         crop_prostate=config1.DATA.PREPROCESS.CROP_PROSTATE,
                                         padding=config1.DATA.PREPROCESS.CROP_PADDING)
 
-    elif settings['dataset_name'] == 'brats20':
+    elif 'brats20' in settings['dataset_name']:
         dataset = BraTS20Dataset(data_dir,
                                       scan_set=scan_set,
                                       split_dict=split_dict,
@@ -164,10 +164,12 @@ def main(settings):
         lesion_annot = labels[1].float().to(device)
 
         # model 1 outputs
-        outputs_1, attn_1, _ = model_1(samples)
+        with torch.no_grad():
+            outputs_1, attn_1, _ = model_1(samples)
         preds_1 = (sigmoid(outputs_1) > 0.5) * 1
         preds_1_bools = preds_1 > 0
-        attn_maps_1 = generate_spatial_attention(attn_1)
+        # attn_maps_1 = generate_spatial_attention(attn_1)
+        attn_maps_1 = generate_spatial_attention(attn_1, mode='cls_token')
         reduced_attn_maps_1 = extract_heatmap(attn_maps_1,
                                             feat_interpolation='bilinear',
                                             channel_reduction='squeeze_mean',
@@ -175,33 +177,34 @@ def main(settings):
         binary_pred_masks_1 = binary_map_highest_values(reduced_attn_maps_1, 0.005)
 
         # model 2 outputs
-        outputs_2, attn_2, _ = model_2(samples)
+        with torch.no_grad():
+            outputs_2, attn_2, _ = model_2(samples)
         preds_2 = (sigmoid(outputs_2) > 0.5) * 1
         preds_2_bools = preds_2 > 0
-        attn_maps_2 = generate_spatial_attention(attn_2)
+        attn_maps_2 = generate_spatial_attention(attn_2,  mode='cls_token')
         #############################
-        attn_maps_2_h0 = extract_heatmap(attn_maps_2[:,0,...].unsqueeze(1),
-                                            feat_interpolation='bilinear',
-                                            channel_reduction='squeeze_mean',
-                                            resize_shape=lesion_annot.shape[-2:])
-        attn_maps_2_h1 = extract_heatmap(attn_maps_2[:,1,...].unsqueeze(1),
-                                            feat_interpolation='bilinear',
-                                            channel_reduction='squeeze_mean',
-                                            resize_shape=lesion_annot.shape[-2:])
-        attn_maps_2_h2 = extract_heatmap(attn_maps_2[:,2,...].unsqueeze(1),
-                                            feat_interpolation='bilinear',
-                                            channel_reduction='squeeze_mean',
-                                            resize_shape=lesion_annot.shape[-2:])
-        attn_maps_2_h3 = extract_heatmap(attn_maps_2[:,3,...].unsqueeze(1),
-                                            feat_interpolation='bilinear',
-                                            channel_reduction='squeeze_mean',
-                                            resize_shape=lesion_annot.shape[-2:])
-        attn_maps_2_h4 = extract_heatmap(attn_maps_2[:,4,...].unsqueeze(1),
-                                            feat_interpolation='bilinear',
-                                            channel_reduction='squeeze_mean',
-                                            resize_shape=lesion_annot.shape[-2:])
-
-        #############################
+        # attn_maps_2_h0 = extract_heatmap(attn_maps_2[:,0,...].unsqueeze(1),
+        #                                     feat_interpolation='bilinear',
+        #                                     channel_reduction='squeeze_mean',
+        #                                     resize_shape=lesion_annot.shape[-2:])
+        # attn_maps_2_h1 = extract_heatmap(attn_maps_2[:,1,...].unsqueeze(1),
+        #                                     feat_interpolation='bilinear',
+        #                                     channel_reduction='squeeze_mean',
+        #                                     resize_shape=lesion_annot.shape[-2:])
+        # attn_maps_2_h2 = extract_heatmap(attn_maps_2[:,2,...].unsqueeze(1),
+        #                                     feat_interpolation='bilinear',
+        #                                     channel_reduction='squeeze_mean',
+        #                                     resize_shape=lesion_annot.shape[-2:])
+        # attn_maps_2_h3 = extract_heatmap(attn_maps_2[:,3,...].unsqueeze(1),
+        #                                     feat_interpolation='bilinear',
+        #                                     channel_reduction='squeeze_mean',
+        #                                     resize_shape=lesion_annot.shape[-2:])
+        # attn_maps_2_h4 = extract_heatmap(attn_maps_2[:,4,...].unsqueeze(1),
+        #                                     feat_interpolation='bilinear',
+        #                                     channel_reduction='squeeze_mean',
+        #                                     resize_shape=lesion_annot.shape[-2:])
+        #
+        # #############################
         reduced_attn_maps_2 = extract_heatmap(attn_maps_2,
                                             feat_interpolation='bilinear',
                                             channel_reduction='squeeze_mean',
@@ -223,9 +226,9 @@ def main(settings):
             cur_pred_2 = preds_2_bools[slice_num][0]
             cur_pred_mask_2 = binary_pred_masks_2[slice_num].cpu().numpy().astype(np.float32)
             cur_attn_heatmap_2 = reduced_attn_maps_2[slice_num]
-            if cur_annot.sum() > 0 and preds_1_bools[slice_num][0] and preds_2_bools[slice_num][0]:
-            # if cur_annot.sum() > 0 and not (cur_annot * cur_pred_mask_1).sum() and (cur_annot * cur_pred_mask_2).sum()\
-            #         and gt_cls and cur_pred_1 and cur_pred_2:
+            # if cur_annot.sum() > 0 and preds_1_bools[slice_num][0] and preds_2_bools[slice_num][0]:
+            if cur_annot.sum() > 0 and not (cur_annot * cur_pred_mask_1).sum() and (cur_annot * cur_pred_mask_2).sum()\
+                    and gt_cls.item() and cur_pred_1.item() and cur_pred_2.item():
                 cur_slice_w_annot = draw_contours_on_image(np.repeat((utils.min_max_normalize(samples[slice_num,2,:,:].unsqueeze(0))*255).squeeze().unsqueeze(2).cpu().numpy(),3,axis=2).astype(np.uint8),
                                                            (cur_annot*255).astype(np.uint8),
                                                            contour_color=(255, 0, 255), contour_thickness=2)
@@ -271,46 +274,46 @@ def main(settings):
                 # # plt.show()
                 # ###################################
 
-                #################################
-                cur_annot_smooth = generate_gauss_blur_annotations(torch.from_numpy(cur_annot).unsqueeze(0), 75).squeeze().numpy()
-                fig, ax = plt.subplots(2, 3, figsize=(10, 7))
-                # ax[0][0].imshow((utils.min_max_normalize(attn_maps_2[slice_num,0,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[0][0].imshow((utils.min_max_normalize(attn_maps_2_h0[slice_num].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                # ax[0][0].imshow((utils.min_max_normalize(attn_2[slice_num,0,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[0][0].set_title('head 0')
-                ax[0][0].axis('off')
-                # ax[0][1].imshow((utils.min_max_normalize(attn_maps_2[slice_num,1,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[0][1].imshow((utils.min_max_normalize(attn_maps_2_h1[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
-                # ax[0][1].imshow((utils.min_max_normalize(attn_2[slice_num,1,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[0][1].set_title('head 1')
-                ax[0][1].axis('off')
-                # ax[0][2].imshow((utils.min_max_normalize(attn_maps_2[slice_num,2,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[0][2].imshow((utils.min_max_normalize(attn_maps_2_h2[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
-                # ax[0][2].imshow((utils.min_max_normalize(attn_2[slice_num,2,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[0][2].set_title('head 2')
-                ax[0][2].axis('off')
-                # ax[1][0].imshow((utils.min_max_normalize(attn_maps_2[slice_num,3,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[1][0].imshow((utils.min_max_normalize(attn_maps_2_h3[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
-                # ax[1][0].imshow((utils.min_max_normalize(attn_2[slice_num,0,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[1][0].set_title('head 3')
-                ax[1][0].axis('off')
-                # ax[1][1].imshow((utils.min_max_normalize(attn_maps_2[slice_num,4,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[1][1].imshow((utils.min_max_normalize(attn_maps_2_h4[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
-                # ax[1][1].imshow((utils.min_max_normalize(attn_2[slice_num,1,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[1][1].set_title('head 4')
-                ax[1][1].axis('off')
-                ax[1][2].imshow(cur_attn_heatmap_2.detach().cpu().numpy())
-                # ax[1][2].imshow((utils.min_max_normalize(attn_2[slice_num,2,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
-                ax[1][2].set_title('dwi')
-                ax[1][2].axis('off')
-                plt.suptitle(f"Patient ID: {scan_id[0]}  Slice: {slice_num+str_idx+1}")
-                plt.tight_layout()
-                fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice_num+str_idx+1}.jpg'), dpi=150)
-                plt.close()
-                # plt.show()
-                ###################################
-
                 # #################################
+                # cur_annot_smooth = generate_gauss_blur_annotations(torch.from_numpy(cur_annot).unsqueeze(0), 75).squeeze().numpy()
+                # fig, ax = plt.subplots(2, 3, figsize=(10, 7))
+                # # ax[0][0].imshow((utils.min_max_normalize(attn_maps_2[slice_num,0,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[0][0].imshow((utils.min_max_normalize(attn_maps_2_h0[slice_num].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # # ax[0][0].imshow((utils.min_max_normalize(attn_2[slice_num,0,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[0][0].set_title('head 0')
+                # ax[0][0].axis('off')
+                # # ax[0][1].imshow((utils.min_max_normalize(attn_maps_2[slice_num,1,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[0][1].imshow((utils.min_max_normalize(attn_maps_2_h1[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
+                # # ax[0][1].imshow((utils.min_max_normalize(attn_2[slice_num,1,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[0][1].set_title('head 1')
+                # ax[0][1].axis('off')
+                # # ax[0][2].imshow((utils.min_max_normalize(attn_maps_2[slice_num,2,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[0][2].imshow((utils.min_max_normalize(attn_maps_2_h2[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
+                # # ax[0][2].imshow((utils.min_max_normalize(attn_2[slice_num,2,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[0][2].set_title('head 2')
+                # ax[0][2].axis('off')
+                # # ax[1][0].imshow((utils.min_max_normalize(attn_maps_2[slice_num,3,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[1][0].imshow((utils.min_max_normalize(attn_maps_2_h3[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
+                # # ax[1][0].imshow((utils.min_max_normalize(attn_2[slice_num,0,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[1][0].set_title('head 3')
+                # ax[1][0].axis('off')
+                # # ax[1][1].imshow((utils.min_max_normalize(attn_maps_2[slice_num,4,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[1][1].imshow((utils.min_max_normalize(attn_maps_2_h4[slice_num].unsqueeze(0)) * 255).squeeze().detach().cpu().numpy())
+                # # ax[1][1].imshow((utils.min_max_normalize(attn_2[slice_num,1,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[1][1].set_title('head 4')
+                # ax[1][1].axis('off')
+                # ax[1][2].imshow(cur_attn_heatmap_2.detach().cpu().numpy())
+                # # ax[1][2].imshow((utils.min_max_normalize(attn_2[slice_num,2,:,:].unsqueeze(0))*255).squeeze().detach().cpu().numpy())
+                # ax[1][2].set_title('dwi')
+                # ax[1][2].axis('off')
+                # plt.suptitle(f"Patient ID: {scan_id[0]}  Slice: {slice_num+str_idx+1}")
+                # plt.tight_layout()
+                # fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice_num+str_idx+1}.jpg'), dpi=150)
+                # plt.close()
+                # # plt.show()
+                # ###################################
+
+                #################################
                 # fig, ax = plt.subplots(2, 2, figsize=(8, 7))
                 # ax[0][0].imshow(attn_over_slice_w_aanot_1)
                 # ax[0][0].set_title('ViT-B')
@@ -332,6 +335,32 @@ def main(settings):
                 # plt.close()
                 # # plt.show()
                 # ###################################
+                #################################
+                fig, ax = plt.subplots(1, 2, figsize=(10, 6))
+                ax[0].imshow(attn_over_slice_w_aanot_1)
+                ax[0].set_title('Vanilla ViT')
+                ax[0].title.set_size(25)
+                ax[0].axis('off')
+                ax[1].imshow(attn_over_slice_w_aanot_2)
+                ax[1].set_title('LGM-ViT')
+                ax[1].title.set_size(25)
+                ax[1].axis('off')
+                # ax[1][0].imshow(attn_over_annot_1)
+                # # ax[1][0].imshow(attn_over_pred_mask_1)
+                # # ax[1][0].set_title('ViT-B')
+                # ax[1][0].axis('off')
+                # ax[1][1].imshow(attn_over_annot_2)
+                # # ax[1][1].imshow(attn_over_pred_mask_2)
+                # # ax[1][1].set_title('ViT-B + LGM')
+                # ax[1][1].axis('off')
+                # plt.suptitle(f"Patient ID: {scan_id[0]}\nSlice: {slice_num + str_idx + 1}")
+                plt.tight_layout()
+                fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice_num + str_idx + 1}.jpg'), dpi=150)
+                plt.close()
+                # plt.show()
+                ###################################
+
+
 
     print('Done!')
 

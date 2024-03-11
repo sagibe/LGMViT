@@ -358,11 +358,11 @@ def generate_relevance(model, outputs, index=None, bin_thresh=0.5):
     # a batch of samples
     batch_size = outputs.shape[0]
     # output = model(input, register_hook=True)
-    if index == None:
-        # index = np.argmax(output.cpu().data.numpy(), axis=-1)
-        index = torch.sigmoid(outputs) > bin_thresh
-        index = index.long().T
-        index = torch.tensor(index)
+    # if index == None:
+    #     # index = np.argmax(output.cpu().data.numpy(), axis=-1)
+    #     index = torch.sigmoid(outputs) > bin_thresh
+    #     index = index.long().T
+    #     index = torch.tensor(index)
 
     one_hot = torch.sum(outputs)
     # one_hot = np.zeros((batch_size, 2), dtype=np.float32)

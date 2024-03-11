@@ -12,7 +12,7 @@ class VisionTransformerLGM(nn.Module):
     """ This is the VisTR module that performs video object detection """
     def __init__(self, patch_embed, transformer, feat_size, num_classes=2, backbone_stages=4,
                  embed_dim=2048, use_cls_token=False, use_pos_embed=True, pos_embed_fit_mode='interpolate',
-                 attention_3d=True, store_layers_attn=False):
+                 attention_3d=True, store_layers_attn=False): # learned_beta #BETA CHANGE
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbones to be used. See backbones.py
@@ -33,6 +33,8 @@ class VisionTransformerLGM(nn.Module):
         self.store_layers_attn = store_layers_attn
         self.pos_embed_fit_mode = pos_embed_fit_mode
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        # if learned_beta:  # BETA CHANGE
+        #     self.beta = nn.Parameter(torch.tensor(0.75))
         self.avgpool = nn.AvgPool1d(feat_size*feat_size)
         self.transformer = transformer
         self.mlp_head = nn.Sequential(
@@ -104,6 +106,7 @@ def build_model(config):
     device = torch.device(config.DEVICE)
     feat_size = config.TRAINING.INPUT_SIZE // config.MODEL.PATCH_SIZE
     pos_embed = config.MODEL.POSITION_EMBEDDING.TYPE is not None
+    # learned_beta = True if config.TRAINING.LOSS.LOCALIZATION_LOSS.FUSION_BETA == 'learned' else False BETA CHANGE
     patch_embed = build_patch_embedding(config)
 
     transformer = build_transformer(config)
@@ -119,6 +122,7 @@ def build_model(config):
         use_pos_embed=pos_embed,
         pos_embed_fit_mode=config.MODEL.POSITION_EMBEDDING.FIT_MODE,
         attention_3d=config.MODEL.TRANSFORMER.ATTENTION_3D,
+        # learned_beta=learned_beta # BETA CHANGE
     )
 
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S1':

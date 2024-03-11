@@ -31,30 +31,86 @@ from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
+# SETTINGS = {
+#     'models': [
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_attn_kl_a500_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Attention-Based LGM'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_bb_feat_kl_a500_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Backbone-Based LGM'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_75_kl_a500_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b0_75_kl_a500'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_75_kl_a250_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b0_75_kl_a250'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a500_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b0_9_kl_a500'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'ViT-B + Fusion LGM b0_95_kl_a500'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_75_kl_a1000_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM a500'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RobustVit'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RES D2'},  # if None default is config_name
+#     ],
+#     'dataset_name': 'brats20_split3',
+#     'data_path': '',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
+#     'output_name': None, # 'for_presentaraion3',  # if None default is datetime
+#     'save_results': True,
+#     'save_attn': False,
+#     'device': 'cuda',
+# }
+
 SETTINGS = {
     'models': [
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline_tvt',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_attn_kl_a500_FR_sqz_mean_smthseg_51_tvt',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a100_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B + Attention-Based LGM'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a100'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_bb_feat_kl_a500_FR_sqz_mean_smthseg_51_tvt',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B + Backbone-Based LGM'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a250'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_FR_sqz_mean_smthseg_51_tvt',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a500_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'ViT-B + Fusion LGM'},  # if None default is config_name
-        # {
-        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100_tvt',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'RobustVit'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a500'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_rse_d2_a10_tvt',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a1000_gtproc_gauss_51',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a1000'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'RobustVit'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'RES D2'},  # if None default is config_name
     ],
@@ -62,10 +118,152 @@ SETTINGS = {
     'data_path': '',
     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
     'output_name': None, # 'for_presentaraion3',  # if None default is datetime
-    'save_results': False,
+    'save_results': True,
     'save_attn': False,
     'device': 'cuda',
 }
+
+
+
+# SETTINGS = {
+#     'models': [
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a100_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a100'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a200_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a200'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a300_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a300'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a400_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a400'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a500_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'LGM-ViT Fusion b0_8 a500'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a600_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a600'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a700_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a700'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a800_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a800'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a900_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_8 a900'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a100_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a100'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a200_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a200'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a300_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a300'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a400_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a400'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a500_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a500'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a600_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a600'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a700_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a700'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a800_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a800'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a900_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a900'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a1000_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_9 a1000'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a100_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a100'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a200_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a200'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a300'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a400_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a400'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a500'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a600_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a600'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a700_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a700'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a800_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a800'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a900_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a900'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a1000_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_95 a1000'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RobustVit'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RES D2'},  # if None default is config_name
+#     ],
+#     'dataset_name': 'brats20_split3',
+#     'data_path': '',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
+#     'output_name': None, # 'for_presentaraion3',  # if None default is datetime
+#     'save_results': True,
+#     'save_attn': False,
+#     'device': 'cuda',
+# }
 
 def main(settings):
     df_list = []
@@ -206,7 +404,7 @@ def main(settings):
         plt.show()
         pd.set_option('display.max_columns', None)
         pd.set_option('display.expand_frame_repr', False)
-        pd.set_option('max_colwidth', -1)
+        pd.set_option('max_colwidth', 100)
         with pd.option_context('display.max_rows', 20, 'display.max_columns', 10):
             print(cur_df.round(6))
 

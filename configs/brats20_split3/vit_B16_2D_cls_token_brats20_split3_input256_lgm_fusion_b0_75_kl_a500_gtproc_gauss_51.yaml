@@ -24,7 +24,7 @@ TRAINING:
       USE: true
       TYPE: kl
       SPATIAL_FEAT_SRC: fusion
-      ATTENTION_METHOD: relevance_map # options: 'raw_attn', 'relevance_map',
+      ATTENTION_METHOD: raw_attn # options: 'raw_attn', 'relevance_map',
       FUSION_BETA: 0.75
       SPATIAL_FEAT_INTERPOLATION: bilinear
       FEAT_CHANNEL_REDUCTION: squeeze_mean
