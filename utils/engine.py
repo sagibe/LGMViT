@@ -237,7 +237,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                                    torch.cat(lesion_annot[:, targets[:, 0].to(bool), :, :].unbind()))
                 localization_loss = localization_loss + torch.mean(tempD)
                 localization_loss = localization_loss * localization_loss_params.ALPHA
-
+            elif 'gradmask' in localization_loss_params.TYPE:
+                localization_loss = localization_loss_params.ALPHA * \
+                                     localization_criterion(utils.min_max_normalize(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:]) * (1 - lesion_annot[:,targets[:,0].to(bool),:,:]),
+                                                           torch.zeros_like(lesion_annot[:,targets[:,0].to(bool),:,:]))
             else:
                 localization_loss = localization_loss_params.ALPHA * \
                                      localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),

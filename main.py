@@ -213,8 +213,10 @@ def main(config, settings):
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
         localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse':
-        localization_criterion = torch.nn.MSELoss(reduction="sum")
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse' or config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'gradmask':
+        localization_criterion = torch.nn.MSELoss(reduction="mean")
+    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'l1':
+        localization_criterion = torch.nn.MSELoss(reduction="mean")
     elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse_fgbg':
         localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
     elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl_fgbg':
