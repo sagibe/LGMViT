@@ -20,6 +20,7 @@ from sklearn.metrics import precision_recall_curve
 
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
+from datasets.lits17 import LiTS17Dataset
 # from datasets.picai2022 import prepare_datagens
 
 from models.lgmvit import build_model
@@ -83,47 +84,89 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 #     'device': 'cuda',
 # }
 
+# SETTINGS = {
+#     'models': [
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a100_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a100'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a250'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a500_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a500'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a1000_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a1000'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RobustVit'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RES D2'},  # if None default is config_name
+#     ],
+#     'dataset_name': 'brats20_split3',
+#     'data_path': '',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
+#     'output_name': None, # 'for_presentaraion3',  # if None default is datetime
+#     'save_results': True,
+#     'save_attn': False,
+#     'device': 'cuda',
+# }
+
 SETTINGS = {
     'models': [
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_baseline',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a100_gtproc_gauss_51',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a100_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a100'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b0_25_kl_a100'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a250_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a250'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b0_25_kl_a250'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a500_gtproc_gauss_51',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_25_kl_a500'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a500_gtproc_gauss_51',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a750_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a500'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b0_25_kl_a750'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a1000_gtproc_gauss_51',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a1000_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion learned_i05_kl_a1000'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b0_25_kl_a1000'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_robust_vit_a10',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'RobustVit'},  # if None default is config_name
+            'plot_name': 'RobustVit a10'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_res_d2_a10',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'RES D2'},  # if None default is config_name
+            'plot_name': 'RES D2 a10'},  # if None default is config_name
     ],
-    'dataset_name': 'brats20_split3',
+    'dataset_name': 'lits17_bs16',
     'data_path': '',
     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
-    'output_name': None, # 'for_presentaraion3',  # if None default is datetime
+    'output_name': None,  # 'for_presentaraion3',  # if None default is datetime
     'save_results': True,
     'save_attn': False,
     'device': 'cuda',
 }
-
-
 
 # SETTINGS = {
 #     'models': [
@@ -268,12 +311,13 @@ SETTINGS = {
 def main(settings):
     df_list = []
     if settings['save_results']:
+        date_time_stamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
         if settings['output_name']:
             save_dir = os.path.join(settings['output_dir'], settings['output_name'])
             if os.path.isdir(save_dir):
-                save_dir = os.path.join(settings['output_dir'], settings['output_name'] + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
+                save_dir = os.path.join(settings['output_dir'], settings['output_name'] + date_time_stamp)
         else:
-            save_dir = os.path.join(settings['output_dir'], datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
+            save_dir = os.path.join(settings['output_dir'], date_time_stamp)
         os.makedirs(save_dir, exist_ok=True)
 
     cur_df = pd.DataFrame(
@@ -356,6 +400,13 @@ def main(settings):
                                           input_size=config.TRAINING.INPUT_SIZE,
                                           resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                           padding=config.DATA.PREPROCESS.CROP_PADDING)
+        elif 'LiTS17' in config.DATA.DATASETS:
+            dataset_test = LiTS17Dataset(data_dir,
+                                          scan_set=scan_set,
+                                          split_dict=split_dict,
+                                          input_size=config.TRAINING.INPUT_SIZE,
+                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
 
         if config.distributed:
             sampler_test = DistributedSampler(dataset_test)
@@ -399,7 +450,7 @@ def main(settings):
     df_list.append(cur_df.iloc[:,1:])
     if settings['save_results']:
         fig.savefig(os.path.join(save_dir, f'ROC_PR_Curves.jpg'), dpi=200)
-        cur_df.round(6).to_csv(os.path.join(save_dir, f'metrics_table.csv'), index=False)
+        cur_df.round(6).to_csv(os.path.join(save_dir, f'metrics_table{date_time_stamp}.csv'), index=False)
     else:
         plt.show()
         pd.set_option('display.max_columns', None)

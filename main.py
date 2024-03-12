@@ -50,18 +50,18 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'picai22',
-    # 'config_name': ['picai_22_debug_vit'
-    #                 ],
-    'config_name': ['vit_B16_2D_cls_token_picai22_input128_prostate_crop_baseline',
-                    'vit_B16_2D_cls_token_picai22_input128_prostate_crop_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
-                    'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_baseline',
-                    'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
-                    'vit_B16_2D_cls_token_picai22_input128_prostate_crop_res_d2_a10.',
-                    'vit_B16_2D_cls_token_picai22_input128_prostate_crop_robust_vit_a10',
-                    'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_res_d2_a10',
-                    'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_robust_vit_a10.',
+    'dataset_name': 'lits17_bs16',
+    'config_name': ['lits17_bs16debug_vit'
                     ],
+    # 'config_name': ['vit_B16_2D_cls_token_picai22_input128_prostate_crop_baseline',
+    #                 'vit_B16_2D_cls_token_picai22_input128_prostate_crop_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_baseline',
+    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_picai22_input128_prostate_crop_res_d2_a10.',
+    #                 'vit_B16_2D_cls_token_picai22_input128_prostate_crop_robust_vit_a10',
+    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_robust_vit_a10.',
+    #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a500_gtproc_gauss_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_5_kl_a500_gtproc_gauss_51',
@@ -157,8 +157,8 @@ SETTINGS = {
     #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
-    'use_wandb': True,
-    'wandb_proj_name': 'LGMViT_PICAI22',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22
+    'use_wandb': False,
+    'wandb_proj_name': 'LGMViT_lits17',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22
     'wandb_group': None,
     'device': 'cuda',
     'save_ckpt_interval': 5,
@@ -177,7 +177,7 @@ def main(config, settings):
     random.seed(seed)
 
     # model = build_resnet(config)
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn']:
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'gradcam', 'attn_gradcam']:
         model = build_model_with_LRP(config)
         lrp = LRP(model)
     else:

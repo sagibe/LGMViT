@@ -131,6 +131,12 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                     feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
                     reduced_attn_maps = reduced_attn_maps.reshape(bs, feat_size, feat_size).unsqueeze(0)
                     reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // feat_size, mode='bilinear')
+                elif localization_loss_params.ATTENTION_METHOD == 'attn_gradcam':
+                    reduced_attn_maps = lrp.generate_LRP(samples, method='attn_gradcam', start_layer=1, index=None).unsqueeze(0)
+                    reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
+                elif localization_loss_params.ATTENTION_METHOD == 'gradcam':
+                    reduced_attn_maps = lrp.generate_LRP(samples, method='gradcam', start_layer=1, index=None).unsqueeze(0)
+                    reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
             if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                 # spatial_feat_maps = bb_feat_map
                 if use_cls_token:

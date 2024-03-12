@@ -3,6 +3,7 @@ from scipy.ndimage import zoom
 from torch import nn
 import torch.nn.functional as F
 from einops import repeat, rearrange
+import numpy as np
 
 from models.layers.position_encoding import PositionalEncodingSine2D
 from utils.layers_lrp import *
@@ -440,6 +441,24 @@ class VisionTransformerLGMLRP(nn.Module):
                 cam = grad * cam
             cam = cam.clamp(min=0).mean(dim=0)
             cam = cam[0, 1:]
+            return cam
+        elif method == "attn_gradcam":
+            grad = self.transformer_encoder[-1].attn.get_attn_gradients()
+            cam = self.transformer_encoder[-1].attn.get_attn()
+            feat_size, bs = int(np.sqrt(cam.shape[-1])), cam.shape[0]
+            cam = cam[:, :, 0, 1:].reshape(bs, -1, feat_size, feat_size)
+            grad = grad[:, :, 0, 1:].reshape(bs, -1, feat_size, feat_size)
+            # grad = grad.mean(dim=[1, 2], keepdim=True)
+            # grad = grad.mean(dim=1)
+            cam = (cam * grad).mean(1).clamp(min=0)
+            cam = (cam - cam.min()) / (cam.max() - cam.min())
+            return cam
+        elif method == "gradcam":
+            cam = self.transformer_encoder[-1].attn.get_attn_gradients()
+            feat_size, bs = int(np.sqrt(cam.shape[-1])), cam.shape[0]
+            cam = cam[:, :, 0, 1:].reshape(bs, -1, feat_size, feat_size)
+            cam = cam.mean(1).clamp(min=0)
+            cam = (cam - cam.min()) / (cam.max() - cam.min())
             return cam
 
 def build_model_with_LRP(config):
