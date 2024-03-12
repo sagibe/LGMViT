@@ -17,12 +17,14 @@ import SimpleITK as sitk
 
 
 class PICAI2021Dataset:
-    def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=128,
-                 resize_mode='interpolate',prostate_mask_dir=None, prostate_masking=True, crop_prostate=True, padding=0):
-        self.data_dir = data_dir
-        if prostate_mask_dir is not None:
-            self.prostate_mask_dir = prostate_mask_dir
-        self.scan_list = split_dict[scan_set]
+    def __init__(self, data_dir, split_dict=None, transforms=None, fold_id=None, scan_set='', input_size=128,
+                 resize_mode='interpolate', mask=True, crop_prostate=True, padding=0, task='cls'):
+        self.scan_list = []
+        if split_dict is not None:
+            patient_list = split_dict[f'fold_{fold_id}'][scan_set]
+            self.scan_list += [os.path.join(data_dir,f) for f in os.listdir(data_dir) if (f.endswith('.pkl') and f.split('.')[0] in patient_list)]
+        else:
+            self.scan_list += [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.pkl')]
 
         # for data_dir in data_dirs:
         #     files_dir = os.path.join(data_dir, f'fold_{fold_id}',scan_set) if scan_set in ['train', 'val'] else data_dir
@@ -32,78 +34,59 @@ class PICAI2021Dataset:
         #         self.scan_list += [os.path.join(files_dir, f) for f in os.listdir(files_dir) if f.endswith('.pkl')]
         # self.scan_list = [os.path.join(files_dir, f) for f in os.listdir(files_dir) if f.endswith('.pkl') and f.split('.')[0] not in ignore_list]
         self.input_size = input_size
-        self.prostate_masking = prostate_masking
+        self.mask = mask
         self.resize_mode = resize_mode
         self.crop_prostate = crop_prostate
         self.padding = padding
         self._transforms = transforms
+        self.task = task
 
     def __len__(self):
         return len(self.scan_list)
 
     def __getitem__(self, idx):
-        # for idx in range(20):
-        scan_id = self.scan_list[idx]
-        t2w_path = os.path.join(self.data_dir, 'imagesTr', scan_id + '_0000.nii.gz')
-        adc_path = os.path.join(self.data_dir, 'imagesTr', scan_id + '_0001.nii.gz')
-        dwi_path = os.path.join(self.data_dir, 'imagesTr', scan_id + '_0002.nii.gz')
-        seg_lbl_path = os.path.join(self.data_dir, 'labelsTr', scan_id + '.nii.gz')
-        prostate_masks_path = os.path.join(self.prostate_mask_dir, scan_id + '.nii.gz')
+        scan_id = self.scan_list[idx].split('/')[-1].split('.')[0]
+        with open(self.scan_list[idx], 'rb') as handle:
+            scan_dict = pickle.load(handle)
 
-        t2w = sitk.GetArrayFromImage(sitk.ReadImage(t2w_path)).astype(np.float32)
-        adc = sitk.GetArrayFromImage(sitk.ReadImage(adc_path)).astype(np.float32)
-        dwi = sitk.GetArrayFromImage(sitk.ReadImage(dwi_path)).astype(np.float32)
-        seg_labels = sitk.GetArrayFromImage(sitk.ReadImage(seg_lbl_path)).astype(np.float32)
-        cls_labels = (np.sum(np.squeeze(seg_labels), axis=(1, 2)) > 0).astype(int)
+        img_t2w = scan_dict['modalities']['t2w']
+        img_adc = scan_dict['modalities']['adc']
+        img_dwi = scan_dict['modalities']['dwi']
+        seg_labels = scan_dict['seg_labels']
+        prostate_slices = np.ones(scan_dict['prostate_mask'].shape[0], dtype=bool)
 
-        # ######
-        # seg_labels_trans = seg_labels.transpose(2, 0, 1)
-        # seg_labels_trans = np.rot90(seg_labels_trans, 3, axes=(1, 2))
-        # # seg_labels = np.flip(seg_labels, axis=0)
-        # # seg_labels = np.flip(seg_labels, axis=1)
-        # seg_labels_trans = np.flip(seg_labels_trans, axis=2)
-        # #####
-        # if sum(cls_labels)>0:
-        #     for j in range(len(cls_labels)):
-        #         if cls_labels[j] >0:
-        #             f, ax = plt.subplots(1, 3)
-        #             ax[0].imshow(adc[j], cmap='gray')
-        #             ax[1].imshow(seg_labels[j], cmap='gray')
-        #             ax[2].imshow(seg_labels_trans[j], cmap='gray')
-        #             plt.show()
-
-        if self.prostate_masking:
-            prostate_masks = sitk.GetArrayFromImage(sitk.ReadImage(prostate_masks_path)).astype(np.float32)
-
-        if self.prostate_masking:
-            t2w *= prostate_masks
-            adc *= prostate_masks
-            dwi *= prostate_masks
+        if self.mask:
+            img_t2w *= scan_dict['prostate_mask']
+            img_adc *= scan_dict['prostate_mask']
+            img_dwi *= scan_dict['prostate_mask']
             if self.crop_prostate:
-                y1, y2, x1, x2 = get_square_crop_coords(prostate_masks, padding=self.padding)  # CHECK HERE
-                prostate_slices = np.sum(prostate_masks, axis=(1,2)) > 0
-                t2w = t2w[prostate_slices, y1:y2, x1:x2]
-                adc = adc[prostate_slices, y1:y2, x1:x2]
-                dwi = dwi[prostate_slices, y1:y2, x1:x2]
+                y1, y2, x1, x2 = get_square_crop_coords(scan_dict['prostate_mask'], padding=self.padding) # CHECK HERE
+                prostate_slices = np.sum(scan_dict['prostate_mask'], axis=(1,2)) > 0
+                img_t2w = img_t2w[prostate_slices, y1:y2, x1:x2]
+                img_adc = img_adc[prostate_slices, y1:y2, x1:x2]
+                img_dwi = img_dwi[prostate_slices, y1:y2, x1:x2]
                 seg_labels = seg_labels[prostate_slices, y1:y2, x1:x2]
-                cls_labels = cls_labels[prostate_slices]
+                #
+                # img_t2w = img_t2w[prostate_slices, :, :]
+                # img_adc = img_adc[prostate_slices, :, :]
+                # img_dwi = img_dwi[prostate_slices, :, :]
 
-        if self.input_size != t2w.shape[1]:
-            if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < t2w.shape[1]):
-                t2w = resize_scan(t2w, size=self.input_size)
-                adc = resize_scan(adc, size=self.input_size)
-                dwi = resize_scan(dwi, size=self.input_size)
+        if self.input_size != img_t2w.shape[1]:
+            if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < img_t2w.shape[1]):
+                img_t2w = resize_scan(img_t2w, size=self.input_size)
+                img_adc = resize_scan(img_adc, size=self.input_size)
+                img_dwi = resize_scan(img_dwi, size=self.input_size)
             elif self.resize_mode == 'padding':
-                padding = self.input_size - t2w.shape[1]
+                padding = self.input_size - img_t2w.shape[1]
                 side_pad = padding//2
                 if padding % 2 == 0:
-                    t2w = np.pad(t2w, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
-                    adc = np.pad(adc, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
-                    dwi = np.pad(dwi, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
+                    img_t2w = np.pad(img_t2w, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
+                    img_adc = np.pad(img_adc, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
+                    img_dwi = np.pad(img_dwi, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
                 else:
-                    t2w = np.pad(t2w, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
-                    adc = np.pad(adc, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
-                    dwi = np.pad(dwi, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
+                    img_t2w = np.pad(img_t2w, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
+                    img_adc = np.pad(img_adc, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
+                    img_dwi = np.pad(img_dwi, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
             scale_factor_h = self.input_size / seg_labels.shape[-2]
             scale_factor_w = self.input_size / seg_labels.shape[-1]
             seg_labels = scipy.ndimage.zoom(seg_labels, (1, scale_factor_h, scale_factor_w))
@@ -116,19 +99,19 @@ class PICAI2021Dataset:
         # plt.show()
 
         # img_concat = np.concatenate([img_t2w, img_adc, img_dwi], axis=1).squeeze(0).transpose(1, 0, 2, 3)
-        scan = np.stack([t2w, adc, dwi], axis=1)
+        img_concat = np.stack([img_t2w, img_adc, img_dwi], axis=1)
 
         # apply the transforms
         if self._transforms is not None:
-            scan = self._transforms(scan)
+            img_concat = self._transforms(img_concat)
 
         # if self.seg_transform is not None:
         #     seg = apply_transform(self.seg_transform, seg, map_items=False)
         # labels = scan_dict['cls_labels'] if self.task=='cls' else scan_dict['seg_labels']
-        labels = [cls_labels, seg_labels]
+        labels = [scan_dict['cls_labels'][prostate_slices], seg_labels]
         # labels =labels[prostate_slices]
 
-        return tuple([scan, labels, scan_id])
+        return tuple([img_concat, labels, scan_id])
         # return tuple([img_concat, seg_labels if self.get_seg_labels else cls_labels])
 
 def get_square_crop_coords(mask, padding=0):

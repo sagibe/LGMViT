@@ -34,7 +34,7 @@ class VisionTransformerLGM(nn.Module):
         self.pos_embed_fit_mode = pos_embed_fit_mode
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         if learned_beta:
-            self.beta = nn.Parameter(torch.tensor(0.75))
+            self.beta = nn.Parameter(torch.tensor(0.5))
         self.avgpool = nn.AvgPool1d(feat_size*feat_size)
         self.transformer = transformer
         self.mlp_head = nn.Sequential(

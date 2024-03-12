@@ -90,8 +90,9 @@ def get_default_config():
     # DATA.PREPROCESS
     cfg.DATA.PREPROCESS = edict()
     cfg.DATA.PREPROCESS.RESIZE_MODE = 'interpolate'  # options: interpolate or padding
-    cfg.DATA.PREPROCESS.MASK_PROSTATE = True # apply prostate mask on scan
-    cfg.DATA.PREPROCESS.CROP_PROSTATE = True # crop scan according to prostate mask
+    cfg.DATA.PREPROCESS.GLAND_SEG_DIR = None
+    cfg.DATA.PREPROCESS.MASK_PROSTATE = True  # apply prostate mask on scan
+    cfg.DATA.PREPROCESS.CROP_PROSTATE = True  # crop scan according to prostate mask
     cfg.DATA.PREPROCESS.CROP_PADDING = 0 # padding around prostate crop (0 for minimal cropping)
 
     # TEST
