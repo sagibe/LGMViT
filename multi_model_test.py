@@ -58,22 +58,62 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 #         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a500_gtproc_gauss_51',
 #         #     'exp_name': None,  # if None default is config_name
 #         #     'plot_name': 'ViT-B + Fusion LGM b0_9_kl_a500'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a1000_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b0_95_kl_a1000'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b0_95_kl_a300'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a300_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b0_8_kl_a300'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a100_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b_learned_i075_kl_a100'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a250_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b_learned_i075_kl_a250'},  # if None default is config_name
 #         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a500_gtproc_gauss_51',
 #             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'ViT-B + Fusion LGM b0_95_kl_a500'},  # if None default is config_name
+#             'plot_name': 'ViT-B + Fusion LGM b_learned_i075_kl_a500'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a100_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b_learned_i05_kl_a100'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b_learned_i05_kl_a250'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a500_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B + Fusion LGM b_learned_i05_kl_a500'},  # if None default is config_name
 #         # {
 #         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_75_kl_a1000_gtproc_gauss_51',
 #         #     'exp_name': None,  # if None default is config_name
 #         #     'plot_name': 'ViT-B + Fusion LGM a500'},  # if None default is config_name
 #         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_gradmask_a100',
 #             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'RobustVit'},  # if None default is config_name
+#             'plot_name': 'GradMask a100'},  # if None default is config_name
 #         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a1',
 #             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'RES D2'},  # if None default is config_name
+#             'plot_name': 'RobustVit a1'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RobustVit a100'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a1',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RES D2 a1'},  # if None default is config_name
 #     ],
 #     'dataset_name': 'brats20_split3',
 #     'data_path': '',
@@ -131,33 +171,29 @@ SETTINGS = {
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a100_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_25_kl_a100'},  # if None default is config_name
-        {
             'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a250_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_25_kl_a250'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a250_gtproc_gauss_51',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a500_gtproc_gauss_51',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a500'},  # if None default is config_name
         # {
-        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a500_gtproc_gauss_51',
+        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_gradmask_a1',
         #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'LGM-ViT Fusion b0_25_kl_a500'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a750_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_25_kl_a750'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a1000_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_25_kl_a1000'},  # if None default is config_name
+        #     'plot_name': 'GradMask a1'},  # if None default is config_name
         {
             'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_robust_vit_a10',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'RobustVit a10'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_res_d2_a10',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_res_d2_a100',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'RES D2 a10'},  # if None default is config_name
+            'plot_name': 'RES D2 a100'},  # if None default is config_name
     ],
     'dataset_name': 'lits17_bs16',
     'data_path': '',

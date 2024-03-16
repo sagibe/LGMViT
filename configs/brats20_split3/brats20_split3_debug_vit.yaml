@@ -23,11 +23,11 @@ TRAINING:
     LOCALIZATION_LOSS:
       USE: true
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion',
+      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
       ATTENTION_METHOD: 'raw_attn' # options: 'raw_attn', 'relevance_map', 'lrp', 'rollout', 'beyond_attn'
       FUSION_BETA: 'learned'
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
-      FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
+      FEAT_CHANNEL_REDUCTION: 'learned' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
       GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
       GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 100

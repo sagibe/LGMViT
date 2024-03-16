@@ -89,6 +89,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         # localization loss
         if localization_loss_params.USE and targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
             reduced_attn_maps = reduced_bb_feat_maps = None
+            if localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
+                attn_maps = generate_spatial_attention(attn, mode='cls_token')
+                bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
+                fusion_experimental_maps = torch.cat([attn_maps, bb_feat_map], dim=1)
+                reduced_fusion_experimental_maps = model.channel_reduction_exp_fusion(fusion_experimental_maps).permute(1,0,2,3)
+                reduced_fusion_experimental_maps = F.interpolate(reduced_fusion_experimental_maps,
+                                         lesion_annot.shape[-2:],
+                                         mode=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                         align_corners=False).to(device)
             if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
                 # spatial_feat_maps = attn_maps
                 if localization_loss_params.ATTENTION_METHOD == 'raw_attn':
@@ -102,10 +111,18 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                                             channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                                                             resize_shape=attn_maps.shape[-2:])
                     else:
-                        reduced_attn_maps = extract_heatmap(attn_maps,
-                                                            feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                                                            channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                                                            resize_shape=lesion_annot.shape[-2:])
+                        if localization_loss_params.FEAT_CHANNEL_REDUCTION == 'learned':
+                            reduced_attn_maps = model.channel_reduction_attn(attn_maps).permute(1,0,2,3)
+                            reduced_attn_maps = F.interpolate(reduced_attn_maps,
+                                                                             lesion_annot.shape[-2:],
+                                                                             mode=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                                             align_corners=False).to(device)
+                            reduced_attn_maps = reduced_attn_maps.squeeze(0)
+                        else:
+                            reduced_attn_maps = extract_heatmap(attn_maps,
+                                                                feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                                channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                                                                resize_shape=lesion_annot.shape[-2:])
                         # reduced_attn_maps = extract_heatmap(attn_maps,
                         #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                         #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
@@ -143,10 +160,18 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
                 else:
                     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='max_pool')
-                reduced_bb_feat_maps = extract_heatmap(bb_feat_map,
-                                                            feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                                                            channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                                                            resize_shape=lesion_annot.shape[-2:])
+                if localization_loss_params.FEAT_CHANNEL_REDUCTION == 'learned':
+                    reduced_bb_feat_maps = model.channel_reduction_embedding(bb_feat_map).permute(1, 0, 2, 3)
+                    reduced_bb_feat_maps = F.interpolate(reduced_bb_feat_maps,
+                                                      lesion_annot.shape[-2:],
+                                                      mode=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                      align_corners=False).to(device)
+                    reduced_bb_feat_maps = reduced_bb_feat_maps.squeeze(0)
+                else:
+                    reduced_bb_feat_maps = extract_heatmap(bb_feat_map,
+                                                                feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                                                                channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
+                                                                resize_shape=lesion_annot.shape[-2:])
                 # reduced_bb_feat_maps = extract_heatmap(bb_feat_map,
                 #                                             feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                 #                                             channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
@@ -180,6 +205,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 else:
                     beta = model.beta
                 reduced_spatial_feat_maps = reduced_attn_maps * beta + reduced_bb_feat_maps * (1 - beta)
+            elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
+                reduced_spatial_feat_maps = reduced_fusion_experimental_maps
             # elif localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
             #     reduced_spatial_feat_maps = relevance_maps
 

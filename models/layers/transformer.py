@@ -243,6 +243,8 @@ class TransformerEncoder(nn.Module):
                                                 norm_layer=norm_layer)
         self.layers = _get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.embed_size = embed_size
         self.store_layers_attn = store_layers_attn
         self.norm_output = norm_output
 

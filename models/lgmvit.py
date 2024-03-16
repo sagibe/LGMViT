@@ -12,7 +12,7 @@ class VisionTransformerLGM(nn.Module):
     """ This is the VisTR module that performs video object detection """
     def __init__(self, patch_embed, transformer, feat_size, num_classes=2, backbone_stages=4,
                  embed_dim=2048, use_cls_token=False, use_pos_embed=True, pos_embed_fit_mode='interpolate',
-                 attention_3d=True, store_layers_attn=False, learned_beta=False):
+                 attention_3d=True, store_layers_attn=False, learned_beta=False, channel_reduction_srcs=[]):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbones to be used. See backbones.py
@@ -34,7 +34,13 @@ class VisionTransformerLGM(nn.Module):
         self.pos_embed_fit_mode = pos_embed_fit_mode
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         if learned_beta:
-            self.beta = nn.Parameter(torch.tensor(0.5))
+            self.beta = nn.Parameter(torch.tensor(0.75))
+        if 'attn' in channel_reduction_srcs:
+            self.channel_reduction_attn = nn.Conv2d(transformer.num_heads, 1, kernel_size=1, stride=1, padding=0)
+        if 'bb_feat' in channel_reduction_srcs:
+            self.channel_reduction_embedding = nn.Conv2d(transformer.embed_size, 1, kernel_size=1, stride=1, padding=0)
+        if 'fusion_experimental' in channel_reduction_srcs:
+            self.channel_reduction_exp_fusion = nn.Conv2d(transformer.num_heads+transformer.embed_size, 1, kernel_size=1, stride=1, padding=0)
         self.avgpool = nn.AvgPool1d(feat_size*feat_size)
         self.transformer = transformer
         self.mlp_head = nn.Sequential(
@@ -107,6 +113,21 @@ def build_model(config):
     feat_size = config.TRAINING.INPUT_SIZE // config.MODEL.PATCH_SIZE
     pos_embed = config.MODEL.POSITION_EMBEDDING.TYPE is not None
     learned_beta = True if config.TRAINING.LOSS.LOCALIZATION_LOSS.FUSION_BETA == 'learned' else False
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.FEAT_CHANNEL_REDUCTION == 'learned':
+        if config.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'attn':
+            channel_reduction_srcs = ['attn']
+        elif config.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'bb_feat':
+            channel_reduction_srcs = ['bb_feat']
+        elif config.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'fusion':
+            channel_reduction_srcs = ['attn', 'bb_feat']
+        elif config.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'fusion_experimental':
+            channel_reduction_srcs = ['fusion_experimental']
+        else:
+            channel_reduction_srcs = []
+    else:
+        channel_reduction_srcs = []
+
+
     patch_embed = build_patch_embedding(config)
 
     transformer = build_transformer(config)
@@ -122,7 +143,8 @@ def build_model(config):
         use_pos_embed=pos_embed,
         pos_embed_fit_mode=config.MODEL.POSITION_EMBEDDING.FIT_MODE,
         attention_3d=config.MODEL.TRANSFORMER.ATTENTION_3D,
-        learned_beta=learned_beta
+        learned_beta=learned_beta,
+        channel_reduction_srcs=channel_reduction_srcs
     )
 
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.GT_SEG_PROCESS_METHOD == 'learned_S1':

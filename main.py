@@ -53,22 +53,18 @@ SETTINGS = {
     'dataset_name': 'lits17_bs16',
     'config_name': ['lits17_bs16debug_vit'
                     ],
-    # 'config_name': ['vit_B16_2D_cls_token_picai22_input128_prostate_crop_baseline',
-    #                 'vit_B16_2D_cls_token_picai22_input128_prostate_crop_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_baseline',
-    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_picai22_input128_prostate_crop_res_d2_a10.',
-    #                 'vit_B16_2D_cls_token_picai22_input128_prostate_crop_robust_vit_a10',
-    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_res_d2_a10',
-    #                 'vit_B16_2D_cls_token_picai22_input256_no_prostate_crop_robust_vit_a10.',
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline_all_epochs',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51_all_epochs',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a250_gtproc_gauss_51_all_epochs',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a1_all_epochs',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100_all_epochs',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_gradmask_a100_all_epochs',
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_5_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_25_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_1_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_05_kl_a500_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_75_kl_a500_gtproc_gauss_51',
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_res_g_a10',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_g_a100',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_g_a250',
     #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a100_gtproc_gauss_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a200_gtproc_gauss_51',
@@ -158,10 +154,10 @@ SETTINGS = {
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': False,
-    'wandb_proj_name': 'LGMViT_lits17',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22
+    'wandb_proj_name': 'LGMViT_brats20',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22
     'wandb_group': None,
     'device': 'cuda',
-    'save_ckpt_interval': 5,
+    'save_ckpt_interval': 1,
     'seed': 42
 }
 
@@ -410,13 +406,45 @@ def main(config, settings):
         if config.DATA.OUTPUT_DIR:
             # checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
             checkpoint_paths = []
+            ##### old ########
+            # try:
+            #     if val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION] >= best_epoch_stat:
+            #         checkpoint_paths.append(os.path.join(ckpt_dir, 'checkpoint_best.pth'))
+            #         best_epoch_stat = val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION]
+            # except:
+            #     print('WARNING: Cant save best epoch checkpoint - unsupported validation metric or validation stats not available')
+            ####### old #######
+            # # extra checkpoint before LR drop and every epochs
+            if isinstance(config.TRAINING.SAVE_BEST_CKPT_CRITERION, list):
+                single_stat = config.TRAINING.SAVE_BEST_CKPT_CRITERION[0]
+                if len(config.TRAINING.SAVE_BEST_CKPT_CRITERION) > 1:
+                    multi_stat = config.TRAINING.SAVE_BEST_CKPT_CRITERION
+                else:
+                    multi_stat = None
+            else:
+                single_stat = config.TRAINING.SAVE_BEST_CKPT_CRITERION
+                multi_stat = None
             try:
-                if val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION] >= best_epoch_stat:
+                # single stat
+                if val_stats[single_stat] >= best_epoch_stat:
                     checkpoint_paths.append(os.path.join(ckpt_dir, 'checkpoint_best.pth'))
-                    best_epoch_stat = val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION]
+                    best_epoch_stat = val_stats[single_stat]
             except:
                 print('WARNING: Cant save best epoch checkpoint - unsupported validation metric or validation stats not available')
-            # extra checkpoint before LR drop and every epochs
+            # multi stat
+            if multi_stat is not None:
+                try:
+                    multi_stat_val = 0
+                    name_suffix = ''
+                    for cur_stat in multi_stat:
+                        name_suffix += f'_{cur_stat}'
+                        multi_stat_val += val_stats[cur_stat]
+                    multi_stat_val = multi_stat_val / len(multi_stat)
+                    if multi_stat_val >= best_epoch_stat_multi:
+                        checkpoint_paths.append(os.path.join(ckpt_dir, f'checkpoint_best{name_suffix}.pth'))
+                        best_epoch_stat_multi = multi_stat_val
+                except:
+                    print('WARNING: Cant save best epoch checkpoint - unsupported validation metric or validation stats not available')
             if epoch % config.TRAINING.LR_DROP == 0 or epoch % config.TRAINING.SAVE_CKPT_INTERVAL == 0:
                 checkpoint_paths.append(os.path.join(ckpt_dir, f'checkpoint{epoch:04}.pth'))
             for checkpoint_path in checkpoint_paths:
@@ -432,7 +460,7 @@ def main(config, settings):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-    print('hi')
+    # print('hi')
 
 # # Single Run Mode
 # if __name__ == '__main__':
