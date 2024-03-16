@@ -135,7 +135,7 @@ def main(settings):
                                         scan_set=scan_set,
                                         input_size=config1.TRAINING.INPUT_SIZE,
                                         resize_mode=config1.DATA.PREPROCESS.RESIZE_MODE,
-                                        mask=config1.DATA.PREPROCESS.MASK_PROSTATE,
+                                        mask=config1.DATA.PREPROCESS.MASK_ORGAN,
                                         crop_prostate=config1.DATA.PREPROCESS.CROP_PROSTATE,
                                         padding=config1.DATA.PREPROCESS.CROP_PADDING)
 

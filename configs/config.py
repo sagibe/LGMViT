@@ -13,6 +13,7 @@ def get_default_config():
     cfg.TRAINING.LR = 0.00001
     cfg.TRAINING.LR_DROP = 12
     cfg.TRAINING.BATCH_SIZE = 1
+    cfg.TRAINING.MAX_SCAN_SIZE = None
     cfg.TRAINING.WEIGHT_DECAY = 0.0001
     cfg.TRAINING.EPOCHS = 50
     cfg.TRAINING.CLIP_MAX_NORM = 0.1
@@ -91,8 +92,9 @@ def get_default_config():
     cfg.DATA.PREPROCESS = edict()
     cfg.DATA.PREPROCESS.RESIZE_MODE = 'interpolate'  # options: interpolate or padding
     cfg.DATA.PREPROCESS.GLAND_SEG_DIR = None
-    cfg.DATA.PREPROCESS.MASK_PROSTATE = True  # apply prostate mask on scan
-    cfg.DATA.PREPROCESS.CROP_PROSTATE = True  # crop scan according to prostate mask
+    cfg.DATA.PREPROCESS.MASK_ORGAN = True  # apply organ mask on scan
+    cfg.DATA.PREPROCESS.CROP_ORGAN_SLICES = True  # crop scan according to prostate mask
+    cfg.DATA.PREPROCESS.CROP_ORGAN_SPATIAL = True  # crop scan according to prostate mask
     cfg.DATA.PREPROCESS.CROP_PADDING = 0 # padding around prostate crop (0 for minimal cropping)
 
     # TEST

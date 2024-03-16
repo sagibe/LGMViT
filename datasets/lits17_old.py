@@ -10,8 +10,29 @@ import numpy as np
 import scipy
 import torch
 import SimpleITK as sitk
+import matplotlib.image as mpimg
 
+def draw_contours_on_image(image, binary_mask, contour_color=(0, 255, 0), contour_thickness=1):
+    """
+    Draw contours of a binary mask on an image.
 
+    Parameters:
+    - image (numpy.ndarray): The input image (BGR format).
+    - binary_mask (numpy.ndarray): The binary mask.
+    - contour_color (tuple): The color of the contours (BGR format). Default is green (0, 255, 0).
+    - contour_thickness (int): The thickness of the contours. Default is 2.
+
+    Returns:
+    - numpy.ndarray: The image with contours drawn.
+    """
+    # Find contours in the binary mask
+    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Draw the contours on a copy of the input image
+    image_with_contours = image.copy()
+    cv2.drawContours(image_with_contours, contours, -1, contour_color, contour_thickness)
+
+    return image_with_contours
 class LiTS17Dataset:
     def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=512,
                  resize_mode='interpolate', padding=0):
@@ -30,7 +51,36 @@ class LiTS17Dataset:
     def __getitem__(self, idx):
         # scan_id = self.scan_list[idx]
         # R_num, scan_id  = self.scan_list[idx].split('/')
-        scan_id = self.scan_list[idx].split('.')[0].split('-')[1]
+        scan_id = self.scan_list[idx].split('-')[1]
+        vol_num = int(scan_id.split('_')[0])
+        str_slice = int(scan_id.split('_')[1]) - 1
+        end_slice = int(scan_id.split('_')[2])
+        slices_list = []
+        seg_list = []
+        for cur_slice_num in range(str_slice, end_slice):
+            cur_slice = mpimg.imread(os.path.join(self.data_dir, 'data', f'volume-{vol_num}_{cur_slice_num}.png'))
+            cur_seg_labels = mpimg.imread(os.path.join(self.data_dir, 'data', f'segmentation-{vol_num}_lesionmask_{cur_slice_num}.png'))
+            cur_seg_labels = cur_seg_labels[:,:,0]
+            cur_seg_labels[cur_seg_labels>0] = 1
+            slices_list.append(cur_slice)
+            seg_list.append(cur_seg_labels)
+        ct = np.stack(slices_list)
+        seg_labels = np.stack(seg_list)
+        for slice_num in range(seg_labels.shape[0]):
+            if seg_labels[slice_num].sum() > 0:
+                img_w_anoot = draw_contours_on_image((ct[slice_num]*255).astype(np.uint8), (seg_labels[slice_num]*255).astype(np.uint8), contour_color=(0, 255, 0), contour_thickness=2)
+                img_w_anoot2 = draw_contours_on_image((ct[slice_num]*255).astype(np.uint8), np.flip((seg_labels[slice_num]*255).astype(np.uint8), axis=0), contour_color=(0, 255, 0), contour_thickness=2)
+                img_w_anoot3 = draw_contours_on_image((ct[slice_num]*255).astype(np.uint8), np.flip((seg_labels[slice_num]*255).astype(np.uint8), axis=1), contour_color=(0, 255, 0), contour_thickness=2)
+                img_w_anoot4 = draw_contours_on_image((ct[slice_num]*255).astype(np.uint8), (seg_labels[slice_num]*255).astype(np.uint8).transpose(1,0), contour_color=(0, 255, 0), contour_thickness=2)
+                f, ax = plt.subplots(2, 3, figsize=(14, 8))
+                ax[0][0].imshow(img_w_anoot, cmap='gray')
+                ax[0][1].imshow(ct[slice_num], cmap='gray')
+                ax[0][2].imshow(img_w_anoot2, cmap='gray')
+                ax[1][0].imshow(img_w_anoot3, cmap='gray')
+                ax[1][1].imshow(ct[slice_num], cmap='gray')
+                ax[1][2].imshow(img_w_anoot4, cmap='gray')
+                plt.show()
+
         ct_path = os.path.join(self.data_dir, 'scans', f'volume-{scan_id}.nii')
         seg_path = os.path.join(self.data_dir, 'segmentations', f'segmentation-{scan_id}.nii')
 

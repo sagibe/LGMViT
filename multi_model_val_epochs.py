@@ -23,7 +23,7 @@ from datasets.brats20 import BraTS20Dataset
 from datasets.kits21_lesions import KiTS21Dataset
 from datasets.kits23_lesions import KiTS23Dataset
 from datasets.lits17_lesions import LiTS17Dataset
-# from datasets.lits17_organ import LiTS17OrganDataset
+# from datasets.lits17_organ import LiTS17Dataset
 # from datasets.picai2022 import prepare_datagens
 
 from models.lgmvit import build_model
@@ -173,26 +173,26 @@ SETTINGS = {
             'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_baseline',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a250_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a250_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a500_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a500'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a250_gtproc_gauss_51',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a250_gtproc_gauss_51',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a500_gtproc_gauss_51',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a500'},  # if None default is config_name
         # {
         #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_gradmask_a1',
         #     'exp_name': None,  # if None default is config_name
         #     'plot_name': 'GradMask a1'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_robust_vit_a10',
+            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_robust_vit_a1',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'RobustVit a10'},  # if None default is config_name
+            'plot_name': 'RobustVit a1'},  # if None default is config_name
         {
             'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_res_d2_a100',
             'exp_name': None,  # if None default is config_name
@@ -200,9 +200,10 @@ SETTINGS = {
     ],
     'dataset_name': 'lits17_bs16',
     'data_path': '',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Val_metrics/',
     'output_name': None,  # 'for_presentaraion3',  # if None default is datetime
-    'save_results': True,
+    'best_epoch_metrics': ['f1'],
+    'save_results': False,
     'save_attn': False,
     'device': 'cuda',
 }
@@ -361,7 +362,7 @@ def main(settings):
 
     cur_df = pd.DataFrame(
         columns=['Model Name', 'F1 Score', 'Sensitivity', 'Specificity', 'AUROC', 'AUPRC', 'Cohens Kappa',
-                 'Precision', 'Accuracy'])
+                 'Precision', 'Accuracy', 'Best_Epoch'])
     fig, ax = plt.subplots(1, 2, figsize=(15, 6))
     for model_settings in settings['models']:
         config = get_default_config()
@@ -380,22 +381,23 @@ def main(settings):
         else:
             model = build_model(config)
         model.to(device)
-        if isinstance(config.TEST.CHECKPOINT, int):
-            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
-        elif isinstance(config.TEST.CHECKPOINT, str):
-            if 'best' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
-            elif '/' in config.TEST.CHECKPOINT:
-                checkpoint_path = config.TEST.CHECKPOINT
-            else:
-                if (config.TEST.CHECKPOINT).endswith('.pth'):
-                    checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
-                else:
-                    checkpoint_path = ''
-        else:
-            checkpoint_path = ''
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
-        model.load_state_dict(checkpoint['model'])
+        ckpt_list  = [d for d in os.listdir(os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt')) if 'best' not in d]
+        # if isinstance(config.TEST.CHECKPOINT, int):
+        #     checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
+        # elif isinstance(config.TEST.CHECKPOINT, str):
+        #     if 'best' in config.TEST.CHECKPOINT:
+        #         checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
+        #     elif '/' in config.TEST.CHECKPOINT:
+        #         checkpoint_path = config.TEST.CHECKPOINT
+        #     else:
+        #         if (config.TEST.CHECKPOINT).endswith('.pth'):
+        #             checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
+        #         else:
+        #             checkpoint_path = ''
+        # else:
+        #     checkpoint_path = ''
+        # checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        # model.load_state_dict(checkpoint['model'])
 
         model_without_ddp = model
         if config.distributed:
@@ -419,111 +421,129 @@ def main(settings):
             scan_set = ''
         else:
             data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
+            # config.DATA.DATA_SPLIT_FILE = 'datasets/data_splits/lits17_bs16/train_val_split_debug.json'
             with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
                 split_dict = json.load(f)
-            scan_set = 'test'
-        if 'picai' in config.DATA.DATASETS:
-            dataset_test = PICAI2021Dataset(data_dir,
-                                           split_dict=split_dict,
-                                           scan_set=scan_set,
-                                           input_size=config.TRAINING.INPUT_SIZE,
-                                           resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                           mask=config.DATA.PREPROCESS.MASK_ORGAN,
-                                           crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
-                                           padding=config.DATA.PREPROCESS.CROP_PADDING)
+            scan_set = 'val'
+        cur_best_epoch_stat = 0
+        for ckpt_name in ckpt_list:
+            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', ckpt_name)
+            checkpoint = torch.load(checkpoint_path, map_location='cpu')
+            model.load_state_dict(checkpoint['model'])
 
-        elif 'BraTS2020' in config.DATA.DATASETS:
-            dataset_test = BraTS20Dataset(data_dir,
-                                          scan_set=scan_set,
-                                          split_dict=split_dict,
-                                          input_size=config.TRAINING.INPUT_SIZE,
-                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
-        # elif 'LiTS17' in config.DATA.DATASETS:
-        #     dataset_test = LiTS17Dataset(data_dir,
-        #                                   scan_set=scan_set,
-        #                                   split_dict=split_dict,
-        #                                   input_size=config.TRAINING.INPUT_SIZE,
-        #                                   resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-        #                                   padding=config.DATA.PREPROCESS.CROP_PADDING)
-        elif 'LiTS17' in config.DATA.DATASETS:
-            dataset_test = LiTS17Dataset(data_dir,
-                                           scan_set=scan_set,
-                                           split_dict=split_dict,
-                                           input_size=config.TRAINING.INPUT_SIZE,
-                                           resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                           liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                           crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                           crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                           random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                           padding=config.DATA.PREPROCESS.CROP_PADDING)
-        elif 'kits21' in config.DATA.DATASETS:
-            dataset_test = KiTS21Dataset(data_dir,
-                                        scan_set=scan_set,
-                                        split_dict=split_dict,
-                                        input_size=config.TRAINING.INPUT_SIZE,
-                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                        kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                        crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                        crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                        padding=config.DATA.PREPROCESS.CROP_PADDING)
-        elif 'kits23' in config.DATA.DATASETS:
-            dataset_test = KiTS23Dataset(data_dir,
-                                        scan_set=scan_set,
-                                        split_dict=split_dict,
-                                        input_size=config.TRAINING.INPUT_SIZE,
-                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                        kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                        crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                        crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                        padding=config.DATA.PREPROCESS.CROP_PADDING)
-        if config.distributed:
-            sampler_test = DistributedSampler(dataset_test)
-        else:
-            sampler_test = RandomSampler(dataset_test)
+            if 'picai' in config.DATA.DATASETS:
+                dataset_val = PICAI2021Dataset(data_dir,
+                                               split_dict=split_dict,
+                                               scan_set=scan_set,
+                                               input_size=config.TRAINING.INPUT_SIZE,
+                                               resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                               mask=config.DATA.PREPROCESS.MASK_PROSTATE,
+                                               crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
+                                               padding=config.DATA.PREPROCESS.CROP_PADDING)
 
-        batch_sampler_test = BatchSampler(sampler_test, config.TEST.BATCH_SIZE, drop_last=True)
-        data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=config.TEST.NUM_WORKERS)
+            elif 'BraTS2020' in config.DATA.DATASETS:
+                dataset_val = BraTS20Dataset(data_dir,
+                                              scan_set=scan_set,
+                                              split_dict=split_dict,
+                                              input_size=config.TRAINING.INPUT_SIZE,
+                                              resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                              padding=config.DATA.PREPROCESS.CROP_PADDING)
+            # elif 'LiTS17' in config.DATA.DATASETS:
+            #     dataset_val = LiTS17Dataset(data_dir,
+            #                                   scan_set=scan_set,
+            #                                   split_dict=split_dict,
+            #                                   input_size=config.TRAINING.INPUT_SIZE,
+            #                                   resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+            #                                   padding=config.DATA.PREPROCESS.CROP_PADDING)
+            elif 'LiTS17' in config.DATA.DATASETS:
+                dataset_val = LiTS17Dataset(data_dir,
+                                             scan_set=scan_set,
+                                             split_dict=split_dict,
+                                             input_size=config.TRAINING.INPUT_SIZE,
+                                             resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                             liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
+                                             crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
+                                             crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
+                                             random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
+                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
+            elif 'kits21' in config.DATA.DATASETS:
+                dataset_val = KiTS21Dataset(data_dir,
+                                             scan_set=scan_set,
+                                             split_dict=split_dict,
+                                             input_size=config.TRAINING.INPUT_SIZE,
+                                             resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                             kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
+                                             crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
+                                             crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
+                                             random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
+                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
+            elif 'kits23' in config.DATA.DATASETS:
+                dataset_val = KiTS23Dataset(data_dir,
+                                             scan_set=scan_set,
+                                             split_dict=split_dict,
+                                             input_size=config.TRAINING.INPUT_SIZE,
+                                             resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                             kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
+                                             crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
+                                             crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
+                                             random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
+                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
 
-        if settings['save_results'] and settings['save_attn']:
-            save_attn_dir = save_dir
-        else:
-            save_attn_dir = None
-        test_stats = eval_test(model, data_loader_test, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH, save_attn_dir)
+            if config.distributed:
+                sampler_val = DistributedSampler(dataset_val)
+            else:
+                sampler_val = RandomSampler(dataset_val)
 
-        # cur_df = cur_df.concat({'Model Name': model_settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
-        #                 'AUROC': test_stats.auroc, 'AUPRC': test_stats.auprc, 'Cohens Kappa': test_stats.cohen_kappa,
-        #                 'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}, ignore_index=True)
-        cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': model_settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
-                        'AUROC': test_stats.auroc, 'AUPRC': test_stats.auprc, 'Cohens Kappa': test_stats.cohen_kappa,
-                        'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}])
-                            ], ignore_index=True)
-        fpr, tpr, _ = metrics.roc_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
-        lr_precision, lr_recall, _ = precision_recall_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
+            batch_sampler_val = BatchSampler(sampler_val, config.TEST.BATCH_SIZE, drop_last=True)
+            data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TEST.NUM_WORKERS)
 
-        # Plot ROC Curve
-        ax[0].plot(fpr, tpr, label=f"{model_settings['plot_name']}-{test_stats.auroc:.4f}")
-        ax[1].plot(lr_recall, lr_precision, label=f"{model_settings['plot_name']}-{test_stats.auprc:.4f}")
+            if settings['save_results'] and settings['save_attn']:
+                save_attn_dir = save_dir
+            else:
+                save_attn_dir = None
+            val_stats = eval_test(model, data_loader_val, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH, save_attn_dir)
 
-    # Plot ROC Curve and Confusion Matrix
-    ax[0].set_title('ROC Curve')
-    ax[0].set_xlabel('False Positive Rate')
-    ax[0].set_ylabel('True Positive Rate')
-    ax[0].legend()
-    ax[1].set_title('Precision-Recall Curve')
-    ax[1].set_xlabel('Recall')
-    ax[1].set_ylabel('Precision')
-    ax[1].legend()
-    plt.suptitle(f'Metrics Curves')
+            multi_stat_val = 0
+            name_suffix = ''
+            for cur_stat in settings['best_epoch_metrics']:
+                name_suffix += f'_{cur_stat}'
+                multi_stat_val += getattr(val_stats, cur_stat)
+            multi_stat_val = multi_stat_val / len(settings['best_epoch_metrics'])
+            if multi_stat_val >= cur_best_epoch_stat:
+                cur_best_epoch_stat = multi_stat_val
+                cur_best_epoch_df = pd.DataFrame([{'Model Name': model_settings['plot_name'], 'F1 Score': val_stats.f1, 'Sensitivity': val_stats.sensitivity, 'Specificity': val_stats.specificity,
+                        'AUROC': val_stats.auroc, 'AUPRC': val_stats.auprc, 'Cohens Kappa': val_stats.cohen_kappa,
+                        'Precision': val_stats.precision, 'Accuracy': val_stats.accuracy, 'Best_Epoch':ckpt_name.split('.')[0][-4:]}])
+
+        # cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': model_settings['plot_name'], 'F1 Score': val_stats.f1, 'Sensitivity': val_stats.sensitivity, 'Specificity': val_stats.specificity,
+        #                 'AUROC': val_stats.auroc, 'AUPRC': val_stats.auprc, 'Cohens Kappa': val_stats.cohen_kappa,
+        #                 'Precision': val_stats.precision, 'Accuracy': val_stats.accuracy}])
+        #                     ], ignore_index=True)
+        cur_df = pd.concat([cur_df, cur_best_epoch_df], ignore_index=True)
+        # fpr, tpr, _ = metrics.roc_curve(val_stats.targets.cpu().numpy(), val_stats.preds.cpu().numpy())
+        # lr_precision, lr_recall, _ = precision_recall_curve(val_stats.targets.cpu().numpy(), val_stats.preds.cpu().numpy())
+        #
+        # # Plot ROC Curve
+        # ax[0].plot(fpr, tpr, label=f"{model_settings['plot_name']}-{val_stats.auroc:.4f}")
+        # ax[1].plot(lr_recall, lr_precision, label=f"{model_settings['plot_name']}-{val_stats.auprc:.4f}")
+
+    # # Plot ROC Curve and Confusion Matrix
+    # ax[0].set_title('ROC Curve')
+    # ax[0].set_xlabel('False Positive Rate')
+    # ax[0].set_ylabel('True Positive Rate')
+    # ax[0].legend()
+    # ax[1].set_title('Precision-Recall Curve')
+    # ax[1].set_xlabel('Recall')
+    # ax[1].set_ylabel('Precision')
+    # ax[1].legend()
+    # plt.suptitle(f'Metrics Curves')
 
     df_list.append(cur_df.iloc[:,1:])
     if settings['save_results']:
         fig.savefig(os.path.join(save_dir, f'ROC_PR_Curves.jpg'), dpi=200)
         cur_df.round(6).to_csv(os.path.join(save_dir, f'metrics_table{date_time_stamp}.csv'), index=False)
     else:
-        plt.show()
+        # plt.show()
         pd.set_option('display.max_columns', None)
         pd.set_option('display.expand_frame_repr', False)
         pd.set_option('max_colwidth', 100)

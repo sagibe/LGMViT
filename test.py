@@ -80,7 +80,7 @@ def main(config, settings):
     dataset_test = PICAI2021Dataset(data_dirs, scan_set='',
                                    input_size=config.TRAINING.INPUT_SIZE,
                                    resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                   mask=config.DATA.PREPROCESS.MASK_PROSTATE,
+                                   mask=config.DATA.PREPROCESS.MASK_ORGAN,
                                    crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
                                    padding=config.DATA.PREPROCESS.CROP_PADDING)
 

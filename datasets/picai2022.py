@@ -18,7 +18,7 @@ import SimpleITK as sitk
 
 class PICAI2021Dataset:
     def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=128,
-                 resize_mode='interpolate',prostate_mask_dir=None, prostate_masking=True, crop_prostate=True, padding=0):
+                 resize_mode='interpolate',prostate_mask_dir=None, prostate_masking=True, crop_prostate_slices=True, crop_prostate_spatial=True, padding=0):
         self.data_dir = data_dir
         if prostate_mask_dir is not None:
             self.prostate_mask_dir = prostate_mask_dir
@@ -34,7 +34,8 @@ class PICAI2021Dataset:
         self.input_size = input_size
         self.prostate_masking = prostate_masking
         self.resize_mode = resize_mode
-        self.crop_prostate = crop_prostate
+        self.crop_prostate_slices = crop_prostate_slices
+        self.crop_prostate_spatial = crop_prostate_spatial
         self.padding = padding
         self._transforms = transforms
 
@@ -75,18 +76,36 @@ class PICAI2021Dataset:
         if self.prostate_masking:
             prostate_masks = sitk.GetArrayFromImage(sitk.ReadImage(prostate_masks_path)).astype(np.float32)
 
+        # if self.prostate_masking:
+        #     t2w *= prostate_masks
+        #     adc *= prostate_masks
+        #     dwi *= prostate_masks
+        #     if self.crop_prostate:
+        #         y1, y2, x1, x2 = get_square_crop_coords(prostate_masks, padding=self.padding)  # CHECK HERE
+        #         prostate_slices = np.sum(prostate_masks, axis=(1,2)) > 0
+        #         t2w = t2w[prostate_slices, y1:y2, x1:x2]
+        #         adc = adc[prostate_slices, y1:y2, x1:x2]
+        #         dwi = dwi[prostate_slices, y1:y2, x1:x2]
+        #         seg_labels = seg_labels[prostate_slices, y1:y2, x1:x2]
+        #         cls_labels = cls_labels[prostate_slices]
+        #
         if self.prostate_masking:
             t2w *= prostate_masks
             adc *= prostate_masks
             dwi *= prostate_masks
-            if self.crop_prostate:
-                y1, y2, x1, x2 = get_square_crop_coords(prostate_masks, padding=self.padding)  # CHECK HERE
-                prostate_slices = np.sum(prostate_masks, axis=(1,2)) > 0
-                t2w = t2w[prostate_slices, y1:y2, x1:x2]
-                adc = adc[prostate_slices, y1:y2, x1:x2]
-                dwi = dwi[prostate_slices, y1:y2, x1:x2]
-                seg_labels = seg_labels[prostate_slices, y1:y2, x1:x2]
+            if self.crop_prostate_slices:
+                prostate_slices = np.sum(prostate_masks, axis=(1, 2)) > 0
+                t2w = t2w[prostate_slices]
+                adc = adc[prostate_slices]
+                dwi = dwi[prostate_slices]
+                seg_labels = seg_labels[prostate_slices]
                 cls_labels = cls_labels[prostate_slices]
+            if self.crop_prostate_spatial:
+                y1, y2, x1, x2 = get_square_crop_coords(prostate_masks, padding=self.padding)  # CHECK HERE
+                t2w = t2w[:, y1:y2, x1:x2]
+                adc = adc[:, y1:y2, x1:x2]
+                dwi = dwi[:, y1:y2, x1:x2]
+                seg_labels = seg_labels[:, y1:y2, x1:x2]
 
         if self.input_size != t2w.shape[1]:
             if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < t2w.shape[1]):

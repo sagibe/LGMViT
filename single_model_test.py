@@ -270,7 +270,7 @@ def main(settings):
     #                                scan_set=scan_set,
     #                                input_size=config.TRAINING.INPUT_SIZE,
     #                                resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-    #                                mask=config.DATA.PREPROCESS.MASK_PROSTATE,
+    #                                mask=config.DATA.PREPROCESS.MASK_ORGAN,
     #                                crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
     #                                padding=config.DATA.PREPROCESS.CROP_PADDING)
 
@@ -289,7 +289,7 @@ def main(settings):
                                          scan_set=scan_set,
                                          input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         mask=config.DATA.PREPROCESS.MASK_PROSTATE,
+                                         mask=config.DATA.PREPROCESS.MASK_ORGAN,
                                          crop_prostate=config.DATA.PREPROCESS.CROP_PROSTATE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
     elif 'node21' in config.DATA.DATASETS:
