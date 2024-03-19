@@ -269,9 +269,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                      localization_criterion(utils.min_max_normalize(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:]) * (1 - lesion_annot[:,targets[:,0].to(bool),:,:]),
                                                            torch.zeros_like(lesion_annot[:,targets[:,0].to(bool),:,:]))
             else:
-                localization_loss = localization_loss_params.ALPHA * \
-                                     localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
-                                                           torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()))
+                if localization_loss_params.SPATIAL_MAP_NORM == 'softmax':
+                    localization_loss = localization_loss_params.ALPHA * \
+                                         localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()),
+                                                               torch.cat(utils.attention_softmax_2d(lesion_annot[:,targets[:,0].to(bool),:,:], apply_log=True).unbind()))
+                elif localization_loss_params.SPATIAL_MAP_NORM == 'minmax':
+                    localization_loss = localization_loss_params.ALPHA * \
+                                         localization_criterion(utils.min_max_normalize(reduced_spatial_feat_maps[:,targets[:,0].to(bool),:,:]),
+                                                               utils.min_max_normalize(lesion_annot[:,targets[:,0].to(bool),:,:]))
             loss = cls_loss + localization_loss
             localization_loss_value = localization_loss.item()
             metric_logger.update(localization_loss=localization_loss_value)
