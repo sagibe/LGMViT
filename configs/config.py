@@ -12,7 +12,8 @@ def get_default_config():
     cfg.TRAINING.INPUT_SIZE = 256
     cfg.TRAINING.LR = 0.00001
     cfg.TRAINING.LR_DROP = 12
-    cfg.TRAINING.BATCH_SIZE = 1
+    cfg.TRAINING.SCAN_SEG_SIZE = 32
+    cfg.TRAINING.BATCH_SIZE = 32
     cfg.TRAINING.MAX_SCAN_SIZE = None
     cfg.TRAINING.WEIGHT_DECAY = 0.0001
     cfg.TRAINING.EPOCHS = 50

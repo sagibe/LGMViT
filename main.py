@@ -336,11 +336,11 @@ def main(config, settings):
         sampler_train = RandomSampler(dataset_train)
         sampler_val = RandomSampler(dataset_val)
 
-    batch_sampler_train = BatchSampler(sampler_train, config.TRAINING.BATCH_SIZE, drop_last=True)
+    batch_sampler_train = BatchSampler(sampler_train, 1, drop_last=True)
     data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.TRAINING.NUM_WORKERS)
     # data_loader_train = DataLoader(dataset_train, num_workers=config.TRAINING.NUM_WORKERS)
 
-    batch_sampler_val = BatchSampler(sampler_val, config.TRAINING.BATCH_SIZE, drop_last=True)
+    batch_sampler_val = BatchSampler(sampler_val, 1, drop_last=True)
     data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
     # data_loader_val = DataLoader(dataset_val, num_workers=config.TRAINING.NUM_WORKERS)
 
@@ -377,6 +377,8 @@ def main(config, settings):
             model, criterion, localization_criterion, data_loader_train, optimizer, device, epoch,
             localization_loss_params=config.TRAINING.LOSS.LOCALIZATION_LOSS,
             sampling_loss_params=config.TRAINING.LOSS.SAMPLING_LOSS,
+            scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
+            batch_size=config.TRAINING.BATCH_SIZE,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
             cls_thresh=config.TRAINING.CLS_THRESH,
             use_cls_token=config.TRAINING.USE_CLS_TOKEN,
@@ -385,7 +387,10 @@ def main(config, settings):
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
                 model, criterion, data_loader_val, device, epoch,
-                config.TRAINING.CLIP_MAX_NORM, config.TRAINING.CLS_THRESH)
+                scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
+                batch_size=config.TRAINING.BATCH_SIZE,
+                max_norm=config.TRAINING.CLIP_MAX_NORM,
+                cls_thresh=config.TRAINING.CLS_THRESH)
         if settings['use_wandb']:
             if epoch % config.TRAINING.EVAL_INTERVAL == 0:
                 wandb_logger(train_stats, val_stats, epoch=epoch)

@@ -508,7 +508,7 @@ def main(settings):
             else:
                 sampler_val = RandomSampler(dataset_val)
 
-            batch_sampler_val = BatchSampler(sampler_val, config.TEST.BATCH_SIZE, drop_last=True)
+            batch_sampler_val = BatchSampler(sampler_val, 1, drop_last=True)
             data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TEST.NUM_WORKERS)
 
             if settings['save_results'] and settings['save_attn']:
