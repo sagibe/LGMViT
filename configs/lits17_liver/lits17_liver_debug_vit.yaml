@@ -65,10 +65,15 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: LiTS17
-  DATA_SPLIT_FILE: datasets/data_splits/brats20/train_val_split_debug.json
+  ANNOT_TYPE: 'organ'
+  DATA_SPLIT_FILE: datasets/data_splits/lits17/train_val_split_debug.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
+    MASK_ORGAN: false # apply prostate mask on scan
+    CROP_ORGAN_SLICES: false # extract only slice with organ according to organ mask
+    CROP_ORGAN_SPATIAL: false # spatial cropping of slices according to prostate mask
+    CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
     SCAN_NORM_MODE: 'scan'  # options: 'slice', 'scan'
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/

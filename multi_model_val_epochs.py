@@ -21,8 +21,8 @@ from sklearn.metrics import precision_recall_curve
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 from datasets.kits21_lesions import KiTS21Dataset
-from datasets.kits23_lesions import KiTS23Dataset
-from datasets.lits17_lesions import LiTS17Dataset
+from datasets.kits23 import KiTS23Dataset
+from datasets.lits17 import LiTS17Dataset
 from datasets.lits17_organ import LiTS17OrganDataset
 # from datasets.lits17_organ import LiTS17Dataset
 # from datasets.picai2022 import prepare_datagens
@@ -474,12 +474,14 @@ def main(settings):
                                              scan_set=scan_set,
                                              split_dict=split_dict,
                                              input_size=config.TRAINING.INPUT_SIZE,
+                                             annot_type=config.DATA.ANNOT_TYPE,
                                              resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                              liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                              crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                              crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                              random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                             padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                             scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
             elif 'kits21' in config.DATA.DATASETS:
                 dataset_val = KiTS21Dataset(data_dir,
                                              scan_set=scan_set,
@@ -496,12 +498,14 @@ def main(settings):
                                              scan_set=scan_set,
                                              split_dict=split_dict,
                                              input_size=config.TRAINING.INPUT_SIZE,
+                                             annot_type=config.DATA.ANNOT_TYPE,
                                              resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                              kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                              crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                              crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                              random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                             padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                             scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
 
             if config.distributed:
                 sampler_val = DistributedSampler(dataset_val)

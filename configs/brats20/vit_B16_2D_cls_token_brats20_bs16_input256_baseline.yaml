@@ -2,10 +2,10 @@ TRAINING:
   INPUT_SIZE: 256
   LR: 0.00001
   LR_DROP: 20
-  BATCH_SIZE: 1
-  MAX_SCAN_SIZE: 64
+  SCAN_SEG_SIZE: 16
+  BATCH_SIZE: 16
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 25
+  EPOCHS: 50
   CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
   SAVE_CKPT_INTERVAL: 1
@@ -22,16 +22,17 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: true
-      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', 'res_gauss', 'res_gauss', 'res_S1', 'res_S2,'res_D1', 'res_D2
-      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', 'relevance_map'
-      ATTENTION_METHOD: 'raw_attn' # options: 'raw_attn', 'relevance_map', 'lrp', 'rollout', 'beyond_attn'
-      FUSION_BETA: 'learned'
+      USE: false
+      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
+      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
+      ATTENTION_METHOD: 'raw_attn' # options: 'gradcam', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
+      FUSION_BETA: 0.95
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
-      FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max'
-      GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2'
-      GT_SEG_PROCESS_KERNEL_SIZE: 51  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 250
+      FEAT_CHANNEL_REDUCTION: 'learned' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
+      SPATIAL_MAP_NORM: 'softmax'
+      GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
+      GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
+      ALPHA: 100
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false
@@ -63,15 +64,12 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
-  DATASETS: kits23
-  DATA_SPLIT_FILE: datasets/data_splits/kits23_lesions/train_val_test_split.json
+  DATASETS: BraTS2020
+  DATA_SPLIT_FILE: datasets/data_splits/brats20/train_val_test_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
-    MASK_ORGAN: false # apply prostate mask on scan
-    CROP_ORGAN_SLICES: true # extract only slice with organ according to organ mask
-    CROP_ORGAN_SPATIAL: false # spatial cropping of slices according to prostate mask
-    CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
+    SCAN_NORM_MODE: 'scan'  # options: 'slice', 'scan'
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
 

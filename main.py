@@ -19,8 +19,8 @@ from datasets.brats20 import BraTS20Dataset
 from datasets.covid1920 import Covid1920Dataset
 from datasets.isles22 import Isles22Dataset
 from datasets.kits21_lesions import KiTS21Dataset
-from datasets.kits23_lesions import KiTS23Dataset
-from datasets.lits17_lesions import LiTS17Dataset
+from datasets.kits23 import KiTS23Dataset
+from datasets.lits17 import LiTS17Dataset
 from datasets.lits17_organ import LiTS17OrganDataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
@@ -55,7 +55,7 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20',
-    'config_name': ['brats20_debug_vit'
+    'config_name': ['vit_B16_2D_cls_token_brats20_bs16_input256_baseline'
                     ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split10_input256_baseline',
     #                 'vit_B16_2D_cls_token_brats20_split10_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
@@ -256,22 +256,26 @@ def main(config, settings):
                                          scan_set='train',
                                          split_dict=split_dict,
                                          input_size=config.TRAINING.INPUT_SIZE,
+                                         annot_type=config.DATA.ANNOT_TYPE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                          crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                          crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                          random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         dataset_val = LiTS17Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
+                                       annot_type=config.DATA.ANNOT_TYPE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                        crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                        crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
     elif 'kits21' in config.DATA.DATASETS:
         dataset_train = KiTS21Dataset(data_dir,
                                          scan_set='train',
@@ -298,22 +302,26 @@ def main(config, settings):
                                          scan_set='train',
                                          split_dict=split_dict,
                                          input_size=config.TRAINING.INPUT_SIZE,
+                                         annot_type=config.DATA.ANNOT_TYPE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                          crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                          crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                          random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         dataset_val = KiTS23Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
+                                       annot_type=config.DATA.ANNOT_TYPE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                        crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                        crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
 
     # elif 'LiTS17' in config.DATA.DATASETS:
     #     dataset_train = LiTS17Dataset(data_dir,

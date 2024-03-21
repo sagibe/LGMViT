@@ -13,20 +13,22 @@ import SimpleITK as sitk
 
 
 class LiTS17Dataset:
-    def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=512,
+    def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=512, annot_type='lesion',
                  resize_mode='interpolate', liver_masking=True, crop_liver_slices=True, crop_liver_spatial=True,
-                 random_slice_segment=None, padding=0):
+                 random_slice_segment=None, padding=0, scan_norm_mode='slice'):
         self.data_dir = data_dir
         self.scan_list = split_dict[scan_set]
         # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
 
         self.input_size = input_size
+        self.annot_type = annot_type
         self.liver_masking = liver_masking
         self.crop_liver_slices = crop_liver_slices
         self.crop_liver_spatial = crop_liver_spatial
         self.random_slice_segment = random_slice_segment
         self.resize_mode = resize_mode
         self.padding = padding
+        self.scan_norm_mode = scan_norm_mode
         self._transforms = transforms
 
     def __len__(self):
@@ -42,30 +44,40 @@ class LiTS17Dataset:
         ct = sitk.GetArrayFromImage(sitk.ReadImage(ct_path)).astype(np.float32)
 
         seg_labels = sitk.GetArrayFromImage(sitk.ReadImage(seg_path)).astype(np.float32)
-        liver_masks = (seg_labels > 0).astype(int)
-        lesion_labels = (seg_labels > 1).astype(int)
-        cls_labels = (np.sum(np.squeeze(lesion_labels), axis=(1, 2)) > 0).astype(int)
+        if self.annot_type == 'lesion':
+            liver_masks = (seg_labels > 0).astype(int)
+            binary_seg_labels = (seg_labels > 1).astype(int)
+        elif self.annot_type == 'organ':
+            binary_seg_labels = (seg_labels > 0).astype(int)
+        else:
+            raise ValueError(f"annot_type {self.annot_type} is not valid")
+        cls_labels = (np.sum(np.squeeze(binary_seg_labels), axis=(1, 2)) > 0).astype(int)
 
-        ct = min_max_norm(ct)
-        if self.liver_masking:
-            ct *= liver_masks
+        if self.scan_norm_mode == 'scan':
+            ct = min_max_norm_scan(ct)
+        elif self.scan_norm_mode == 'slice':
+            ct = min_max_norm_slice(ct)
+
+        if self.annot_type == 'lesion':
+            if self.liver_masking:
+                ct *= liver_masks
             if self.crop_liver_slices:
                 liver_slices = np.sum(liver_masks, axis=(1, 2)) > 0
                 ct = ct[liver_slices]
-                lesion_labels = lesion_labels[liver_slices]
+                binary_seg_labels = binary_seg_labels[liver_slices]
                 liver_masks = liver_masks[liver_slices]
                 cls_labels = cls_labels[liver_slices]
             if self.crop_liver_spatial:
                 y1, y2, x1, x2 = get_square_crop_coords(liver_masks, padding=self.padding)  # CHECK HER
                 ct = ct[:, y1:y2, x1:x2]
-                lesion_labels = lesion_labels[:, y1:y2, x1:x2]
+                binary_seg_labels = binary_seg_labels[:, y1:y2, x1:x2]
                 liver_masks = liver_masks[:, y1:y2, x1:x2]
         if self.random_slice_segment is not None:
             if self.random_slice_segment < len(cls_labels):
                 random_range = len(cls_labels) - self.random_slice_segment + 1
                 random_idx = np.random.randint(random_range)
                 ct = ct[random_idx:random_idx + self.random_slice_segment]
-                lesion_labels = lesion_labels[random_idx:random_idx + self.random_slice_segment]
+                binary_seg_labels = binary_seg_labels[random_idx:random_idx + self.random_slice_segment]
                 liver_masks = liver_masks[random_idx:random_idx + self.random_slice_segment]
                 cls_labels = cls_labels[random_idx:random_idx + self.random_slice_segment]
 
@@ -86,17 +98,17 @@ class LiTS17Dataset:
                     ct = np.pad(ct, ((0,0),(side_pad,side_pad),(side_pad,side_pad)))
                 else:
                     ct = np.pad(ct, ((0,0),(side_pad,side_pad+1),(side_pad,side_pad+1)))
-            scale_factor_h = self.input_size / lesion_labels.shape[-2]
-            scale_factor_w = self.input_size / lesion_labels.shape[-1]
-            lesion_labels = scipy.ndimage.zoom(lesion_labels, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
+            scale_factor_h = self.input_size / binary_seg_labels.shape[-2]
+            scale_factor_w = self.input_size / binary_seg_labels.shape[-1]
+            binary_seg_labels = scipy.ndimage.zoom(binary_seg_labels, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
             # liver_masks = scipy.ndimage.zoom(liver_masks, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
 
-        # for slice_num in range(lesion_labels.shape[0]):
-        #     if lesion_labels[slice_num].sum() > 0:
+        # for slice_num in range(binary_seg_labels.shape[0]):
+        #     if binary_seg_labels[slice_num].sum() > 0:
         #         f, ax = plt.subplots(1, 3, figsize=(14, 4))
         #         ax[0].imshow(ct[slice_num], cmap='gray')
         #         ax[1].imshow(liver_masks[slice_num], cmap='gray')
-        #         ax[2].imshow(lesion_labels[slice_num], cmap='gray')
+        #         ax[2].imshow(binary_seg_labels[slice_num], cmap='gray')
         #         plt.show()
 
         # f, ax = plt.subplots(1, 3)
@@ -115,18 +127,18 @@ class LiTS17Dataset:
         # if True:
         #     half_seg_size = 25
         #     mid_idx = cls_labels.shape[0]//2
-        #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], lesion_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
+        #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], binary_seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
         #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
         # if True:
         #     str_idx = 0
         #     seg_size = 16
-        #     labels = [cls_labels[str_idx:str_idx+seg_size], lesion_labels[str_idx:str_idx+seg_size]]
+        #     labels = [cls_labels[str_idx:str_idx+seg_size], binary_seg_labels[str_idx:str_idx+seg_size]]
         #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
 
-        labels = [cls_labels, lesion_labels]
+        labels = [cls_labels, binary_seg_labels]
         return tuple([scan, labels, scan_id])
-        # return tuple([img_concat, lesion_labels if self.get_lesion_labels else cls_labels])
+        # return tuple([img_concat, binary_seg_labels if self.get_binary_seg_labels else cls_labels])
 
 def resize_scan(scan, size=256):
     # zoom_factor = (1, size/scan.shape[1], size/scan.shape[2])
@@ -139,8 +151,18 @@ def resize_scan(scan, size=256):
         scan_rs[idx, :, :] = cur_slice_rs
     return scan_rs
 
-def min_max_norm(scan):
+def min_max_norm_scan(scan):
     return (scan - scan.min()) / (scan.max() - scan.min())
+
+def min_max_norm_slice(scan):
+    scan_norm = np.zeros_like(scan)
+    for idx in range(len(scan)):
+        cur_slice = scan[idx, :, :]
+        if cur_slice.max() > cur_slice.min():
+            cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
+            scan_norm[idx, :, :] = cur_slice_norm
+    return scan_norm
+
 
 def get_square_crop_coords(mask, padding=0):
     y1 = x1 = np.inf

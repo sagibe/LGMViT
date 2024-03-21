@@ -64,7 +64,7 @@ MODEL:
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: kits23
-  DATA_SPLIT_FILE: datasets/data_splits/kits23_lesions/train_val_test_split.json
+  DATA_SPLIT_FILE: datasets/data_splits/kits23/train_val_test_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
