@@ -102,7 +102,7 @@ class Attention(nn.Module):
     def get_attn_gradients(self):
         return self.attn_gradients
 
-    def forward(self, x, return_attention=False,  store_layers_attn=False):
+    def forward(self, x, return_attention=False,  store_layers_attn=False, save_attn_grads=True):
         # x: B, N, C
         # mask: [B, N, ] torch.bool
         B, N, C = x.shape
@@ -121,7 +121,7 @@ class Attention(nn.Module):
 
         # if store_layers_attn:
         self.save_attn(attn)
-        if attn.requires_grad is True:
+        if attn.requires_grad and save_attn_grads:
             attn.register_hook(self.save_attn_gradients)
 
         # x = (attn @ v).transpose(1, 2).reshape(B, N, C)
@@ -202,14 +202,14 @@ class TransformerEncoderBlock(nn.Sequential):
         self.clone2 = Clone()
         # self.patch_embed = PatchEmbedding(patch_size=16, stride=16, padding=0, in_chans=3, embed_dim=embed_size)
 
-    def forward(self, x, return_attention=False, store_layers_attn=False):
+    def forward(self, x, return_attention=False, store_layers_attn=False, save_attn_grads=True):
         # out_attn, attn_map = self.attn(self.norm1(x), store_layers_attn=store_layers_attn)
         # x = x + self.drop_path(out_attn)
         # # x = x + self.drop_path(self.attn(self.norm1(x)))
         # x = x + self.drop_path(self.mlp(self.norm2(x)))
 
         x1, x2 = self.clone1(x, 2)
-        out1, attn_mat = self.attn(self.norm1(x2), store_layers_attn=store_layers_attn)
+        out1, attn_mat = self.attn(self.norm1(x2), store_layers_attn=store_layers_attn, save_attn_grads=save_attn_grads)
         x = self.add1([x1, out1])
         x1, x2 = self.clone2(x, 2)
         out2 = self.mlp(self.norm2(x))
@@ -342,7 +342,7 @@ class VisionTransformerLGMLRP(nn.Module):
         ########
         for idx, blk in enumerate(self.transformer_encoder):
             if idx < self.num_layers - 1:
-                x = blk(x, store_layers_attn=self.store_layers_attn)
+                x = blk(x, store_layers_attn=self.store_layers_attn, save_attn_grads=False)
             else:
                 out_transformer, attn = blk(x, return_attention=True, store_layers_attn=self.store_layers_attn)
         #########

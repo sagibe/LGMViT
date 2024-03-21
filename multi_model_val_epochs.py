@@ -23,6 +23,7 @@ from datasets.brats20 import BraTS20Dataset
 from datasets.kits21_lesions import KiTS21Dataset
 from datasets.kits23_lesions import KiTS23Dataset
 from datasets.lits17_lesions import LiTS17Dataset
+from datasets.lits17_organ import LiTS17OrganDataset
 # from datasets.lits17_organ import LiTS17Dataset
 # from datasets.picai2022 import prepare_datagens
 
@@ -127,86 +128,99 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 #     'device': 'cuda',
 # }
 
-# SETTINGS = {
-#     'models': [
-#         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
-#             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
-#         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a100_gtproc_gauss_51',
-#             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a100'},  # if None default is config_name
-#         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
-#             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a250'},  # if None default is config_name
-#         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a500_gtproc_gauss_51',
-#             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a500'},  # if None default is config_name
-#         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a1000_gtproc_gauss_51',
-#             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'LGM-ViT Fusion learned_i05_kl_a1000'},  # if None default is config_name
-#         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a10',
-#             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'RobustVit'},  # if None default is config_name
-#         {
-#             'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a10',
-#             'exp_name': None,  # if None default is config_name
-#             'plot_name': 'RES D2'},  # if None default is config_name
-#     ],
-#     'dataset_name': 'brats20_split3',
-#     'data_path': '',
-#     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
-#     'output_name': None, # 'for_presentaraion3',  # if None default is datetime
-#     'save_results': True,
-#     'save_attn': False,
-#     'device': 'cuda',
-# }
-
 SETTINGS = {
     'models': [
         {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_baseline',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline_all_epochs',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B Baseline'},  # if None default is config_name
-        # {
-        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a250_gtproc_gauss_51',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
-        # {
-        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a250_gtproc_gauss_51',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
-        # {
-        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a500_gtproc_gauss_51',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a500'},  # if None default is config_name
-        # {
-        #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_gradmask_a1',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'GradMask a1'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_robust_vit_a1',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'RobustVit a1'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b0_95_kl_a250'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_res_d2_a100',
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51_all_epochs',
             'exp_name': None,  # if None default is config_name
-            'plot_name': 'RES D2 a100'},  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b0_95_kl_a500'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b0_8_kl_a250'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a250_gtproc_gauss_51_all_epochs',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'LGM-ViT Fusion b_learned_i075_kl_a250'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100_all_epochs',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'RobustVit a100'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a1_all_epochs',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'RES D2 a1'},  # if None default is config_name
+        {
+            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_res_g_a10',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'RES G a10'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_gradmask_a100_all_epochs',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'RES G a10'},  # if None default is config_name
     ],
-    'dataset_name': 'lits17_bs16',
+    'dataset_name': 'brats20_split3',
     'data_path': '',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Val_metrics/',
-    'output_name': None,  # 'for_presentaraion3',  # if None default is datetime
-    'best_epoch_metrics': ['f1'],
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
+    'output_name': None, # 'for_presentaraion3',  # if None default is datetime
+    'best_epoch_metrics': ['f1', 'auroc', 'sensitivity'],
     'save_results': False,
     'save_attn': False,
     'device': 'cuda',
 }
+
+# SETTINGS = {
+#     'models': [
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_baseline',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'ViT-B Baseline'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b0_25_kl_a250_gtproc_gauss_51',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'LGM-ViT Fusion b0_25_kl_a250'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a250_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a250'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_lgm_fusion_b_learned_i025_kl_a500_gtproc_gauss_51',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'LGM-ViT Fusion b_learned_i025_kl_a500'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_gradmask_a250_all_epochs',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'GradMask a250'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_robust_vit_a10',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'RobustVit a1'},  # if None default is config_name
+#         # {
+#         #     'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_res_d2_a100',
+#         #     'exp_name': None,  # if None default is config_name
+#         #     'plot_name': 'RES D2 a100'},  # if None default is config_name
+#         {
+#             'config': 'vit_B16_2D_cls_token_lits17_bs16_input256_res_g_a250',
+#             'exp_name': None,  # if None default is config_name
+#             'plot_name': 'RES G a250'},  # if None default is config_name
+#     ],
+#     'dataset_name': 'lits17_bs16',
+#     'data_path': '',
+#     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Val_metrics/',
+#     'output_name': None,  # 'for_presentaraion3',  # if None default is datetime
+#     'best_epoch_metrics': ['f1', 'auroc', 'sensitivity'],
+#     'save_results': False,
+#     'save_attn': False,
+#     'device': 'cuda',
+# }
 
 # SETTINGS = {
 #     'models': [
@@ -448,13 +462,13 @@ def main(settings):
                                               input_size=config.TRAINING.INPUT_SIZE,
                                               resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                               padding=config.DATA.PREPROCESS.CROP_PADDING)
-            # elif 'LiTS17' in config.DATA.DATASETS:
-            #     dataset_val = LiTS17Dataset(data_dir,
-            #                                   scan_set=scan_set,
-            #                                   split_dict=split_dict,
-            #                                   input_size=config.TRAINING.INPUT_SIZE,
-            #                                   resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-            #                                   padding=config.DATA.PREPROCESS.CROP_PADDING)
+            elif 'LiTS17_bs16' in config.DATA.DATASETS:
+                dataset_val = LiTS17OrganDataset(data_dir,
+                                              scan_set=scan_set,
+                                              split_dict=split_dict,
+                                              input_size=config.TRAINING.INPUT_SIZE,
+                                              resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                              padding=config.DATA.PREPROCESS.CROP_PADDING)
             elif 'LiTS17' in config.DATA.DATASETS:
                 dataset_val = LiTS17Dataset(data_dir,
                                              scan_set=scan_set,

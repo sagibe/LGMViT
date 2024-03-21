@@ -66,8 +66,8 @@ DATA:
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
-    MASK_PROSTATE: true # apply prostate mask on scan
-    CROP_PROSTATE: true # crop scan according to prostate mask
+    MASK_ORGAN: true # apply prostate mask on scan
+    CROP_ORGAN_SLICES: true # crop scan according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/

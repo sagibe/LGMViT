@@ -28,6 +28,7 @@ from datasets.node21 import Node21Dataset
 from models.lgmvit import build_model
 import utils.util as utils
 from models.lgmvit_LRP import build_model_with_LRP
+from models.lgmvit_gae import build_model_with_gae
 from models.resnet import build_resnet
 from utils.ViT_explanation_generator import LRP
 from utils.engine import train_one_epoch, eval_epoch
@@ -53,21 +54,22 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'lits17_lesions',
-    'config_name': ['vit_B16_2D_cls_token_lits17_lesions_input256_s_size_64_mask_kidney_crop_slice_spatial_lgm_fusion_b_learned_i05_kl_a250'
-                    ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_baseline_all_epochs',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51_all_epochs',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i075_kl_a250_gtproc_gauss_51_all_epochs',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a1_all_epochs',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100_all_epochs',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_gradmask_a100_all_epochs',
+    'dataset_name': 'brats20_split10',
+    # 'config_name': ['brats20_split10_debug_vit'
     #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_res_g_a10',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_g_a100',
-    #                 'vit_B16_2D_cls_token_brats20_split3_input256_res_g_a250',
+    'config_name': ['vit_B16_2D_cls_token_brats20_split10_input256_baseline',
+                    'vit_B16_2D_cls_token_brats20_split10_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
+                    'vit_B16_2D_cls_token_brats20_split10_input256_res_d2_a1',
+                    'vit_B16_2D_cls_token_brats20_split10_input256_res_d2_a1_gradcam',
+                    'vit_B16_2D_cls_token_brats20_split10_input256_res_g_a10',
+                    'vit_B16_2D_cls_token_brats20_split10_input256_robust_vit_a100',
+                    'vit_B16_2D_cls_token_brats20_split10_input256_gradmask_a100',
+                    ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a250_gtproc_gauss_51',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51_new',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a300_gtproc_gauss_51_new',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_new',
+    #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51_new',
     #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a100_gtproc_gauss_51',
     #                 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_9_kl_a200_gtproc_gauss_51',
@@ -156,8 +158,8 @@ SETTINGS = {
     #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
-    'use_wandb': False,
-    'wandb_proj_name': 'LGMViT_kits21_lesions',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
+    'use_wandb': True,
+    'wandb_proj_name': 'LGMViT_brats20_split10',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
     'save_ckpt_interval': 1,
@@ -176,9 +178,12 @@ def main(config, settings):
     random.seed(seed)
 
     # model = build_resnet(config)
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'gradcam', 'attn_gradcam']:
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'attn_gradcam']: # 'gradcam'
         model = build_model_with_LRP(config)
         lrp = LRP(model)
+    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD == 'relevance_map':
+    #     model = build_model_with_gae(config)
+    #     lrp = None
     else:
         model = build_model(config)
         lrp = None
@@ -206,6 +211,7 @@ def main(config, settings):
     # criterion = nn.BCELoss()
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
+        # criterion = nn.CrossEntropyLoss()
     elif config.TRAINING.LOSS.TYPE == 'focal':
         criterion = FocalLoss(alpha=config.TRAINING.LOSS.FOCAL_PARAMS.ALPHA, gamma=config.TRAINING.LOSS.FOCAL_PARAMS.GAMMA)
     else:
@@ -450,6 +456,7 @@ def main(config, settings):
     print("Start training")
     start_time = time.time()
     best_epoch_stat = -np.inf
+    best_epoch_stat_multi = -np.inf
     for epoch in range(config.TRAINING.START_EPOCH, config.TRAINING.EPOCHS + 1):
         # if config.distributed:
         #     sampler_train.set_epoch(epoch)

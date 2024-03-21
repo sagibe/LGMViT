@@ -79,11 +79,11 @@ class LiTS17OrganDataset:
         #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
         #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
-        if True:
-            str_idx = 0
-            seg_size = 16
-            labels = [cls_labels[str_idx:str_idx+seg_size], seg_labels[str_idx:str_idx+seg_size]]
-            return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
+        # if True:
+        #     str_idx = 0
+        #     seg_size = 16
+        #     labels = [cls_labels[str_idx:str_idx+seg_size], seg_labels[str_idx:str_idx+seg_size]]
+        #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
 
         labels = [cls_labels, seg_labels]
         return tuple([scan, labels, scan_id])

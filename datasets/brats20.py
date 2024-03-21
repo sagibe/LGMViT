@@ -90,7 +90,7 @@ class BraTS20Dataset:
 
         # if True:
         #     str_idx = 0
-        #     seg_size = 25
+        #     seg_size = 32
         #     labels = [cls_labels[str_idx:str_idx+seg_size], seg_labels[str_idx:str_idx+seg_size]]
         #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
 
@@ -111,3 +111,12 @@ def resize_scan(scan, size=256):
 
 def min_max_norm(scan):
     return (scan - scan.min()) / (scan.max() - scan.min())
+
+# def min_max_norm(scan):
+#     scan_norm = np.zeros_like(scan)
+#     for idx in range(len(scan)):
+#         cur_slice = scan[idx, :, :]
+#         if cur_slice.max() > cur_slice.min():
+#             cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
+#             scan_norm[idx, :, :] = cur_slice_norm
+#     return scan_norm

@@ -48,6 +48,12 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
+    #     self.attn_gradients = None
+    # def save_attn_gradients(self, attn_gradients):
+    #     self.attn_gradients = attn_gradients
+    #
+    # def get_attn_gradients(self):
+    #     return self.attn_gradients
     def forward(self, x, return_attention=False,  store_layers_attn=False):
         # x: B, N, C
         # mask: [B, N, ] torch.bool
@@ -61,6 +67,9 @@ class Attention(nn.Module):
         attn = self.attn_drop(attn)
         if store_layers_attn:
             self.attn_maps = attn
+        #
+        # if attn.requires_grad:
+        #     attn.register_hook(self.save_attn_gradients)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)

@@ -67,8 +67,8 @@ DATA:
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
   PREPROCESS:
     RESIZE_MODE: interpolate
-    MASK_PROSTATE: true
-    CROP_PROSTATE: true
+    MASK_ORGAN: true
+    CROP_ORGAN_SLICES: true
     CROP_PADDING: 0
 TEST:
   DATASET_PATH: null

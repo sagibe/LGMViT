@@ -22,12 +22,13 @@ TRAINING:
       GAMMA: 2
     LOCALIZATION_LOSS:
       USE: true
-      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
-      ATTENTION_METHOD: 'raw_attn' # options: 'raw_attn', 'relevance_map', 'lrp', 'rollout', 'beyond_attn'
-      FUSION_BETA: 'learned'
+      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
+      SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
+      ATTENTION_METHOD: 'rollout' # options: 'raw_attn', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
+      FUSION_BETA: 0.95
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'learned' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
+      SPATIAL_MAP_NORM: 'softmax'
       GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
       GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 100
@@ -67,8 +68,8 @@ DATA:
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
-    MASK_PROSTATE: true # apply prostate mask on scan
-    CROP_PROSTATE: true # crop scan according to prostate mask
+    MASK_ORGAN: true # apply prostate mask on scan
+    CROP_ORGAN_SLICES: true # crop scan according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/

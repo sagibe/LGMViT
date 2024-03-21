@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from torch import sigmoid
 import matplotlib.pyplot as plt
 import cv2
+from pytorch_grad_cam import GradCAM
 # from mmengine.visualization import Visualizer
 
 import utils.util as utils
@@ -24,13 +25,19 @@ from utils.localization import extract_heatmap, generate_heatmap_over_img, gener
 
 # from datasets.coco_eval import CocoEvaluator
 # from datasets.panoptic_eval import PanopticEvaluator
+def reshape_transform(tensor, height=16, width=16):
+    result = tensor[:, 1:, :].reshape(tensor.size(0),
+                                      height, width, tensor.size(2))
 
+    # Bring the channels to the first dimension,
+    # like in CNNs.
+    result = result.transpose(2, 3).transpose(1, 2)
+    return result
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localization_criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, localization_loss_params: dict, sampling_loss_params: dict,
                     max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False, lrp=None):
     model.train()
-    criterion.train()
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -49,7 +56,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
     print_freq = 50
     # count = 0
     metric_logger.update(localization_loss=0)
-
+    # gradcam = GradCAM(model=model, target_layers=[model.transformer.layers[-1].norm1],
+    #                   reshape_transform=reshape_transform)
     if localization_loss_params.USE and localization_loss_params.PATIENT_LIST is not None:
         with open(localization_loss_params.PATIENT_LIST, 'r') as f:
             localization_patient_list = json.load(f)
@@ -152,8 +160,20 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                     reduced_attn_maps = lrp.generate_LRP(samples, method='attn_gradcam', start_layer=1, index=None).unsqueeze(0)
                     reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
                 elif localization_loss_params.ATTENTION_METHOD == 'gradcam':
+                    # gradcam = GradCAM(model=model, target_layers=[model.transformer.layers[-1].norm1], reshape_transform=reshape_transform)
+                    # reduced_attn_maps = gradcam(samples, targets=None)
+                    # reduced_attn_maps = torch.from_numpy(reduced_attn_maps).unsqueeze(0).to(device)
                     reduced_attn_maps = lrp.generate_LRP(samples, method='gradcam', start_layer=1, index=None).unsqueeze(0)
                     reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
+                    # cam = model.transformer_encoder[-1].attn.get_attn_gradients()
+                    # cam = model.transformer.layers[-1].attn.get_attn_gradients()
+                    # if cam is None:
+                    #     cam = attn
+                    # feat_size, bs = int(np.sqrt(cam.shape[-1])), cam.shape[0]
+                    # cam = cam[:, :, 0, 1:].reshape(bs, -1, feat_size, feat_size)
+                    # cam = cam.mean(1).clamp(min=0).unsqueeze(0)
+                    # reduced_attn_maps = (cam - cam.min()) / (cam.max() - cam.min())
+                    # reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
             if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                 # spatial_feat_maps = bb_feat_map
                 if use_cls_token:
@@ -348,6 +368,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         metric_logger.update(cohen_kappa=metrics.cohen_kappa)
         # metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+        # with torch.no_grad():
+        #     torch.cuda.empty_cache()
 
     # fix initialization of localization loss # TODO
     if metric_logger.meters['localization_loss'].count > 1:
