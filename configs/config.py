@@ -96,7 +96,8 @@ def get_default_config():
     cfg.DATA.PREPROCESS.MASK_ORGAN = True  # apply organ mask on scan
     cfg.DATA.PREPROCESS.CROP_ORGAN_SLICES = True  # crop scan according to prostate mask
     cfg.DATA.PREPROCESS.CROP_ORGAN_SPATIAL = True  # crop scan according to prostate mask
-    cfg.DATA.PREPROCESS.CROP_PADDING = 0 # padding around prostate crop (0 for minimal cropping)
+    cfg.DATA.PREPROCESS.SCAN_NORM_MODE = 'slice'
+    cfg.DATA.PREPROCESS.CROP_PADDING = 0  # padding around prostate crop (0 for minimal cropping)
 
     # TEST
     cfg.TEST = edict()

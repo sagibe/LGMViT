@@ -14,14 +14,15 @@ import SimpleITK as sitk
 
 class BraTS20Dataset:
     def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=256,
-                 resize_mode='interpolate', padding=0):
-        self.data_dir = data_dir
+                 resize_mode='interpolate', padding=0, scan_norm_mode='slice'):
+        self.data_dir = os.path.join(data_dir, 'MICCAI_BraTS2020_TrainingData')
         self.scan_list = split_dict[scan_set]
         # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
 
         self.input_size = input_size
         self.resize_mode = resize_mode
         self.padding = padding
+        self.scan_norm_mode = scan_norm_mode
         self._transforms = transforms
 
     def __len__(self):
@@ -41,9 +42,14 @@ class BraTS20Dataset:
         seg_labels = (seg_labels > 0).astype(int)
         cls_labels = (np.sum(np.squeeze(seg_labels), axis=(1, 2)) > 0).astype(int)
 
-        t1 = min_max_norm(t1)
-        t2 = min_max_norm(t2)
-        flair = min_max_norm(flair)
+        if self.scan_norm_mode == 'scan':
+            t1 = min_max_norm_scan(t1)
+            t2 = min_max_norm_scan(t2)
+            flair = min_max_norm_scan(flair)
+        elif self.scan_norm_mode == 'slice':
+            t1 = min_max_norm_slice(t1)
+            t2 = min_max_norm_slice(t2)
+            flair = min_max_norm_slice(flair)
         # scan = np.stack((scan, scan, scan), axis=1)
         # scan = cv2.resize(scan, (self.input_size, self.input_size), interpolation=cv2.INTER_CUBIC)
         # scan = scan.transpose(2,0,1)
@@ -109,14 +115,14 @@ def resize_scan(scan, size=256):
         scan_rs[idx, :, :] = cur_slice_rs
     return scan_rs
 
-def min_max_norm(scan):
+def min_max_norm_scan(scan):
     return (scan - scan.min()) / (scan.max() - scan.min())
 
-# def min_max_norm(scan):
-#     scan_norm = np.zeros_like(scan)
-#     for idx in range(len(scan)):
-#         cur_slice = scan[idx, :, :]
-#         if cur_slice.max() > cur_slice.min():
-#             cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
-#             scan_norm[idx, :, :] = cur_slice_norm
-#     return scan_norm
+def min_max_norm_slice(scan):
+    scan_norm = np.zeros_like(scan)
+    for idx in range(len(scan)):
+        cur_slice = scan[idx, :, :]
+        if cur_slice.max() > cur_slice.min():
+            cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
+            scan_norm[idx, :, :] = cur_slice_norm
+    return scan_norm
