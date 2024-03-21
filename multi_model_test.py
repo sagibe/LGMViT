@@ -87,10 +87,10 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 SETTINGS = {
     'models': [
-        # {
-        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline_all_epochs',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ViT-B Baseline'},  # if None default is config_name
+        {
+            'config': 'brats20_debug_vit',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ViT-B debug'},  # if None default is config_name
         # {
         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
         #     'exp_name': None,  # if None default is config_name
@@ -103,26 +103,26 @@ SETTINGS = {
         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51',
         #     'exp_name': None,  # if None default is config_name
         #     'plot_name': 'LGM-ViT Fusion b0_8_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51_new',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a300'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51_new',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_8_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_new',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_mse_min_max_norm',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a250_mse_min_max_norm'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_mse_min_max_norm_a100_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a100_mse_min_max_norm'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51_new',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a300'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51_new',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_8_kl_a250'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_new',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a250'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_mse_min_max_norm',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a250_mse_min_max_norm'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_mse_min_max_norm_a100_gtproc_gauss_51',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a100_mse_min_max_norm'},  # if None default is config_name
         # {
         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
         #     'exp_name': None,  # if None default is config_name
@@ -140,11 +140,11 @@ SETTINGS = {
         #     'exp_name': None,  # if None default is config_name
         #     'plot_name': 'GradMask a100'},  # if None default is config_name
     ],
-    'dataset_name': 'brats20_split3',
+    'dataset_name': 'brats20',
     'data_path': '',
     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
     'ckpt_load': 'best',
-    'output_name': 'new_lgm_exps_2', # 'for_presentaraion3',  # if None default is datetime
+    'output_name': None, # 'for_presentaraion3',  # if None default is datetime
     'save_results': True,
     'save_attn': False,
     'device': 'cuda',
@@ -405,11 +405,11 @@ def main(settings):
     if settings['save_results']:
         date_time_stamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
         if settings['output_name']:
-            save_dir = os.path.join(settings['output_dir'], settings['output_name'])
+            save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], settings['output_name'])
             if os.path.isdir(save_dir):
-                save_dir = os.path.join(settings['output_dir'], settings['output_name'] + date_time_stamp)
+                save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], settings['output_name'] + date_time_stamp)
         else:
-            save_dir = os.path.join(settings['output_dir'], date_time_stamp)
+            save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], date_time_stamp)
         os.makedirs(save_dir, exist_ok=True)
 
     cur_df = pd.DataFrame(
@@ -435,17 +435,17 @@ def main(settings):
             model = build_model(config)
         model.to(device)
         if isinstance(config.TEST.CHECKPOINT, int):
-            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
+            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
         elif isinstance(config.TEST.CHECKPOINT, str):
             if 'best_f1_auroc_sensitivity' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', 'checkpoint_best_f1_auroc_sensitivity.pth')
+                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best_f1_auroc_sensitivity.pth')
             elif 'best' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
+                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
             elif '/' in config.TEST.CHECKPOINT:
                 checkpoint_path = config.TEST.CHECKPOINT
             else:
                 if (config.TEST.CHECKPOINT).endswith('.pth'):
-                    checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
+                    checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
                 else:
                     checkpoint_path = ''
         else:
@@ -477,7 +477,7 @@ def main(settings):
             data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
             with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
                 split_dict = json.load(f)
-            scan_set = 'test'
+            scan_set = 'val'
         if 'picai' in config.DATA.DATASETS:
             dataset_test = PICAI2021Dataset(data_dir,
                                            split_dict=split_dict,

@@ -395,7 +395,7 @@ def main(settings):
         else:
             model = build_model(config)
         model.to(device)
-        ckpt_list  = [d for d in os.listdir(os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt')) if 'best' not in d]
+        ckpt_list  = [d for d in os.listdir(os.path.join(config.DATA.OUTPUT_DIR, model_settings['dataset_name'], model_settings['exp_name'], 'ckpt')) if 'best' not in d]
         # if isinstance(config.TEST.CHECKPOINT, int):
         #     checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
         # elif isinstance(config.TEST.CHECKPOINT, str):
@@ -441,7 +441,7 @@ def main(settings):
             scan_set = 'val'
         cur_best_epoch_stat = 0
         for ckpt_name in ckpt_list:
-            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', ckpt_name)
+            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['dataset_name'], model_settings['exp_name'], 'ckpt', ckpt_name)
             checkpoint = torch.load(checkpoint_path, map_location='cpu')
             model.load_state_dict(checkpoint['model'])
 

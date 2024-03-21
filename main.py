@@ -344,7 +344,7 @@ def main(config, settings):
     data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
     # data_loader_val = DataLoader(dataset_val, num_workers=config.TRAINING.NUM_WORKERS)
 
-    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['exp_name'])
+    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['dataset_name'], settings['exp_name'])
     ckpt_dir = os.path.join(output_dir, 'ckpt')
     os.makedirs(ckpt_dir, exist_ok=True)
 
