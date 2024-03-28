@@ -34,7 +34,7 @@ class VisionTransformerLGM(nn.Module):
         self.pos_embed_fit_mode = pos_embed_fit_mode
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         if learned_beta:
-            self.beta = nn.Parameter(torch.tensor(0.75))
+            self.beta = nn.Parameter(torch.tensor(0.8))
         if 'attn' in channel_reduction_srcs:
             self.channel_reduction_attn = nn.Conv2d(transformer.num_heads, 1, kernel_size=1, stride=1, padding=0)
         if 'bb_feat' in channel_reduction_srcs:

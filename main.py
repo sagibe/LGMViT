@@ -55,23 +55,24 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20',
-    'config_name': ['vit_B16_2D_cls_token_brats20_bs16_input256_baseline'
-                    ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split10_input256_baseline',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_res_d2_a1',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_res_d2_a1_gradcam',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_res_g_a10',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_robust_vit_a100',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_gradmask_a100',
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs128_input256_baseline_slice_norm_no_param_clip_cosineLR'
     #                 ],
+    'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_95_kl_a250',
+                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_9_kl_a250',
+                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_75_kl_a250',
+                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_5_kl_a250',
+                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_25_kl_a250',
+                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_1_kl_a250',
+                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_05_kl_a250',
+                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b_learned_i08_kl_a250',
+                    ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
-    'use_wandb': False,
+    'use_wandb': True,
     'wandb_proj_name': 'LGMViT_brats20_new',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
-    'save_ckpt_interval': 1,
+    'save_ckpt_interval': 10,
     'seed': 42
 }
 
@@ -96,6 +97,7 @@ def main(config, settings):
     else:
         model = build_model(config)
         lrp = None
+
     model.to(device)
 
     model_without_ddp = model
@@ -115,8 +117,8 @@ def main(config, settings):
     ]
     optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,
                                   weight_decay=config.TRAINING.WEIGHT_DECAY)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
-    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0.0000005)
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.TRAINING.EPOCHS, eta_min=config.TRAINING.LR/100)
     # criterion = nn.BCELoss()
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
@@ -200,14 +202,16 @@ def main(config, settings):
                                          input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
+                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
+                                         random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
         dataset_val = BraTS20Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
+                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
+                                       random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
     elif 'BraTS2021' in config.DATA.DATASETS:
         dataset_train = BraTS20Dataset(data_dir,
                                          scan_set='train',

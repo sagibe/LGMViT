@@ -71,7 +71,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
         loss_value = 0
         cls_loss_value = 0
         num_scan_segs = int(np.ceil(scan.shape[0] / scan_seg_size))
-        acc_steps = int(batch_size / scan_seg_size)
+        acc_steps = int(np.ceil(batch_size / scan_seg_size))
         optimizer.zero_grad()
         for scan_seg_idx in range(num_scan_segs):
             cur_slices = scan[scan_seg_size * scan_seg_idx:scan_seg_size * (scan_seg_idx + 1)]
