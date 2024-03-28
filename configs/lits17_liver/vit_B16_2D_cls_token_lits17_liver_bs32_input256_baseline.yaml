@@ -6,7 +6,7 @@ TRAINING:
   BATCH_SIZE: 32
   LAST_BATCH_MIN_RATIO: 0.7
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 5
+  EPOCHS: 50
   CLIP_MAX_NORM: 0
   EVAL_INTERVAL: 1
   SAVE_CKPT_INTERVAL: 1
@@ -23,13 +23,13 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: true
+      USE: false
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
       SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
       ATTENTION_METHOD: 'raw_attn' # options: 'gradcam', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
       FUSION_BETA: 0.95
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
-      FEAT_CHANNEL_REDUCTION: 'learned' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
+      FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
       SPATIAL_MAP_NORM: 'softmax'
       GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
       GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
@@ -67,7 +67,7 @@ DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
   DATASETS: LiTS17
   ANNOT_TYPE: 'organ'
-  DATA_SPLIT_FILE: datasets/data_splits/lits17/train_val_split_debug.json
+  DATA_SPLIT_FILE: datasets/data_splits/lits17/train_val_test_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
@@ -75,7 +75,7 @@ DATA:
     CROP_ORGAN_SLICES: false # extract only slice with organ according to organ mask
     CROP_ORGAN_SPATIAL: false # spatial cropping of slices according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
-    SCAN_NORM_MODE: 'scan'  # options: 'slice', 'scan'
+    SCAN_NORM_MODE: 'slice'  # options: 'slice', 'scan'
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
 

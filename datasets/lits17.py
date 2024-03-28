@@ -13,19 +13,21 @@ import SimpleITK as sitk
 
 
 class LiTS17Dataset:
-    def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=512, annot_type='lesion',
+    def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=512, batch_size=32, annot_type='lesion',
                  resize_mode='interpolate', liver_masking=True, crop_liver_slices=True, crop_liver_spatial=True,
-                 random_slice_segment=None, padding=0, scan_norm_mode='slice'):
+                 random_slice_segment=None, last_batch_min_ratio=0, padding=0, scan_norm_mode='slice'):
         self.data_dir = data_dir
         self.scan_list = split_dict[scan_set]
         # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
 
         self.input_size = input_size
+        self.batch_size = batch_size
         self.annot_type = annot_type
         self.liver_masking = liver_masking
         self.crop_liver_slices = crop_liver_slices
         self.crop_liver_spatial = crop_liver_spatial
         self.random_slice_segment = random_slice_segment
+        self.last_batch_min_ratio = last_batch_min_ratio
         self.resize_mode = resize_mode
         self.padding = padding
         self.scan_norm_mode = scan_norm_mode
@@ -71,15 +73,21 @@ class LiTS17Dataset:
                 y1, y2, x1, x2 = get_square_crop_coords(liver_masks, padding=self.padding)  # CHECK HER
                 ct = ct[:, y1:y2, x1:x2]
                 binary_seg_labels = binary_seg_labels[:, y1:y2, x1:x2]
-                liver_masks = liver_masks[:, y1:y2, x1:x2]
-        if self.random_slice_segment is not None:
-            if self.random_slice_segment < len(cls_labels):
-                random_range = len(cls_labels) - self.random_slice_segment + 1
+
+        random_slice_segment = self.random_slice_segment
+        if self.last_batch_min_ratio > 0:
+            scan_size = len(cls_labels)
+            last_batch_size = scan_size % self.batch_size
+            if last_batch_size < self.last_batch_min_ratio * self.batch_size:
+                random_slice_segment = scan_size - last_batch_size
+
+        if random_slice_segment is not None:
+            if random_slice_segment < len(cls_labels):
+                random_range = len(cls_labels) - random_slice_segment + 1
                 random_idx = np.random.randint(random_range)
-                ct = ct[random_idx:random_idx + self.random_slice_segment]
-                binary_seg_labels = binary_seg_labels[random_idx:random_idx + self.random_slice_segment]
-                liver_masks = liver_masks[random_idx:random_idx + self.random_slice_segment]
-                cls_labels = cls_labels[random_idx:random_idx + self.random_slice_segment]
+                ct = ct[random_idx:random_idx + random_slice_segment]
+                binary_seg_labels = binary_seg_labels[random_idx:random_idx + random_slice_segment]
+                cls_labels = cls_labels[random_idx:random_idx + random_slice_segment]
 
         # f, ax = plt.subplots(1, 3)
         # slice = 10

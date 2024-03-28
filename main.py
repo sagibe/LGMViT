@@ -54,21 +54,21 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats20',
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs128_input256_baseline_slice_norm_no_param_clip_cosineLR'
-    #                 ],
-    'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_95_kl_a250',
-                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_9_kl_a250',
-                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_75_kl_a250',
-                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_5_kl_a250',
-                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_25_kl_a250',
-                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_1_kl_a250',
-                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_05_kl_a250',
-                    'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b_learned_i08_kl_a250',
+    'dataset_name': 'lits17_liver',
+    'config_name': ['lits17_liver_debug_vit'
                     ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_95_kl_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_9_kl_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_75_kl_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_5_kl_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_25_kl_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_1_kl_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_05_kl_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b_learned_i08_kl_a250',
+    #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
-    'use_wandb': True,
+    'use_wandb': False,
     'wandb_proj_name': 'LGMViT_brats20_new',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
@@ -88,7 +88,7 @@ def main(config, settings):
     random.seed(seed)
 
     # model = build_resnet(config)
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'attn_gradcam']: # 'gradcam'
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'gradcam', 'attn_gradcam']: # 'gradcam'
         model = build_model_with_LRP(config)
         lrp = LRP(model)
     # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD == 'relevance_map':
@@ -260,18 +260,21 @@ def main(config, settings):
                                          scan_set='train',
                                          split_dict=split_dict,
                                          input_size=config.TRAINING.INPUT_SIZE,
+                                         batch_size=config.TRAINING.BATCH_SIZE,
                                          annot_type=config.DATA.ANNOT_TYPE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                          crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                          crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                          random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
+                                         last_batch_min_ratio=config.TRAINING.LAST_BATCH_MIN_RATIO,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING,
                                          scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         dataset_val = LiTS17Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
+                                       batch_size=config.TRAINING.BATCH_SIZE,
                                        annot_type=config.DATA.ANNOT_TYPE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
@@ -306,18 +309,21 @@ def main(config, settings):
                                          scan_set='train',
                                          split_dict=split_dict,
                                          input_size=config.TRAINING.INPUT_SIZE,
+                                         batch_size=config.TRAINING.BATCH_SIZE,
                                          annot_type=config.DATA.ANNOT_TYPE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                          crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                          crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                          random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
+                                         last_batch_min_ratio=config.TRAINING.LAST_BATCH_MIN_RATIO,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING,
                                          scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         dataset_val = KiTS23Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
+                                       batch_size=config.TRAINING.BATCH_SIZE,
                                        annot_type=config.DATA.ANNOT_TYPE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,

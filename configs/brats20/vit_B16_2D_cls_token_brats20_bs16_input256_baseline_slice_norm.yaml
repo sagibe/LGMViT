@@ -2,12 +2,11 @@ TRAINING:
   INPUT_SIZE: 256
   LR: 0.00001
   LR_DROP: 20
-  SCAN_SEG_SIZE: 32
-  BATCH_SIZE: 32
-  LAST_BATCH_MIN_RATIO: 0.7
+  SCAN_SEG_SIZE: 16
+  BATCH_SIZE: 16
   WEIGHT_DECAY: 0.0001
-  EPOCHS: 5
-  CLIP_MAX_NORM: 0
+  EPOCHS: 50
+  CLIP_MAX_NORM: 0.1
   EVAL_INTERVAL: 1
   SAVE_CKPT_INTERVAL: 1
   SAVE_BEST_CKPT_CRITERION: 'f1'
@@ -23,7 +22,7 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: true
+      USE: false
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
       SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
       ATTENTION_METHOD: 'raw_attn' # options: 'gradcam', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
@@ -65,17 +64,12 @@ MODEL:
 
 DATA:
   DATASET_DIR: /mnt/DATA1/Sagi/Data/
-  DATASETS: LiTS17
-  ANNOT_TYPE: 'organ'
-  DATA_SPLIT_FILE: datasets/data_splits/lits17/train_val_split_debug.json
+  DATASETS: BraTS2020
+  DATA_SPLIT_FILE: datasets/data_splits/brats20/train_val_test_split.json
   DATA_FOLD: 0
   PREPROCESS:
     RESIZE_MODE: interpolate  # options: interpolate or padding
-    MASK_ORGAN: false # apply prostate mask on scan
-    CROP_ORGAN_SLICES: false # extract only slice with organ according to organ mask
-    CROP_ORGAN_SPATIAL: false # spatial cropping of slices according to prostate mask
-    CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
-    SCAN_NORM_MODE: 'scan'  # options: 'slice', 'scan'
+    SCAN_NORM_MODE: 'slice'  # options: 'slice', 'scan'
   MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
 
