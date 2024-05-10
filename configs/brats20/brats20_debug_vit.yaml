@@ -2,7 +2,8 @@ TRAINING:
   INPUT_SIZE: 256
   LR: 0.00001
   LR_DROP: 20
-  BATCH_SIZE: 1
+  SCAN_SEG_SIZE: 16
+  BATCH_SIZE: 16
   WEIGHT_DECAY: 0.0001
   EPOCHS: 5
   CLIP_MAX_NORM: 0.1
@@ -21,15 +22,15 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: false
-      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
+      USE: true
+      TYPE: 'res' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
       SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
-      ATTENTION_METHOD: 'raw_attn' # options: 'gradcam', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
+      ATTENTION_METHOD: 'relevance_map' # options: 'gradcam', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
       FUSION_BETA: 0.95
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
-      FEAT_CHANNEL_REDUCTION: 'learned' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
+      FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
       SPATIAL_MAP_NORM: 'softmax'
-      GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
+      GT_SEG_PROCESS_METHOD: 'learned_D2' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
       GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 100
       PATIENT_LIST: null

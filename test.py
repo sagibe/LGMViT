@@ -89,7 +89,7 @@ def main(config, settings):
     else:
         sampler_test = RandomSampler(dataset_test)
 
-    batch_sampler_test = BatchSampler(sampler_test, config.TEST.BATCH_SIZE, drop_last=True)
+    batch_sampler_test = BatchSampler(sampler_test, 1, drop_last=True)
     data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=config.TEST.NUM_WORKERS)
 
     test_stats = eval_test(model, data_loader_test, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH)

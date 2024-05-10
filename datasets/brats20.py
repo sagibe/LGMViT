@@ -14,12 +14,13 @@ import SimpleITK as sitk
 
 class BraTS20Dataset:
     def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=256,
-                 resize_mode='interpolate', padding=0, scan_norm_mode='slice'):
+                 resize_mode='interpolate', padding=0, scan_norm_mode='slice', random_slice_segment=None):
         self.data_dir = os.path.join(data_dir, 'MICCAI_BraTS2020_TrainingData')
         self.scan_list = split_dict[scan_set]
         # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
 
         self.input_size = input_size
+        self.random_slice_segment = random_slice_segment
         self.resize_mode = resize_mode
         self.padding = padding
         self.scan_norm_mode = scan_norm_mode
@@ -54,6 +55,16 @@ class BraTS20Dataset:
         # scan = cv2.resize(scan, (self.input_size, self.input_size), interpolation=cv2.INTER_CUBIC)
         # scan = scan.transpose(2,0,1)
         # scan = np.expand_dims(scan, 0)
+
+        if self.random_slice_segment is not None:
+            if self.random_slice_segment < len(cls_labels):
+                random_range = len(cls_labels) - self.random_slice_segment + 1
+                random_idx = np.random.randint(random_range)
+                t1 = t1[random_idx:random_idx + self.random_slice_segment]
+                t2 = t2[random_idx:random_idx + self.random_slice_segment]
+                flair = flair[random_idx:random_idx + self.random_slice_segment]
+                seg_labels = seg_labels[random_idx:random_idx + self.random_slice_segment]
+                cls_labels = cls_labels[random_idx:random_idx + self.random_slice_segment]
 
         if self.input_size != t1.shape[1]:
             if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < t1.shape[1]):

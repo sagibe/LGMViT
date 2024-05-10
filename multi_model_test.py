@@ -21,8 +21,8 @@ from sklearn.metrics import precision_recall_curve
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 from datasets.kits21_lesions import KiTS21Dataset
-from datasets.kits23_lesions import KiTS23Dataset
-from datasets.lits17_lesions import LiTS17Dataset
+from datasets.kits23 import KiTS23Dataset
+from datasets.lits17 import LiTS17Dataset
 from datasets.lits17_organ import LiTS17OrganDataset
 # from datasets.lits17_organ import LiTS17OrganDataset
 # from datasets.picai2022 import prepare_datagens
@@ -87,10 +87,10 @@ from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, Batc
 
 SETTINGS = {
     'models': [
-        # {
-        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline_all_epochs',
-        #     'exp_name': None,  # if None default is config_name
-        #     'plot_name': 'ViT-B Baseline'},  # if None default is config_name
+        {
+            'config': 'brats20_debug_vit',
+            'exp_name': None,  # if None default is config_name
+            'plot_name': 'ViT-B debug'},  # if None default is config_name
         # {
         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
         #     'exp_name': None,  # if None default is config_name
@@ -103,26 +103,26 @@ SETTINGS = {
         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51',
         #     'exp_name': None,  # if None default is config_name
         #     'plot_name': 'LGM-ViT Fusion b0_8_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51_new',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a300'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51_new',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_8_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_new',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a250'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_mse_min_max_norm',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a250_mse_min_max_norm'},  # if None default is config_name
-        {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_mse_min_max_norm_a100_gtproc_gauss_51',
-            'exp_name': None,  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_95_kl_a100_mse_min_max_norm'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a300_gtproc_gauss_51_new',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a300'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a250_gtproc_gauss_51_new',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_8_kl_a250'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_new',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a250'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51_mse_min_max_norm',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a250_mse_min_max_norm'},  # if None default is config_name
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_mse_min_max_norm_a100_gtproc_gauss_51',
+        #     'exp_name': None,  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_95_kl_a100_mse_min_max_norm'},  # if None default is config_name
         # {
         #     'config': 'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a100',
         #     'exp_name': None,  # if None default is config_name
@@ -140,11 +140,11 @@ SETTINGS = {
         #     'exp_name': None,  # if None default is config_name
         #     'plot_name': 'GradMask a100'},  # if None default is config_name
     ],
-    'dataset_name': 'brats20_split3',
+    'dataset_name': 'brats20',
     'data_path': '',
     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
     'ckpt_load': 'best',
-    'output_name': 'new_lgm_exps_2', # 'for_presentaraion3',  # if None default is datetime
+    'output_name': None, # 'for_presentaraion3',  # if None default is datetime
     'save_results': True,
     'save_attn': False,
     'device': 'cuda',
@@ -250,7 +250,7 @@ SETTINGS = {
 #         #     'exp_name': None,  # if None default is config_name
 #         #     'plot_name': 'RES G a10'},  # if None default is config_name
 #     ],
-#     'dataset_name': 'kits23_lesions',
+#     'dataset_name': 'kits23',
 #     'data_path': '',
 #     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
 #     'ckpt_load': 'best',
@@ -405,11 +405,11 @@ def main(settings):
     if settings['save_results']:
         date_time_stamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
         if settings['output_name']:
-            save_dir = os.path.join(settings['output_dir'], settings['output_name'])
+            save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], settings['output_name'])
             if os.path.isdir(save_dir):
-                save_dir = os.path.join(settings['output_dir'], settings['output_name'] + date_time_stamp)
+                save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], settings['output_name'] + date_time_stamp)
         else:
-            save_dir = os.path.join(settings['output_dir'], date_time_stamp)
+            save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], date_time_stamp)
         os.makedirs(save_dir, exist_ok=True)
 
     cur_df = pd.DataFrame(
@@ -435,17 +435,17 @@ def main(settings):
             model = build_model(config)
         model.to(device)
         if isinstance(config.TEST.CHECKPOINT, int):
-            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
+            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
         elif isinstance(config.TEST.CHECKPOINT, str):
             if 'best_f1_auroc_sensitivity' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', 'checkpoint_best_f1_auroc_sensitivity.pth')
+                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best_f1_auroc_sensitivity.pth')
             elif 'best' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
+                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
             elif '/' in config.TEST.CHECKPOINT:
                 checkpoint_path = config.TEST.CHECKPOINT
             else:
                 if (config.TEST.CHECKPOINT).endswith('.pth'):
-                    checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
+                    checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
                 else:
                     checkpoint_path = ''
         else:
@@ -494,25 +494,28 @@ def main(settings):
                                           split_dict=split_dict,
                                           input_size=config.TRAINING.INPUT_SIZE,
                                           resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                          padding=config.DATA.PREPROCESS.CROP_PADDING)
-        elif 'LiTS17_bs16' in config.DATA.DATASETS:
-            dataset_test = LiTS17OrganDataset(data_dir,
-                                             scan_set=scan_set,
-                                             split_dict=split_dict,
-                                             input_size=config.TRAINING.INPUT_SIZE,
-                                             resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
-        # elif 'LiTS17' in config.DATA.DATASETS:
-        #     dataset_test = LiTS17Dataset(data_dir,
-        #                                    scan_set=scan_set,
-        #                                    split_dict=split_dict,
-        #                                    input_size=config.TRAINING.INPUT_SIZE,
-        #                                    resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-        #                                    liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-        #                                    crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-        #                                    crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-        #                                    random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-        #                                    padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                          padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                          scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
+        # elif 'LiTS17_bs16' in config.DATA.DATASETS:
+        #     dataset_test = LiTS17OrganDataset(data_dir,
+        #                                      scan_set=scan_set,
+        #                                      split_dict=split_dict,
+        #                                      input_size=config.TRAINING.INPUT_SIZE,
+        #                                      resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+        #                                      padding=config.DATA.PREPROCESS.CROP_PADDING)
+        elif 'LiTS17' in config.DATA.DATASETS:
+            dataset_test = LiTS17Dataset(data_dir,
+                                        scan_set=scan_set,
+                                        split_dict=split_dict,
+                                        input_size=config.TRAINING.INPUT_SIZE,
+                                        annot_type=config.DATA.ANNOT_TYPE,
+                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
+                                        liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
+                                        crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
+                                        crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
+                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
+                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                        scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         elif 'kits21' in config.DATA.DATASETS:
             dataset_test = KiTS21Dataset(data_dir,
                                         scan_set=scan_set,
@@ -529,18 +532,20 @@ def main(settings):
                                         scan_set=scan_set,
                                         split_dict=split_dict,
                                         input_size=config.TRAINING.INPUT_SIZE,
+                                        annot_type=config.DATA.ANNOT_TYPE,
                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                         kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                         crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                         crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                         random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                        padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                        scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         if config.distributed:
             sampler_test = DistributedSampler(dataset_test)
         else:
             sampler_test = RandomSampler(dataset_test)
 
-        batch_sampler_test = BatchSampler(sampler_test, config.TEST.BATCH_SIZE, drop_last=True)
+        batch_sampler_test = BatchSampler(sampler_test, 1, drop_last=True)
         data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=config.TEST.NUM_WORKERS)
 
         if settings['save_results'] and settings['save_attn']:

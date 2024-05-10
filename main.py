@@ -16,11 +16,12 @@ import utils.transforms as T
 from configs.config import get_default_config, update_config_from_file
 from datasets.atlasR2 import AtlasR2Dataset
 from datasets.brats20 import BraTS20Dataset
+from datasets.brats21 import BraTS21Dataset
 from datasets.covid1920 import Covid1920Dataset
 from datasets.isles22 import Isles22Dataset
 from datasets.kits21_lesions import KiTS21Dataset
-from datasets.kits23_lesions import KiTS23Dataset
-from datasets.lits17_lesions import LiTS17Dataset
+from datasets.kits23 import KiTS23Dataset
+from datasets.lits17 import LiTS17Dataset
 from datasets.lits17_organ import LiTS17OrganDataset
 from datasets.node21 import Node21Dataset
 # from datasets.picai2022 import prepare_datagens
@@ -54,24 +55,88 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats20',
-    'config_name': ['brats20_debug_vit'
+    'dataset_name': 'brats21',
+    # 'config_name': ['brats21_debug_vit'
+    #                 ],
+    'config_name': [
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a1',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a10',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a50',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a100',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a200',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a300',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a400',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a500',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a750',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a1000',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a2000',
+                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a5000',
                     ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_split10_input256_baseline',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_lgm_fusion_b0_95_kl_a250_gtproc_gauss_51',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_res_d2_a1',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_res_d2_a1_gradcam',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_res_g_a10',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_robust_vit_a100',
-    #                 'vit_B16_2D_cls_token_brats20_split10_input256_gradmask_a100',
+    # 'config_name': ['vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_75_kl_a250',
+    #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_9_kl_a250',
+    #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_95_kl_a250',
+    #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_99_kl_a250',
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a0_001',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a10',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a500',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_01',
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a0_5',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a100',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a500',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1000',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a0_5',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a10',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a100',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a500',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1000',
+    #                 ],
+    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_5',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a10',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a100',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a500',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1000',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a0_5',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a10',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a100',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a500',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a1000',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a0_5',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a10',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a100',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a500',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1000',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a0_5',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a10',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a100',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a250',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a500',
+    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1000',
     #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
-    'use_wandb': False,
-    'wandb_proj_name': 'LGMViT_brats20_new',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
+    'use_wandb': True,
+    'wandb_proj_name': 'LGMViT_brats21',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
-    'save_ckpt_interval': 1,
+    'save_ckpt_interval': 5,
     'seed': 42
 }
 
@@ -87,7 +152,7 @@ def main(config, settings):
     random.seed(seed)
 
     # model = build_resnet(config)
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'attn_gradcam']: # 'gradcam'
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'gradcam', 'attn_gradcam']: # 'gradcam'
         model = build_model_with_LRP(config)
         lrp = LRP(model)
     # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD == 'relevance_map':
@@ -96,6 +161,7 @@ def main(config, settings):
     else:
         model = build_model(config)
         lrp = None
+
     model.to(device)
 
     model_without_ddp = model
@@ -115,8 +181,8 @@ def main(config, settings):
     ]
     optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,
                                   weight_decay=config.TRAINING.WEIGHT_DECAY)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
-    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0.0000005)
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.TRAINING.EPOCHS, eta_min=config.TRAINING.LR/100)
     # criterion = nn.BCELoss()
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
@@ -200,29 +266,33 @@ def main(config, settings):
                                          input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
+                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
+                                         random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
         dataset_val = BraTS20Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
+                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
+                                       random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
     elif 'BraTS2021' in config.DATA.DATASETS:
-        dataset_train = BraTS20Dataset(data_dir,
+        dataset_train = BraTS21Dataset(data_dir,
                                          scan_set='train',
                                          split_dict=split_dict,
                                          input_size=config.TRAINING.INPUT_SIZE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
-        dataset_val = BraTS20Dataset(data_dir,
+                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
+                                         random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
+        dataset_val = BraTS21Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
+                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
+                                       random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
     elif 'ATLAS_R2_0' in config.DATA.DATASETS:
         dataset_train = AtlasR2Dataset(data_dir,
                                          scan_set='train',
@@ -256,22 +326,29 @@ def main(config, settings):
                                          scan_set='train',
                                          split_dict=split_dict,
                                          input_size=config.TRAINING.INPUT_SIZE,
+                                         batch_size=config.TRAINING.BATCH_SIZE,
+                                         annot_type=config.DATA.ANNOT_TYPE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                          crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                          crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                          random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                         last_batch_min_ratio=config.TRAINING.LAST_BATCH_MIN_RATIO,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         dataset_val = LiTS17Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
+                                       batch_size=config.TRAINING.BATCH_SIZE,
+                                       annot_type=config.DATA.ANNOT_TYPE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                        crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                        crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
     elif 'kits21' in config.DATA.DATASETS:
         dataset_train = KiTS21Dataset(data_dir,
                                          scan_set='train',
@@ -298,22 +375,29 @@ def main(config, settings):
                                          scan_set='train',
                                          split_dict=split_dict,
                                          input_size=config.TRAINING.INPUT_SIZE,
+                                         batch_size=config.TRAINING.BATCH_SIZE,
+                                         annot_type=config.DATA.ANNOT_TYPE,
                                          resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                          kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                          crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                          crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                          random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                         last_batch_min_ratio=config.TRAINING.LAST_BATCH_MIN_RATIO,
+                                         padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         dataset_val = KiTS23Dataset(data_dir,
                                        scan_set='val',
                                        split_dict=split_dict,
                                        input_size=config.TRAINING.INPUT_SIZE,
+                                       batch_size=config.TRAINING.BATCH_SIZE,
+                                       annot_type=config.DATA.ANNOT_TYPE,
                                        resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                        kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                        crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                        crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                       padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
 
     # elif 'LiTS17' in config.DATA.DATASETS:
     #     dataset_train = LiTS17Dataset(data_dir,
@@ -336,15 +420,15 @@ def main(config, settings):
         sampler_train = RandomSampler(dataset_train)
         sampler_val = RandomSampler(dataset_val)
 
-    batch_sampler_train = BatchSampler(sampler_train, config.TRAINING.BATCH_SIZE, drop_last=True)
+    batch_sampler_train = BatchSampler(sampler_train, 1, drop_last=True)
     data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.TRAINING.NUM_WORKERS)
     # data_loader_train = DataLoader(dataset_train, num_workers=config.TRAINING.NUM_WORKERS)
 
-    batch_sampler_val = BatchSampler(sampler_val, config.TRAINING.BATCH_SIZE, drop_last=True)
+    batch_sampler_val = BatchSampler(sampler_val, 1, drop_last=True)
     data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
     # data_loader_val = DataLoader(dataset_val, num_workers=config.TRAINING.NUM_WORKERS)
 
-    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['exp_name'])
+    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['dataset_name'], settings['exp_name'])
     ckpt_dir = os.path.join(output_dir, 'ckpt')
     os.makedirs(ckpt_dir, exist_ok=True)
 
@@ -377,6 +461,8 @@ def main(config, settings):
             model, criterion, localization_criterion, data_loader_train, optimizer, device, epoch,
             localization_loss_params=config.TRAINING.LOSS.LOCALIZATION_LOSS,
             sampling_loss_params=config.TRAINING.LOSS.SAMPLING_LOSS,
+            scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
+            batch_size=config.TRAINING.BATCH_SIZE,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
             cls_thresh=config.TRAINING.CLS_THRESH,
             use_cls_token=config.TRAINING.USE_CLS_TOKEN,
@@ -385,7 +471,10 @@ def main(config, settings):
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
                 model, criterion, data_loader_val, device, epoch,
-                config.TRAINING.CLIP_MAX_NORM, config.TRAINING.CLS_THRESH)
+                scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
+                batch_size=config.TRAINING.BATCH_SIZE,
+                max_norm=config.TRAINING.CLIP_MAX_NORM,
+                cls_thresh=config.TRAINING.CLS_THRESH)
         if settings['use_wandb']:
             if epoch % config.TRAINING.EVAL_INTERVAL == 0:
                 wandb_logger(train_stats, val_stats, epoch=epoch)

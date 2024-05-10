@@ -21,8 +21,8 @@ from sklearn.metrics import precision_recall_curve
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 from datasets.kits21_lesions import KiTS21Dataset
-from datasets.kits23_lesions import KiTS23Dataset
-from datasets.lits17_lesions import LiTS17Dataset
+from datasets.kits23 import KiTS23Dataset
+from datasets.lits17 import LiTS17Dataset
 from datasets.lits17_organ import LiTS17OrganDataset
 # from datasets.lits17_organ import LiTS17Dataset
 # from datasets.picai2022 import prepare_datagens
@@ -395,7 +395,7 @@ def main(settings):
         else:
             model = build_model(config)
         model.to(device)
-        ckpt_list  = [d for d in os.listdir(os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt')) if 'best' not in d]
+        ckpt_list  = [d for d in os.listdir(os.path.join(config.DATA.OUTPUT_DIR, model_settings['dataset_name'], model_settings['exp_name'], 'ckpt')) if 'best' not in d]
         # if isinstance(config.TEST.CHECKPOINT, int):
         #     checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
         # elif isinstance(config.TEST.CHECKPOINT, str):
@@ -441,7 +441,7 @@ def main(settings):
             scan_set = 'val'
         cur_best_epoch_stat = 0
         for ckpt_name in ckpt_list:
-            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['exp_name'], 'ckpt', ckpt_name)
+            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['dataset_name'], model_settings['exp_name'], 'ckpt', ckpt_name)
             checkpoint = torch.load(checkpoint_path, map_location='cpu')
             model.load_state_dict(checkpoint['model'])
 
@@ -474,12 +474,14 @@ def main(settings):
                                              scan_set=scan_set,
                                              split_dict=split_dict,
                                              input_size=config.TRAINING.INPUT_SIZE,
+                                             annot_type=config.DATA.ANNOT_TYPE,
                                              resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                              liver_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                              crop_liver_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                              crop_liver_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                              random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                             padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                             scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
             elif 'kits21' in config.DATA.DATASETS:
                 dataset_val = KiTS21Dataset(data_dir,
                                              scan_set=scan_set,
@@ -496,19 +498,21 @@ def main(settings):
                                              scan_set=scan_set,
                                              split_dict=split_dict,
                                              input_size=config.TRAINING.INPUT_SIZE,
+                                             annot_type=config.DATA.ANNOT_TYPE,
                                              resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
                                              kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
                                              crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
                                              crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
                                              random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                             padding=config.DATA.PREPROCESS.CROP_PADDING)
+                                             padding=config.DATA.PREPROCESS.CROP_PADDING,
+                                             scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
 
             if config.distributed:
                 sampler_val = DistributedSampler(dataset_val)
             else:
                 sampler_val = RandomSampler(dataset_val)
 
-            batch_sampler_val = BatchSampler(sampler_val, config.TEST.BATCH_SIZE, drop_last=True)
+            batch_sampler_val = BatchSampler(sampler_val, 1, drop_last=True)
             data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TEST.NUM_WORKERS)
 
             if settings['save_results'] and settings['save_attn']:
