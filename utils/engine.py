@@ -147,7 +147,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                             #                                     resize_shape=attn_maps.shape[-2:])
                         reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
                     elif localization_loss_params.ATTENTION_METHOD == 'relevance_map':
-                        reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh).to(device)
+                        if 'res' in localization_loss_params.TYPE:
+                            reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh, upscale=False).to(device)
+                        else:
+                            reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh).to(device)
                     elif localization_loss_params.ATTENTION_METHOD == 'lrp':
                         # reduced_attn_maps = []
                         reduced_attn_maps = lrp.generate_LRP(cur_slices, method='full' ,start_layer=1, index=None).unsqueeze(0)
@@ -174,7 +177,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                         # reduced_attn_maps = gradcam(cur_slices, targets=None)
                         # reduced_attn_maps = torch.from_numpy(reduced_attn_maps).unsqueeze(0).to(device)
                         reduced_attn_maps = lrp.generate_LRP(cur_slices, method='gradcam', start_layer=1, index=None).unsqueeze(0)
-                        reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
+                        if 'res' not in localization_loss_params.TYPE:
+                            reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
                         # cam = model.transformer_encoder[-1].attn.get_attn_gradients()
                         # cam = model.transformer.layers[-1].attn.get_attn_gradients()
                         # if cam is None:

@@ -354,7 +354,7 @@ def generate_learned_processed_annotations(model,binary_masks,input=None, mode='
 #     return masks_resized
 
 
-def generate_relevance(model, outputs, index=None, bin_thresh=0.5):
+def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True):
     # a batch of samples
     batch_size = outputs.shape[0]
     # output = model(input, register_hook=True)
@@ -386,7 +386,19 @@ def generate_relevance(model, outputs, index=None, bin_thresh=0.5):
     #     cam = avg_heads(cur_attn, grad)
     #     R = R + apply_self_attention_rules(R, cam)
     relevance = R[:, 0, 1:]
-    return upscale_relevance(relevance).permute(1,0,2,3)
+    if upscale:
+        relevance = upscale_relevance(relevance)
+    else:
+        relevance = relevance.reshape(-1, 1, 16, 16)
+        # normalize between 0 and 1
+        relevance = relevance.reshape(relevance.shape[0], -1)
+        min = relevance.min(1, keepdim=True)[0]
+        max = relevance.max(1, keepdim=True)[0]
+        relevance = (relevance - min) / (max - min)
+        relevance = relevance.reshape(-1, 1, 16, 16)
+    return relevance.permute(1,0,2,3)
+    # relevance = R[:, 0, 1:]
+    # return upscale_relevance(relevance).permute(1,0,2,3)
 
 def avg_heads(cam, grad):
     cam = cam.reshape(-1, cam.shape[-3], cam.shape[-2], cam.shape[-1])

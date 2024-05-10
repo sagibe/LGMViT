@@ -4,18 +4,19 @@ from easydict import EasyDict as edict
 from configs.config import get_default_config, update_config_from_file
 
 SETTINGS = {
-    'dataset_name': 'isles22',
-    'base_config': 'vit_B16_2D_cls_token_isles22_input128dwi_baseline',
+    'dataset_name': 'brats21',
+    'base_config': 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a250',
     # 'grid_search_params': [0.95],
     # 'grid_search_params_names': ['0_95']
     # 'grid_search_params': [0.01, 0.05, 0.1, 0.25, 0.5, 0.9, 0.99],
     # 'grid_search_params_names': ['0_01', '0_05', '0_1', '0_25', '0_5', '0_9', '0_99'],
     # 'grid_search_params': [1, 5, 10, 25, 50, 100, 250, 1000, 2000, 5000, 10000],
     # 'grid_search_params_names': None,
-    # 'grid_search_params': [100, 200, 300, 400, 600, 700, 800, 900, 1000],
-    # 'grid_search_params_names': None,
-    'grid_search_params': [0.001, 0.005, 0.0001, 0.0005, 0.00001, 0.00005, 0.000001, 0.000005],
-    'grid_search_params_names': ['1e_3', '5e_3', '1e_4', '5e_4', '1e_5', '5e_5', '1e_6', '5e_6'],
+    'grid_search_params': [1, 10, 50, 100, 200, 300, 400, 500, 600, 700, 750, 800, 900, 1000, 1500, 2000, 5000],
+    # 'grid_search_params': [10, 100, 250, 500, 1000],
+    'grid_search_params_names': None,
+    # 'grid_search_params': [0.001, 0.005, 0.0001, 0.0005, 0.00001, 0.00005, 0.000001, 0.000005],
+    # 'grid_search_params_names': ['1e_3', '5e_3', '1e_4', '5e_4', '1e_5', '5e_5', '1e_6', '5e_6'],
 
 }
 
@@ -33,21 +34,26 @@ def main(settings):
     for idx, param in enumerate(settings['grid_search_params']):
         #brats20
         # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b{settings["grid_search_params_names"][idx]}_kl_a500_gtproc_gauss_51'
-        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_8_kl_a{settings["grid_search_params_names"][idx]}_gtproc_gauss_51'
-        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_split3_input256_baseline_LR_{settings["grid_search_params_names"][idx]}'
-        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_split3_input256_robust_vit_a{settings["grid_search_params_names"][idx]}'
-        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_split3_input256_res_d2_a{settings["grid_search_params_names"][idx]}'
+        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_95_kl_a{settings["grid_search_params_names"][idx]}'
+        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a{settings["grid_search_params_names"][idx]}'
+        cur_yaml_name = f'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a{settings["grid_search_params_names"][idx]}'
+        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a{settings["grid_search_params_names"][idx]}'
+        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a{settings["grid_search_params_names"][idx]}'
+        # cur_yaml_name = f'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a{settings["grid_search_params_names"][idx]}'
+
+        # brats21
+        cur_yaml_name = f'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a{settings["grid_search_params_names"][idx]}'
 
         # isles22
         # cur_yaml_name = f'vit_B16_2D_cls_token_isles22_input128dwi_lgm_fusion_b{settings["grid_search_params_names"][idx]}_kl_a1000_gtproc_gauss_51'
         # cur_yaml_name = f'vit_B16_2D_cls_token_isles22_input128dwi_robust_vit_a{settings["grid_search_params_names"][idx]}'
         # cur_yaml_name = f'vit_B16_2D_cls_token_isles22_input128dwi_res_d2_a{settings["grid_search_params_names"][idx]}'
-        cur_yaml_name = f'vit_B16_2D_cls_token_isles22_input128dwi_baseline_LR_{settings["grid_search_params_names"][idx]}'
+        # cur_yaml_name = f'vit_B16_2D_cls_token_isles22_input128dwi_baseline_LR_{settings["grid_search_params_names"][idx]}'
 
         # config_name_template = f'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b0_95_kl_a500_gtproc_gauss_51'
         # cur_config.TRAINING.LOSS.LOCALIZATION_LOSS.FUSION_BETA = param
-        # cur_config.TRAINING.LOSS.LOCALIZATION_LOSS.ALPHA = param
-        cur_config.TRAINING.LR = param
+        cur_config.TRAINING.LOSS.LOCALIZATION_LOSS.ALPHA = param
+        # cur_config.TRAINING.LR = param
 
         save_path = f"{settings['dataset_name']}/{cur_yaml_name}.yaml"
         if os.path.exists(save_path):
