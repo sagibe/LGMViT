@@ -276,7 +276,7 @@ class TransformerEncoder(nn.Module):
 
 def build_transformer(args):
     # store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'relevance_map'
-    store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD == 'relevance_map'
+    store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['relevance_map', 'rollout']
     if args.MODEL.TRANSFORMER.TYPE == 'max_vit':
         return MaxViT(
                 num_classes=2,

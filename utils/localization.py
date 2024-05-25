@@ -407,6 +407,98 @@ def avg_heads(cam, grad):
     cam = cam.clamp(min=0).mean(dim=1)
     return cam
 
+
+# def attention_rollout(As):
+#     """Computes attention rollout from the given list of attention matrices.
+#     https://arxiv.org/abs/2005.00928
+#     """
+#     As = As.mean(axis=2)
+#     rollout = As[0]
+#     for A in As[1:]:
+#         rollout = torch.matmul(
+#             0.5 * A + 0.5 * torch.eye(A.shape[1], device=A.device),
+#             rollout
+#         )  # the computation takes care of skip connections
+#
+#     return rollout
+
+import torch
+
+import torch
+
+
+def attention_rollout(batch_As):
+    """
+    Computes attention rollout from the given list of attention matrices for a batch of instances.
+
+    Args:
+        batch_As (torch.Tensor): A tensor of shape (B, L, H, W, W) where
+                                 B is the batch size,
+                                 L is the number of layers,
+                                 H is the number of attention heads,
+                                 W is the dimension of the attention matrices.
+
+    Returns:
+        torch.Tensor: A tensor of shape (B, W, W) representing the attention rollout for each instance in the batch.
+    """
+    # Average the attention heads for each instance and each layer
+    batch_As = batch_As.mean(dim=2)  # Shape: (B, L, W, W)
+
+    # Initialize the rollout for each instance in the batch
+    rollout = batch_As[:, 0]  # Shape: (B, W, W)
+
+    # Compute the rollout for each subsequent layer
+    for i in range(1, batch_As.shape[1]):
+        A = batch_As[:, i]  # Shape: (B, W, W)
+        eye = torch.eye(A.shape[-1], device=A.device).unsqueeze(0)  # Shape: (1, W, W)
+        A = 0.5 * A + 0.5 * eye  # Shape: (B, W, W)
+        rollout = torch.matmul(A, rollout) # Shape: (B, W, W)
+
+    spatial_rollout_attn = rollout[:, 0, 1:]
+    min_vals = spatial_rollout_attn.min(dim=1)[0].unsqueeze(1)
+    max_vals = spatial_rollout_attn.max(dim=1)[0].unsqueeze(1)
+    spatial_rollout_attn = (spatial_rollout_attn - min_vals) / (max_vals - min_vals)
+    width = int(spatial_rollout_attn.size(-1) ** 0.5)
+    spatial_rollout_attn = spatial_rollout_attn.reshape(-1, width, width)
+
+    return spatial_rollout_attn
+
+
+# def attention_rollout2(attentions, discard_ratio=0.9, head_fusion='mean'):
+#     result = torch.eye(attentions[0].size(-1))
+#     with torch.no_grad():
+#         for attention in attentions:
+#             if head_fusion == "mean":
+#                 attention_heads_fused = attention.mean(axis=1)
+#             elif head_fusion == "max":
+#                 attention_heads_fused = attention.max(axis=1)[0]
+#             elif head_fusion == "min":
+#                 attention_heads_fused = attention.min(axis=1)[0]
+#             else:
+#                 raise "Attention head fusion type Not supported"
+#
+#             # Drop the lowest attentions, but
+#             # don't drop the class token
+#             flat = attention_heads_fused.view(attention_heads_fused.size(0), -1)
+#             _, indices = flat.topk(int(flat.size(-1) * discard_ratio), -1, False)
+#             indices = indices[indices != 0]
+#             flat[0, indices] = 0
+#
+#             I = torch.eye(attention_heads_fused.size(-1))
+#             a = (attention_heads_fused + 1.0 * I) / 2
+#             a = a / a.sum(dim=-1)
+#
+#             result = torch.matmul(a, result)
+#
+#     # Look at the total attention between the class token,
+#     # and the image patches
+#     mask = result[0, 0, 1:]
+#     # In case of 224x224 image, this brings us from 196 to 14
+#     width = int(mask.size(-1) ** 0.5)
+#     mask = mask.reshape(width, width).numpy()
+#     mask = mask / np.max(mask)
+#     return mask
+
 # rule 6 from paper
 def apply_self_attention_rules(R_ss, cam_ss):
     R_ss_addition = torch.matmul(cam_ss, R_ss)

@@ -55,23 +55,75 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats21',
+    'dataset_name': 'lits17_liver',
     # 'config_name': ['brats21_debug_vit'
     #                 ],
     'config_name': [
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a1',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a10',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a50',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a100',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a200',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a300',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a400',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a500',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a750',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a1000',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a2000',
-                    'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_8_kl_a5000',
+        'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a1',
+        'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a10',
+        'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a100'
                     ],
+    # 'config_name': [
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a0_1',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a0_5',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a1',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a10',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a100',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a0_1',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a0_5',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a1',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a10',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a10',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a0_1',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a0_5',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a1',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a10',
+    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a100',
+    # ],
+    # 'config_name': [
+    #                 # # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a500',
+    #                 # # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a750',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a1000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a1500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a2000',
+    #                 # # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a2500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a3000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a750',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a1000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a1500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a2000',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a2500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a3000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a750',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a1000',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a1500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a2000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a2500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a3000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a750',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a1000',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a1500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a2000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a2500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a3000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a750',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a1000',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a1500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a2000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a2500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a3000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a500',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a750',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a1000',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a1500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a2000',
+    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a2500',
+    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a3000',
+    #                 ],
     # 'config_name': ['vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_75_kl_a250',
     #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_9_kl_a250',
     #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_95_kl_a250',
@@ -133,7 +185,7 @@ SETTINGS = {
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'LGMViT_brats21',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
+    'wandb_proj_name': 'LGMViT_lits17_liver',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
     'save_ckpt_interval': 5,
@@ -152,7 +204,7 @@ def main(config, settings):
     random.seed(seed)
 
     # model = build_resnet(config)
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'rollout', 'beyond_attn', 'gradcam', 'attn_gradcam']: # 'gradcam'
+    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'beyond_attn', 'gradcam', 'attn_gradcam']: # 'gradcam' 'rollout'
         model = build_model_with_LRP(config)
         lrp = LRP(model)
     # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD == 'relevance_map':

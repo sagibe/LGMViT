@@ -20,7 +20,8 @@ from pytorch_grad_cam import GradCAM
 
 import utils.util as utils
 from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attention, \
-    generate_gauss_blur_annotations, generate_spatial_bb_map, generate_relevance, BF_solver, generate_learned_processed_annotations
+    generate_gauss_blur_annotations, generate_spatial_bb_map, generate_relevance, BF_solver, \
+    generate_learned_processed_annotations, attention_rollout
 
 
 # from datasets.coco_eval import CocoEvaluator
@@ -160,10 +161,17 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                         #     reduced_attn_maps = reduced_attn_maps.reshape(cur_slices.shape[0], 1, 16, 16)
                         #     reduced_attn_maps.append(reduced_attn_maps)
                     elif localization_loss_params.ATTENTION_METHOD == 'rollout':
-                        reduced_attn_maps = lrp.generate_LRP(cur_slices, method='rollout', start_layer=1, index=None)
-                        feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
-                        reduced_attn_maps = reduced_attn_maps.reshape(bs, feat_size, feat_size).unsqueeze(0)
-                        reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // feat_size, mode='bilinear')
+                        # reduced_attn_maps = lrp.generate_LRP(cur_slices, method='rollout', start_layer=1, index=None)
+                        # feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
+                        # reduced_attn_maps = reduced_attn_maps.reshape(bs, feat_size, feat_size).unsqueeze(0)
+                        # reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // feat_size, mode='bilinear')
+                        all_layers_attn = []
+                        for i, blk in enumerate(model.transformer.layers):
+                            all_layers_attn.append(blk.attn.attn_maps)
+                        all_layers_attn = torch.stack(all_layers_attn, dim=1)
+                        reduced_attn_maps = attention_rollout(all_layers_attn).unsqueeze(0)
+                        reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps,scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
+                        # reduced_attn_maps2 = attention_rollout2(all_layers_attn)
                     elif localization_loss_params.ATTENTION_METHOD == 'beyond_attn':
                         reduced_attn_maps = lrp.generate_LRP(cur_slices, method='transformer_attribution', start_layer=1, index=None)
                         feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
