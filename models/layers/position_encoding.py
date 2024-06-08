@@ -177,8 +177,6 @@ class LearnedPositionalEncoding2D(nn.Module):
 
 
 def build_position_encoding(args):
-    # N_steps = args.MODEL.TRANSFORMER.EMBED_SIZE // 3
-    # modulo = args.MODEL.TRANSFORMER.EMBED_SIZE % 3
     if args.MODEL.POSITION_EMBEDDING.TYPE == 'sine':
         if args.MODEL.TRANSFORMER.ATTENTION_3D:
             position_embedding = PositionalEncodingSine3D(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,

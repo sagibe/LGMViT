@@ -15,7 +15,6 @@ from pathlib import Path
 import utils.transforms as T
 from sklearn import metrics
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.metrics import precision_recall_curve
 
 from configs.config import get_default_config, update_config_from_file
@@ -23,9 +22,7 @@ from configs.config import get_default_config, update_config_from_file
 
 from models.lgmvit import build_model
 import utils.util as utils
-from models.resnet import build_resnet
 from utils.engine import eval_test
-from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
@@ -129,10 +126,7 @@ def main(settings):
             config.DEVICE = device
             config.TEST.DATASET_PATH = settings['data_path']
 
-            if model_settings['configs'][fold]['config_name'].startswith('resnet'):
-                model = build_resnet(config)
-            else:
-                model = build_model(config)
+            model = build_model(config)
             model.to(device)
             if isinstance(config.TEST.CHECKPOINT, int):
                 checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, model_settings['configs'][fold]['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')

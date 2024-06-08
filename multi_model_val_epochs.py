@@ -23,16 +23,11 @@ from datasets.brats20 import BraTS20Dataset
 from datasets.kits21_lesions import KiTS21Dataset
 from datasets.kits23 import KiTS23Dataset
 from datasets.lits17 import LiTS17Dataset
-from datasets.lits17_organ import LiTS17OrganDataset
-# from datasets.lits17_organ import LiTS17Dataset
-# from datasets.picai2022 import prepare_datagens
 
 from models.lgmvit import build_model
 import utils.util as utils
-from models.resnet import build_resnet
 from utils.engine import eval_test
-from datasets.proles2021_debug import ProLes2021DatasetDebug
-from datasets.picai2022_old import PICAI2021Dataset
+from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
@@ -390,10 +385,7 @@ def main(settings):
         config.DEVICE = device
         config.TEST.DATASET_PATH = settings['data_path']
 
-        if model_settings['config'].startswith('resnet'):
-            model = build_resnet(config)
-        else:
-            model = build_model(config)
+        model = build_model(config)
         model.to(device)
         ckpt_list  = [d for d in os.listdir(os.path.join(config.DATA.OUTPUT_DIR, model_settings['dataset_name'], model_settings['exp_name'], 'ckpt')) if 'best' not in d]
         # if isinstance(config.TEST.CHECKPOINT, int):
@@ -457,13 +449,6 @@ def main(settings):
 
             elif 'BraTS2020' in config.DATA.DATASETS:
                 dataset_val = BraTS20Dataset(data_dir,
-                                              scan_set=scan_set,
-                                              split_dict=split_dict,
-                                              input_size=config.TRAINING.INPUT_SIZE,
-                                              resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                              padding=config.DATA.PREPROCESS.CROP_PADDING)
-            elif 'LiTS17_bs16' in config.DATA.DATASETS:
-                dataset_val = LiTS17OrganDataset(data_dir,
                                               scan_set=scan_set,
                                               split_dict=split_dict,
                                               input_size=config.TRAINING.INPUT_SIZE,

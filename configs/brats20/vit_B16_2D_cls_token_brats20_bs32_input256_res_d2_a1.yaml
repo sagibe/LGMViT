@@ -16,7 +16,6 @@ TRAINING:
   EVAL: false
   NUM_WORKERS: 4
   CLS_THRESH: 0.5
-  USE_CLS_TOKEN: true
   LOSS:
     TYPE: 'bce' # options: 'bce', 'focal'
     FOCAL_PARAMS:
@@ -77,7 +76,7 @@ DATA:
 TEST:
   DATASET_PATH:
   BATCH_SIZE: 1
-  CLIP_MAX_NORM: 0.1
+  CLIP_MAX_NORM: 0
   CHECKPOINT: 'best'
   NUM_WORKERS: 4
   CLS_THRESH: 0.5

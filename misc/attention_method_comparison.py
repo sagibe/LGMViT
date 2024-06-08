@@ -12,16 +12,11 @@ import cv2
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
 from datasets.brats21 import BraTS21Dataset
-# from datasets.picai2022 import prepare_datagens
 
 from models.lgmvit import build_model
-from models.lgmvit_LRP import build_model_with_LRP
 import utils.util as utils
-from models.resnet import build_resnet
-from utils.ViT_explanation_generator import LRP
 from utils.engine import eval_test
-from datasets.proles2021_debug import ProLes2021DatasetDebug
-from datasets.picai2022_old import PICAI2021Dataset
+from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
@@ -67,11 +62,8 @@ def main(settings):
     config.DEVICE = device
     config.TEST.DATASET_PATH = settings['data_path']
 
-    if False:
-        model = build_model(config)
-    else:
-        model = build_model_with_LRP(config)
-        lrp = LRP(model)
+
+    model = build_model(config)
     model.to(device)
 
     if isinstance(config.TEST.CHECKPOINT, int):

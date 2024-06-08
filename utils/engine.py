@@ -37,7 +37,7 @@ def reshape_transform(tensor, height=16, width=16):
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localization_criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, localization_loss_params: dict, sampling_loss_params: dict,
-                    scan_seg_size: int = 32, batch_size: int = 32, max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False, lrp=None):
+                    scan_seg_size: int = 32, batch_size: int = 32, max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False):
     model.train()
     criterion.train()
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
@@ -58,8 +58,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
     print_freq = 50
     # count = 0
     metric_logger.update(localization_loss=0)
-    # gradcam = GradCAM(model=model, target_layers=[model.transformer.layers[-1].norm1],
-    #                   reshape_transform=reshape_transform)
     if localization_loss_params.USE and localization_loss_params.PATIENT_LIST is not None:
         with open(localization_loss_params.PATIENT_LIST, 'r') as f:
             localization_patient_list = json.load(f)
@@ -152,19 +150,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                             reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh, upscale=False).to(device)
                         else:
                             reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh).to(device)
-                    elif localization_loss_params.ATTENTION_METHOD == 'lrp':
-                        # reduced_attn_maps = []
-                        reduced_attn_maps = lrp.generate_LRP(cur_slices, method='full' ,start_layer=1, index=None).unsqueeze(0)
-                        # reduced_attn_maps = reduced_attn_maps.reshape(cur_slices.shape[0], 1, 16, 16)
-                        # for sample in cur_slices:
-                        #     reduced_attn_maps = lrp.generate_LRP(sample.unsqueeze(0), start_layer=1, index=None)
-                        #     reduced_attn_maps = reduced_attn_maps.reshape(cur_slices.shape[0], 1, 16, 16)
-                        #     reduced_attn_maps.append(reduced_attn_maps)
                     elif localization_loss_params.ATTENTION_METHOD == 'rollout':
-                        # reduced_attn_maps = lrp.generate_LRP(cur_slices, method='rollout', start_layer=1, index=None)
-                        # feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
-                        # reduced_attn_maps = reduced_attn_maps.reshape(bs, feat_size, feat_size).unsqueeze(0)
-                        # reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // feat_size, mode='bilinear')
                         all_layers_attn = []
                         for i, blk in enumerate(model.transformer.layers):
                             all_layers_attn.append(blk.attn.attn_maps)
@@ -172,31 +158,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                         reduced_attn_maps = attention_rollout(all_layers_attn).unsqueeze(0)
                         if 'res' not in localization_loss_params.TYPE:
                             reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
-                        # reduced_attn_maps2 = attention_rollout2(all_layers_attn)
-                    elif localization_loss_params.ATTENTION_METHOD == 'beyond_attn':
-                        reduced_attn_maps = lrp.generate_LRP(cur_slices, method='transformer_attribution', start_layer=1, index=None)
-                        feat_size, bs = int(np.sqrt(reduced_attn_maps.shape[-1])), reduced_attn_maps.shape[0]
-                        reduced_attn_maps = reduced_attn_maps.reshape(bs, feat_size, feat_size).unsqueeze(0)
-                        reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // feat_size, mode='bilinear')
-                    elif localization_loss_params.ATTENTION_METHOD == 'attn_gradcam':
-                        reduced_attn_maps = lrp.generate_LRP(cur_slices, method='attn_gradcam', start_layer=1, index=None).unsqueeze(0)
-                        reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
-                    elif localization_loss_params.ATTENTION_METHOD == 'gradcam':
-                        # gradcam = GradCAM(model=model, target_layers=[model.transformer.layers[-1].norm1], reshape_transform=reshape_transform)
-                        # reduced_attn_maps = gradcam(cur_slices, targets=None)
-                        # reduced_attn_maps = torch.from_numpy(reduced_attn_maps).unsqueeze(0).to(device)
-                        reduced_attn_maps = lrp.generate_LRP(cur_slices, method='gradcam', start_layer=1, index=None).unsqueeze(0)
-                        if 'res' not in localization_loss_params.TYPE:
-                            reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
-                        # cam = model.transformer_encoder[-1].attn.get_attn_gradients()
-                        # cam = model.transformer.layers[-1].attn.get_attn_gradients()
-                        # if cam is None:
-                        #     cam = attn
-                        # feat_size, bs = int(np.sqrt(cam.shape[-1])), cam.shape[0]
-                        # cam = cam[:, :, 0, 1:].reshape(bs, -1, feat_size, feat_size)
-                        # cam = cam.mean(1).clamp(min=0).unsqueeze(0)
-                        # reduced_attn_maps = (cam - cam.min()) / (cam.max() - cam.min())
-                        # reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
                 if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                     # spatial_feat_maps = bb_feat_map
                     if use_cls_token:

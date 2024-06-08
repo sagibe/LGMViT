@@ -27,7 +27,6 @@ def get_default_config():
     cfg.TRAINING.EVAL = False
     cfg.TRAINING.NUM_WORKERS = 4
     cfg.TRAINING.CLS_THRESH = 0.5
-    cfg.TRAINING.USE_CLS_TOKEN = False
     #cfg.TRAINING.LOSS
     cfg.TRAINING.LOSS = edict()
     cfg.TRAINING.LOSS.TYPE = 'bce'
@@ -80,7 +79,7 @@ def get_default_config():
     cfg.MODEL.TRANSFORMER.HEADS = 8
     cfg.MODEL.TRANSFORMER.DROP_PATH = 0.1
     cfg.MODEL.TRANSFORMER.FORWARD_DROP_P = 0.1
-    cfg.MODEL.TRANSFORMER.USE_CLS_TOKEN = False
+    cfg.MODEL.TRANSFORMER.USE_CLS_TOKEN = True
     cfg.MODEL.TRANSFORMER.ATTENTION_3D = True
 
     # DATA

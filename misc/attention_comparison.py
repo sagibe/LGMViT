@@ -15,10 +15,8 @@ from datasets.brats20 import BraTS20Dataset
 
 from models.lgmvit import build_model
 import utils.util as utils
-from models.resnet import build_resnet
 from utils.engine import eval_test
-from datasets.proles2021_debug import ProLes2021DatasetDebug
-from datasets.picai2022_old import PICAI2021Dataset
+from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
