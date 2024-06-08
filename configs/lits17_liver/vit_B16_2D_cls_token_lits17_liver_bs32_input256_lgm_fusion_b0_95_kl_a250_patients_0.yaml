@@ -33,7 +33,7 @@ TRAINING:
       SPATIAL_MAP_NORM: 'softmax'
       GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
       GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 100
+      ALPHA: 250
       PATIENT_LIST: null
     SAMPLING_LOSS:
       USE: false

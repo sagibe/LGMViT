@@ -58,11 +58,53 @@ SETTINGS = {
     'dataset_name': 'lits17_liver',
     # 'config_name': ['brats21_debug_vit'
     #                 ],
-    'config_name': [
-        'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a1',
-        'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a10',
-        'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a100'
+    'config_name': ['vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_new',
+                    'vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_new2'
                     ],
+    # 'config_name': [
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_1',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_5',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a10',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a100',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a250',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a500',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1000',
+    #                 ],
+    # 'config_name': [
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_01',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_01',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_01',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_rollout_a1',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_rollout_a10',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_rollout_a100',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_rollout_a1',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_rollout_a10',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_rollout_a100',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_rollout_a1',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_rollout_a10',
+    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_rollout_a100',
+    #                 ],
+    # 'config_name': [
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_0',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_10',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_20',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_25',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_30',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_40',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_50',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_60',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_70',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_75',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_80',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_all',
+    # ],
+    # 'config_name': [
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a1',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a10',
+    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a100'
+    # ],
     # 'config_name': [
     #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a0_1',
     #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a0_5',
@@ -185,7 +227,7 @@ SETTINGS = {
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
     'use_wandb': True,
-    'wandb_proj_name': 'LGMViT_lits17_liver',  # LGMViT_brats20 LGMViT_atlasR2 LGMViT_isles22 LGMViT_lits17 LGMViT_PICAI22 LGMViT_kits21_lesions LGMViT_kits23_lesions
+    'wandb_proj_name': 'LGMViT_lits17_liver',  # LGMViT_brats20_new LGMViT_lits17_liver LGMViT_atlasR2 LGMViT_isles22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
     'save_ckpt_interval': 5,

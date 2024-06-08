@@ -170,7 +170,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                             all_layers_attn.append(blk.attn.attn_maps)
                         all_layers_attn = torch.stack(all_layers_attn, dim=1)
                         reduced_attn_maps = attention_rollout(all_layers_attn).unsqueeze(0)
-                        reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps,scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
+                        if 'res' not in localization_loss_params.TYPE:
+                            reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
                         # reduced_attn_maps2 = attention_rollout2(all_layers_attn)
                     elif localization_loss_params.ATTENTION_METHOD == 'beyond_attn':
                         reduced_attn_maps = lrp.generate_LRP(cur_slices, method='transformer_attribution', start_layer=1, index=None)
@@ -274,7 +275,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                          localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()),
                                                                torch.cat(utils.attention_softmax_2d(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()))
                 elif localization_loss_params.TYPE == 'mse_fgbg':
-                    if localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
+                    if localization_loss_params.ATTENTION_METHOD == 'relevance_map':
                         localization_loss = localization_loss_params.ALPHA * \
                                              localization_criterion(torch.cat(reduced_spatial_feat_maps[:,cur_targets[:,0].to(bool),:,:].unbind()),
                                                                    torch.cat(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:].unbind()))

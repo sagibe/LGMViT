@@ -23,7 +23,7 @@ TRAINING:
       ALPHA: 0.8
       GAMMA: 2
     LOCALIZATION_LOSS:
-      USE: false
+      USE: true
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
       SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
       ATTENTION_METHOD: 'raw_attn' # options: 'gradcam', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
@@ -33,8 +33,8 @@ TRAINING:
       SPATIAL_MAP_NORM: 'softmax'
       GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
       GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 100
-      PATIENT_LIST: null
+      ALPHA: 250
+      PATIENT_LIST: datasets/LGS_patient_lists/lits17/lits17_patient_list_75.json
     SAMPLING_LOSS:
       USE: false
       POS_NEG_RATIO: 1
