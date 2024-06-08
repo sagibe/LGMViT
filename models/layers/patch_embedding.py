@@ -35,5 +35,5 @@ def build_patch_embedding(args):
                               stride=args.MODEL.PATCH_SIZE,
                               padding=0,
                               in_chans=3,
-                              embed_dim=args.MODEL.TRANSFORMER.EMBED_SIZE)
+                              embed_dim=args.MODEL.VIT_ENCODER.EMBED_SIZE)
     return patch_embed

@@ -161,13 +161,13 @@ def build_vit_encoder(args):
     # store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'relevance_map'
     store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['relevance_map', 'rollout']
     return TransformerEncoder(
-        embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,
-        num_heads=args.MODEL.TRANSFORMER.HEADS,
-        drop_path=args.MODEL.TRANSFORMER.DROP_PATH,
-        forward_expansion=args.MODEL.TRANSFORMER.FORWARD_EXPANSION_RATIO,
-        forward_drop_p=args.MODEL.TRANSFORMER.FORWARD_DROP_P,
+        embed_size=args.MODEL.VIT_ENCODER.EMBED_SIZE,
+        num_heads=args.MODEL.VIT_ENCODER.HEADS,
+        drop_path=args.MODEL.VIT_ENCODER.DROP_PATH,
+        forward_expansion=args.MODEL.VIT_ENCODER.FORWARD_EXPANSION_RATIO,
+        forward_drop_p=args.MODEL.VIT_ENCODER.FORWARD_DROP_P,
         norm_layer=nn.LayerNorm,
-        num_layers=args.MODEL.TRANSFORMER.NUM_LAYERS,
+        num_layers=args.MODEL.VIT_ENCODER.NUM_LAYERS,
         norm_output=None,
         store_layers_attn=store_layers_attn
     )

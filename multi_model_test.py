@@ -440,7 +440,6 @@ def main(settings):
     for model_settings in settings['models']:
         config = get_default_config()
         update_config_from_file(f"configs/{settings['dataset_name']}/{model_settings['config']}.yaml", config)
-        config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
         if model_settings['exp_name'] is None: model_settings['exp_name'] = model_settings['config']
         # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
         if settings['ckpt_load'] is not None: config.TEST.CHECKPOINT = settings['ckpt_load']

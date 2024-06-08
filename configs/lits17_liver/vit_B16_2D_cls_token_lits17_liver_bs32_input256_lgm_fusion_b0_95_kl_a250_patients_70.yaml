@@ -18,9 +18,6 @@ TRAINING:
   CLS_THRESH: 0.5
   LOSS:
     TYPE: 'bce' # options: 'bce', 'focal'
-    FOCAL_PARAMS:
-      ALPHA: 0.8
-      GAMMA: 2
     LOCALIZATION_LOSS:
       USE: true
       TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
@@ -34,10 +31,6 @@ TRAINING:
       GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
       ALPHA: 250
       PATIENT_LIST: datasets/LGS_patient_lists/lits17/lits17_patient_list_70.json
-    SAMPLING_LOSS:
-      USE: false
-      POS_NEG_RATIO: 1
-      FULL_NEG_SCAN_RATIO: 0.5
 
 MODEL:
   PRETRAINED_WEIGHTS:
@@ -47,12 +40,7 @@ MODEL:
     TYPE: sine # sine, learned, null
     Z_SIZE: 40
     FIT_MODE: interpolate # interpolate, prune
-  PATCH_EMBED:
-    NAME: patch_embed # convnext  resnet101 , patch_embed
-    RETURN_INTERM_LAYERS: true
-    DILATION: false
-  TRANSFORMER:
-    TYPE: vit # vit, max_vit
+  VIT_ENCODER: 
     NUM_LAYERS: 12
     FORWARD_EXPANSION_RATIO: 4
     EMBED_SIZE: 768
@@ -75,7 +63,6 @@ DATA:
     CROP_ORGAN_SPATIAL: false # spatial cropping of slices according to prostate mask
     CROP_PADDING: 0 # padding around prostate crop (0 for minimal cropping)
     SCAN_NORM_MODE: 'slice'  # options: 'slice', 'scan'
-  MODALITIES: all # 'all' for all available modalities. For specific modalities in a list of the desired ones (example: [])
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
 
 TEST:

@@ -52,7 +52,6 @@ def main(settings):
     # model
     config = get_default_config()
     update_config_from_file(f"../configs/{settings['dataset_name']}/{settings['model']['config']}.yaml", config)
-    config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['model']['exp_name'] is None: settings['model']['exp_name'] = settings['model']['config']
     # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
     config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD = 'relevance_map'  #TODO

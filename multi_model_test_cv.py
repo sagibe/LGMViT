@@ -117,7 +117,6 @@ def main(settings):
             # config = utils.RecursiveNamespace(**config)
             config = get_default_config()
             update_config_from_file(f"configs/{settings['dataset_name']}/{model_settings['configs'][fold]['config_name']}.yaml", config)
-            config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
             if model_settings['configs'][fold]['exp_name'] is None: model_settings['configs'][fold]['exp_name'] = model_settings['configs'][fold]['config_name']
             # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
 

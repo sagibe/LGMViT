@@ -261,8 +261,6 @@ def main(config, settings):
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
         # criterion = nn.CrossEntropyLoss()
-    elif config.TRAINING.LOSS.TYPE == 'focal':
-        criterion = FocalLoss(alpha=config.TRAINING.LOSS.FOCAL_PARAMS.ALPHA, gamma=config.TRAINING.LOSS.FOCAL_PARAMS.GAMMA)
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
@@ -471,20 +469,6 @@ def main(config, settings):
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
                                        scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
 
-    # elif 'LiTS17' in config.DATA.DATASETS:
-    #     dataset_train = LiTS17Dataset(data_dir,
-    #                                      scan_set='train',
-    #                                      split_dict=split_dict,
-    #                                      input_size=config.TRAINING.INPUT_SIZE,
-    #                                      resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-    #                                      padding=config.DATA.PREPROCESS.CROP_PADDING)
-    #     dataset_val = LiTS17Dataset(data_dir,
-    #                                    scan_set='val',
-    #                                    split_dict=split_dict,
-    #                                    input_size=config.TRAINING.INPUT_SIZE,
-    #                                    resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-    #                                    padding=config.DATA.PREPROCESS.CROP_PADDING)
-
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
         sampler_val = DistributedSampler(dataset_val)
@@ -532,12 +516,11 @@ def main(config, settings):
         train_stats = train_one_epoch(
             model, criterion, localization_criterion, data_loader_train, optimizer, device, epoch,
             localization_loss_params=config.TRAINING.LOSS.LOCALIZATION_LOSS,
-            sampling_loss_params=config.TRAINING.LOSS.SAMPLING_LOSS,
             scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
             batch_size=config.TRAINING.BATCH_SIZE,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
             cls_thresh=config.TRAINING.CLS_THRESH,
-            use_cls_token=config.MODEL.TRANSFORMER.USE_CLS_TOKEN,
+            use_cls_token=config.MODEL.VIT_ENCODER.USE_CLS_TOKEN,
         )
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
@@ -616,7 +599,6 @@ def main(config, settings):
 #     settings = SETTINGS
 #     config = get_default_config()
 #     update_config_from_file(f"configs/{settings['dataset_name']}/{settings['config_name']}.yaml", config)
-#     config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
 #     if settings['data_fold'] is not None:
 #         config.DATA.DATA_FOLD = settings['data_fold']
 #     fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
@@ -636,7 +618,6 @@ if __name__ == '__main__':
     for config_name in settings['config_name']:
         config = get_default_config()
         update_config_from_file(f"configs/{settings['dataset_name']}/{config_name}.yaml", config)
-        config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
         if settings['data_fold'] is not None:
             config.DATA.DATA_FOLD = settings['data_fold']
         if settings['save_ckpt_interval'] is not None:

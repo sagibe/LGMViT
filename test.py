@@ -139,7 +139,6 @@ if __name__ == '__main__':
     with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
         config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     config = utils.RecursiveNamespace(**config)
-    config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['exp_name'] is None: settings['exp_name'] = settings['config_name']
 
     if config.DATA.OUTPUT_DIR:

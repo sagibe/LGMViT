@@ -19,9 +19,6 @@ TRAINING:
   CLS_THRESH: 0.5
   LOSS:
     TYPE: bce
-    FOCAL_PARAMS:
-      ALPHA: 0.8
-      GAMMA: 2
     LOCALIZATION_LOSS:
       USE: true
       TYPE: kl
@@ -35,10 +32,7 @@ TRAINING:
       GT_SEG_PROCESS_KERNEL_SIZE: 51
       ALPHA: 1000
       PATIENT_LIST: null
-    SAMPLING_LOSS:
-      USE: false
-      POS_NEG_RATIO: 1
-      FULL_NEG_SCAN_RATIO: 0.5
+
 MODEL:
   PRETRAINED_WEIGHTS: null
   NUM_CLASSES: 2
@@ -47,12 +41,7 @@ MODEL:
     TYPE: sine
     Z_SIZE: 40
     FIT_MODE: interpolate
-  PATCH_EMBED:
-    NAME: patch_embed
-    RETURN_INTERM_LAYERS: true
-    DILATION: false
-  TRANSFORMER:
-    TYPE: vit
+  VIT_ENCODER:
     NUM_LAYERS: 12
     FORWARD_EXPANSION_RATIO: 4
     EMBED_SIZE: 768
@@ -67,7 +56,6 @@ DATA:
   ANNOT_TYPE: null
   DATA_SPLIT_FILE: datasets/data_splits/brats20/train_val_test_split.json
   DATA_FOLD: 0
-  MODALITIES: all
   OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/
   PREPROCESS:
     RESIZE_MODE: interpolate

@@ -55,7 +55,6 @@ def main(settings):
     # model 1
     config1 = get_default_config()
     update_config_from_file(f"../configs/{settings['dataset_name']}/{settings['model_1']['config']}.yaml", config1)
-    config1.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config1.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['model_1']['exp_name'] is None: settings['model_1']['exp_name'] = settings['model_1']['config']
     # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
 
@@ -90,7 +89,6 @@ def main(settings):
     # model 2
     config2 = get_default_config()
     update_config_from_file(f"../configs/{settings['dataset_name']}/{settings['model_2']['config']}.yaml", config2)
-    config2.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config2.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['model_2']['exp_name'] is None: settings['model_2']['exp_name'] = settings['model_2']['config']
     # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
 

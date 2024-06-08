@@ -36,7 +36,7 @@ def reshape_transform(tensor, height=16, width=16):
     return result
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localization_criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
-                    device: torch.device, epoch: int, localization_loss_params: dict, sampling_loss_params: dict,
+                    device: torch.device, epoch: int, localization_loss_params: dict,
                     scan_seg_size: int = 32, batch_size: int = 32, max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False):
     model.train()
     criterion.train()
@@ -77,44 +77,21 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             cur_targets = targets[scan_seg_size * scan_seg_idx:scan_seg_size * (scan_seg_idx + 1)]
             cur_lesion_annot = lesion_annot[:,scan_seg_size * scan_seg_idx:scan_seg_size * (scan_seg_idx + 1),...]
             outputs, attn, bb_feats = model(cur_slices)
-            # if use_cls_token:
-            #     relevance_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh)
-            #     attn_maps = generate_spatial_attention(attn, mode='cls_token')
-            #     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
-            # else:
-            #     attn_maps = generate_spatial_attention(attn, mode='max_pool')
-            #     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='max_pool')
-            #######
-            # bs, nh, h, w = attn.shape
-            # relative_attention = lambda attn: attn.max(dim=1)[0].max(axis=1)[0].view(bs, 16, 16)
-            # attn_map_old = F.softmax(relative_attention(attn), dim=1)
-            # attn_map_old = relative_attention(attn)
-            #######
-            # if attn_map_old is not None:
-            #     attn_map_old = attn_map_old.unsqueeze(0)
-            # sampling loss
-            if sampling_loss_params.USE:
-                # attn_maps = generate_spatial_attention(attn, mode='cls_token')
-                outputs, cur_targets, sampled_idx = sample_loss_inputs(outputs, cur_targets,
-                                                      pos_neg_ratio=sampling_loss_params.POS_NEG_RATIO,
-                                                      full_neg_scan_ratio=sampling_loss_params.FULL_NEG_SCAN_RATIO)
-                attn_map = attn_map[sampled_idx, :, :, :]
-                cur_lesion_annot = cur_lesion_annot[:, sampled_idx, :, :]
 
             cls_loss = criterion(outputs, cur_targets)
 
             # localization loss
             if localization_loss_params.USE and cur_targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
                 reduced_attn_maps = reduced_bb_feat_maps = None
-                if localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
-                    attn_maps = generate_spatial_attention(attn, mode='cls_token')
-                    bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
-                    fusion_experimental_maps = torch.cat([attn_maps, bb_feat_map], dim=1)
-                    reduced_fusion_experimental_maps = model.channel_reduction_exp_fusion(fusion_experimental_maps).permute(1,0,2,3)
-                    reduced_fusion_experimental_maps = F.interpolate(reduced_fusion_experimental_maps,
-                                             cur_lesion_annot.shape[-2:],
-                                             mode=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                                             align_corners=False).to(device)
+                # if localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
+                #     attn_maps = generate_spatial_attention(attn, mode='cls_token')
+                #     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
+                #     fusion_experimental_maps = torch.cat([attn_maps, bb_feat_map], dim=1)
+                #     reduced_fusion_experimental_maps = model.channel_reduction_exp_fusion(fusion_experimental_maps).permute(1,0,2,3)
+                #     reduced_fusion_experimental_maps = F.interpolate(reduced_fusion_experimental_maps,
+                #                              cur_lesion_annot.shape[-2:],
+                #                              mode=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
+                #                              align_corners=False).to(device)
                 if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
                     # spatial_feat_maps = attn_maps
                     if localization_loss_params.ATTENTION_METHOD == 'raw_attn':
@@ -152,7 +129,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                             reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh).to(device)
                     elif localization_loss_params.ATTENTION_METHOD == 'rollout':
                         all_layers_attn = []
-                        for i, blk in enumerate(model.transformer.layers):
+                        for i, blk in enumerate(model.vit_encoder.layers):
                             all_layers_attn.append(blk.attn.attn_maps)
                         all_layers_attn = torch.stack(all_layers_attn, dim=1)
                         reduced_attn_maps = attention_rollout(all_layers_attn).unsqueeze(0)
@@ -198,7 +175,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 # plt.show()
                 ################
 
-                ##########################3### FUSION OPTION 1 #####################################
                 if localization_loss_params.SPATIAL_FEAT_SRC == 'attn':
                     reduced_spatial_feat_maps = reduced_attn_maps
                 elif localization_loss_params.SPATIAL_FEAT_SRC == 'bb_feat':
@@ -209,8 +185,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                     else:
                         beta = model.beta
                     reduced_spatial_feat_maps = reduced_attn_maps * beta + reduced_bb_feat_maps * (1 - beta)
-                elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
-                    reduced_spatial_feat_maps = reduced_fusion_experimental_maps
+                # elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
+                #     reduced_spatial_feat_maps = reduced_fusion_experimental_maps
                 # elif localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
                 #     reduced_spatial_feat_maps = relevance_maps
 
@@ -283,50 +259,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 loss = cls_loss + localization_loss
                 localization_loss_value = localization_loss.item()
                 metric_logger.update(localization_loss=localization_loss_value)
-                #################################################################
-
-                # ###################### FUSION OPTION 2 ############################
-                # localization_loss = 0
-                # if localization_loss_params.SPATIAL_FEAT_SRC == 'fusion':
-                #     beta = localization_loss_params.FUSION_BETA
-                #     lamda_attn = beta
-                #     lamda_bb_feat = 1 - beta
-                # else:
-                #     lamda_attn = lamda_bb_feat = 1
-                # if localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0 and 'fgbg' not in localization_loss_params.TYPE:
-                #     cur_lesion_annot = generate_gauss_blur_annotations(cur_lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
-                # if localization_loss_params.TYPE == 'mse':
-                #     if reduced_attn_maps:
-                #         localization_loss += localization_loss_params.ALPHA * lamda_attn * \
-                #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()),
-                #                                                    torch.cat(utils.attention_softmax_2d(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()))
-                #     if reduced_bb_feat_maps:
-                #         localization_loss += localization_loss_params.ALPHA * lamda_bb_feat * \
-                #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_bb_feat_maps[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()),
-                #                                                    torch.cat(utils.attention_softmax_2d(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()))
-                # elif localization_loss_params.TYPE == 'mse_fgbg':
-                #     if reduced_attn_maps:
-                #         localization_loss = localization_loss_params.ALPHA * lamda_attn * \
-                #                              localization_criterion(torch.cat(utils.min_max_normalize(reduced_attn_maps[:,cur_targets[:,0].to(bool),:,:]).unbind()),
-                #                                                    torch.cat(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:].unbind()))
-                #     if reduced_bb_feat_maps:
-                #         localization_loss = localization_loss_params.ALPHA * lamda_bb_feat * \
-                #                              localization_criterion(torch.cat(utils.min_max_normalize(reduced_bb_feat_maps[:,cur_targets[:,0].to(bool),:,:]).unbind()),
-                #                                                    torch.cat(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:].unbind()))
-                # else:
-                #     if reduced_attn_maps is not None:
-                #         localization_loss += localization_loss_params.ALPHA * lamda_attn * \
-                #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_attn_maps[:,cur_targets[:,0].to(bool),:,:], apply_log=True).unbind()),
-                #                                                    torch.cat(utils.attention_softmax_2d(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:], apply_log=True).unbind()))
-                #     if reduced_bb_feat_maps is not None:
-                #         localization_loss += localization_loss_params.ALPHA * lamda_bb_feat * \
-                #                              localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_bb_feat_maps[:,cur_targets[:,0].to(bool),:,:], apply_log=True).unbind()),
-                #                                                    torch.cat(utils.attention_softmax_2d(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:], apply_log=True).unbind()))
-                # loss = cls_loss + localization_loss
-                # localization_loss_value = localization_loss.item()
-                # metric_logger.update(localization_loss=localization_loss_value)
-                # ##########################################################################
-
             else:
                 loss = cls_loss
 
@@ -382,25 +314,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             'lr': metric_logger.meters['lr'].global_avg,
             }
     # return {k: meter.avg for k, meter in metric_logger.meters.items()}
-
-def sample_loss_inputs(outputs, targets, pos_neg_ratio=1, full_neg_scan_ratio=0.5):
-    if torch.sum(targets, None):
-        pos_idx = (targets[:, 0] > 0).nonzero().squeeze(1)
-        neg_idx = (~ (targets[:, 0] > 0)).nonzero().squeeze(1)
-        num_of_neg = len(neg_idx) if len(neg_idx.size()) != 0 else 0
-        if num_of_neg > 0:
-            neg_samples = min(int(len(pos_idx) * (1/pos_neg_ratio)), num_of_neg)
-            neg_idx_sampled = neg_idx[torch.randperm(neg_idx.size(0))[:neg_samples]]
-            sampled_idx, _ = torch.sort(torch.cat((pos_idx, neg_idx_sampled)))
-        else:
-            sampled_idx = pos_idx
-    else:
-        num_samples = int(full_neg_scan_ratio * len(targets))
-        slice_idx = torch.arange(len(targets))
-        sampled_idx, _ = torch.sort(slice_idx[torch.randperm(slice_idx.size(0))[:num_samples]])
-    targets = targets[sampled_idx]
-    outputs = outputs[sampled_idx]
-    return outputs, targets, sampled_idx
 
 def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, device: torch.device, epoch: int,
