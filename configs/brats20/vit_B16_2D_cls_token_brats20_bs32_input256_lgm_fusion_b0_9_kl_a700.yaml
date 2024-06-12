@@ -20,16 +20,16 @@ TRAINING:
     TYPE: 'bce' # options: 'bce', 'focal'
     LOCALIZATION_LOSS:
       USE: true
-      TYPE: 'res' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg')
-      SPATIAL_FEAT_SRC: 'attn'  # options: 'attn', 'bb_feat', 'fusion',
-      ATTENTION_METHOD: 'rollout' # options: 'raw_attn', 'relevance_map', 'lrp'
-      FUSION_BETA: 0.95
+      TYPE: 'kl' # options: 'kl', 'mse', 'mse_fgbg', ('kl_fgbg') gradmask
+      SPATIAL_FEAT_SRC: 'fusion'  # options: 'attn', 'bb_feat', 'fusion', fusion_experimental
+      ATTENTION_METHOD: 'raw_attn' # options: 'gradcam', 'relevance_map', 'lrp', 'rollout', 'beyond_attn' gradcam
+      FUSION_BETA: 0.9
       SPATIAL_FEAT_INTERPOLATION: 'bilinear' # options: 'bilinear', 'nearest'
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean' # options: 'squeeze_mean', 'select_max', 'squeeze_max', 'learned'
       SPATIAL_MAP_NORM: 'softmax'
       GT_SEG_PROCESS_METHOD: 'gauss' # options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'
-      GT_SEG_PROCESS_KERNEL_SIZE: 3  # gaussian smoothing kernel size on the gt segmentation
-      ALPHA: 1
+      GT_SEG_PROCESS_KERNEL_SIZE:  51  # gaussian smoothing kernel size on the gt segmentation
+      ALPHA: 700
       PATIENT_LIST: null
 
 MODEL:

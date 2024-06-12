@@ -46,12 +46,13 @@ from utils.wandb import init_wandb, wandb_logger
 
 # Multi Run Mode
 SETTINGS = {
-    'dataset_name': 'brats20',
-    'config_name': ['brats20_debug_vit'
-                    ],
-    # 'config_name': ['vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_new',
-    #                 'vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_new2'
+    'dataset_name': 'lits17_liver',
+    # 'config_name': ['brats20_debug_vit'
     #                 ],
+    'config_name': [
+                    'vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_test',
+                    'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_05_kl_a250_test',
+                    ],
     # 'config_name': [
     #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_1',
     #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_5',
@@ -217,7 +218,7 @@ SETTINGS = {
     #                 ],
     'exp_name': None,  # if None default is config_name
     'data_fold': None,  # None to take fold number from config
-    'use_wandb': False,
+    'use_wandb': True,
     'wandb_proj_name': 'LGMViT_lits17_liver',  # LGMViT_brats20_new LGMViT_lits17_liver LGMViT_atlasR2 LGMViT_isles22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
