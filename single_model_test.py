@@ -26,9 +26,7 @@ from datasets.node21 import Node21Dataset
 
 from models.lgmvit import build_model
 import utils.util as utils
-from models.resnet import build_resnet
 from utils.engine import eval_test
-from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
@@ -208,7 +206,6 @@ def main(settings):
     config = get_default_config()
     update_config_from_file(f"configs/{settings['dataset_name']}/{settings['model']['config'] }.yaml", config)
     # config = utils.RecursiveNamespace(**config)
-    config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['model']['exp_name'] is None: settings['model']['exp_name'] = settings['model']['config']
     # if model_settings['plot_name'] is None: model_settings['plot_name'] = model_settings['config']
 
@@ -217,10 +214,7 @@ def main(settings):
     config.DEVICE = device
     config.TEST.DATASET_PATH = settings['data_path']
 
-    if settings['model']['config'].startswith('resnet'):
-        model = build_resnet(config)
-    else:
-        model = build_model(config)
+    model = build_model(config)
     model.to(device)
     if isinstance(config.TEST.CHECKPOINT, int):
         checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['model']['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')

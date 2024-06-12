@@ -4,8 +4,6 @@ import os
 import time
 import datetime
 import torch
-# from picai_baseline.nnunet.training_docker.focal_loss import FocalLoss
-# from monai.losses import FocalLoss
 from torch import nn
 import yaml
 import json
@@ -13,6 +11,7 @@ import wandb
 import random
 from pathlib import Path
 import utils.transforms as T
+
 from configs.config import get_default_config, update_config_from_file
 from datasets.atlasR2 import AtlasR2Dataset
 from datasets.brats20 import BraTS20Dataset
@@ -22,18 +21,10 @@ from datasets.isles22 import Isles22Dataset
 from datasets.kits21_lesions import KiTS21Dataset
 from datasets.kits23 import KiTS23Dataset
 from datasets.lits17 import LiTS17Dataset
-from datasets.lits17_organ import LiTS17OrganDataset
 from datasets.node21 import Node21Dataset
-# from datasets.picai2022 import prepare_datagens
-
 from models.lgmvit import build_model
 import utils.util as utils
-from models.lgmvit_LRP import build_model_with_LRP
-from models.lgmvit_gae import build_model_with_gae
-from models.resnet import build_resnet
-from utils.ViT_explanation_generator import LRP
 from utils.engine import train_one_epoch, eval_epoch
-from datasets.proles2021_debug import ProLes2021DatasetDebug
 from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
@@ -56,10 +47,11 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'lits17_liver',
-    # 'config_name': ['brats21_debug_vit'
+    # 'config_name': ['brats20_debug_vit'
     #                 ],
-    'config_name': ['vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_new',
-                    'vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_new2'
+    'config_name': [
+                    'vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_test',
+                    'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_05_kl_a250_test',
                     ],
     # 'config_name': [
     #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_1',
@@ -245,17 +237,7 @@ def main(config, settings):
     np.random.seed(seed)
     random.seed(seed)
 
-    # model = build_resnet(config)
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['lrp', 'beyond_attn', 'gradcam', 'attn_gradcam']: # 'gradcam' 'rollout'
-        model = build_model_with_LRP(config)
-        lrp = LRP(model)
-    # elif config.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD == 'relevance_map':
-    #     model = build_model_with_gae(config)
-    #     lrp = None
-    else:
-        model = build_model(config)
-        lrp = None
-
+    model = build_model(config)
     model.to(device)
 
     model_without_ddp = model
@@ -273,16 +255,13 @@ def main(config, settings):
             "lr": config.TRAINING.LR,
         },
     ]
-    optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,
-                                  weight_decay=config.TRAINING.WEIGHT_DECAY)
+    optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,weight_decay=config.TRAINING.WEIGHT_DECAY)
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.TRAINING.EPOCHS, eta_min=config.TRAINING.LR/100)
     # criterion = nn.BCELoss()
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
         # criterion = nn.CrossEntropyLoss()
-    elif config.TRAINING.LOSS.TYPE == 'focal':
-        criterion = FocalLoss(alpha=config.TRAINING.LOSS.FOCAL_PARAMS.ALPHA, gamma=config.TRAINING.LOSS.FOCAL_PARAMS.GAMMA)
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
@@ -293,17 +272,15 @@ def main(config, settings):
         localization_criterion = torch.nn.MSELoss(reduction="mean")
     elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse_fgbg':
         localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl_fgbg':
-        localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="batchmean"), lambda_fg=0.3, lambda_bg=2)
     elif 'res' in config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE:
         localization_criterion = nn.L1Loss(reduction='none')
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} localization loss type not supported")
 
-    # transforms
-    transforms = T.Compose([
-        T.ToTensor()
-    ])
+    # # transforms
+    # transforms = T.Compose([
+    #     T.ToTensor()
+    # ])
     # Data loading
     data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
     with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
@@ -493,20 +470,6 @@ def main(config, settings):
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
                                        scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
 
-    # elif 'LiTS17' in config.DATA.DATASETS:
-    #     dataset_train = LiTS17Dataset(data_dir,
-    #                                      scan_set='train',
-    #                                      split_dict=split_dict,
-    #                                      input_size=config.TRAINING.INPUT_SIZE,
-    #                                      resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-    #                                      padding=config.DATA.PREPROCESS.CROP_PADDING)
-    #     dataset_val = LiTS17Dataset(data_dir,
-    #                                    scan_set='val',
-    #                                    split_dict=split_dict,
-    #                                    input_size=config.TRAINING.INPUT_SIZE,
-    #                                    resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-    #                                    padding=config.DATA.PREPROCESS.CROP_PADDING)
-
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
         sampler_val = DistributedSampler(dataset_val)
@@ -554,13 +517,11 @@ def main(config, settings):
         train_stats = train_one_epoch(
             model, criterion, localization_criterion, data_loader_train, optimizer, device, epoch,
             localization_loss_params=config.TRAINING.LOSS.LOCALIZATION_LOSS,
-            sampling_loss_params=config.TRAINING.LOSS.SAMPLING_LOSS,
             scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
             batch_size=config.TRAINING.BATCH_SIZE,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
             cls_thresh=config.TRAINING.CLS_THRESH,
-            use_cls_token=config.TRAINING.USE_CLS_TOKEN,
-            lrp=lrp
+            use_cls_token=config.MODEL.VIT_ENCODER.USE_CLS_TOKEN,
         )
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
@@ -639,7 +600,6 @@ def main(config, settings):
 #     settings = SETTINGS
 #     config = get_default_config()
 #     update_config_from_file(f"configs/{settings['dataset_name']}/{settings['config_name']}.yaml", config)
-#     config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
 #     if settings['data_fold'] is not None:
 #         config.DATA.DATA_FOLD = settings['data_fold']
 #     fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
@@ -659,7 +619,6 @@ if __name__ == '__main__':
     for config_name in settings['config_name']:
         config = get_default_config()
         update_config_from_file(f"configs/{settings['dataset_name']}/{config_name}.yaml", config)
-        config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
         if settings['data_fold'] is not None:
             config.DATA.DATA_FOLD = settings['data_fold']
         if settings['save_ckpt_interval'] is not None:

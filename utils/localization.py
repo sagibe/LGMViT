@@ -371,20 +371,14 @@ def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True)
     # one_hot = torch.sum(one_hot.to(input.device) * output)
     model.zero_grad()
 
-    num_tokens = model.transformer.layers[0].attn.attn_maps.shape[-1]
+    num_tokens = model.vit_encoder.layers[0].attn.attn_maps.shape[-1]
     R = torch.eye(num_tokens, num_tokens).cuda()
     R = R.unsqueeze(0).expand(batch_size, num_tokens, num_tokens)
-    for i, blk in enumerate(model.transformer.layers):
+    for i, blk in enumerate(model.vit_encoder.layers):
         grad = torch.autograd.grad(one_hot, [blk.attn.attn_maps], retain_graph=True)[0]
         cam = blk.attn.attn_maps
         cam = avg_heads(cam, grad)
         R = R + apply_self_attention_rules(R, cam)
-    # for layer in range(attn.shape[1]):
-    #     cur_attn = attn[:, layer]
-    #     grad = torch.autograd.grad(one_hot, [cur_attn], retain_graph=True)[0]
-    #     # cam = blk.attn.get_attention_map()
-    #     cam = avg_heads(cur_attn, grad)
-    #     R = R + apply_self_attention_rules(R, cam)
     relevance = R[:, 0, 1:]
     if upscale:
         relevance = upscale_relevance(relevance)

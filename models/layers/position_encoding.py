@@ -177,23 +177,21 @@ class LearnedPositionalEncoding2D(nn.Module):
 
 
 def build_position_encoding(args):
-    # N_steps = args.MODEL.TRANSFORMER.EMBED_SIZE // 3
-    # modulo = args.MODEL.TRANSFORMER.EMBED_SIZE % 3
     if args.MODEL.POSITION_EMBEDDING.TYPE == 'sine':
-        if args.MODEL.TRANSFORMER.ATTENTION_3D:
-            position_embedding = PositionalEncodingSine3D(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,
+        if args.MODEL.VIT_ENCODER.ATTENTION_3D:
+            position_embedding = PositionalEncodingSine3D(embed_size=args.MODEL.VIT_ENCODER.EMBED_SIZE,
                                                        z_size=args.MODEL.POSITION_EMBEDDING.Z_SIZE,
                                                        fit_mode=args.MODEL.POSITION_EMBEDDING.FIT_MODE,
                                                        normalize=True,
                                                        device=args.DEVICE)
         else:
-            position_embedding = PositionalEncodingSine2D(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE)
+            position_embedding = PositionalEncodingSine2D(embed_size=args.MODEL.VIT_ENCODER.EMBED_SIZE)
 
     elif args.MODEL.POSITION_EMBEDDING.TYPE == 'learned':
-        if args.MODEL.TRANSFORMER.ATTENTION_3D:
-            position_embedding = LearnedPositionalEmbedding3D(embedding_dim=args.MODEL.TRANSFORMER.EMBED_SIZE)
+        if args.MODEL.VIT_ENCODER.ATTENTION_3D:
+            position_embedding = LearnedPositionalEmbedding3D(embedding_dim=args.MODEL.VIT_ENCODER.EMBED_SIZE)
         else:
-            position_embedding = LearnedPositionalEncoding2D(embed_size=args.MODEL.TRANSFORMER.EMBED_SIZE,
+            position_embedding = LearnedPositionalEncoding2D(embed_size=args.MODEL.VIT_ENCODER.EMBED_SIZE,
                                                              img_size=args.TRAINING.INPUT_SIZE,
                                                              patch_size=args.MODEL.PATCH_SIZE
                                                              )

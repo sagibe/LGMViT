@@ -18,8 +18,7 @@ import seaborn as sns
 from models.lgmvit import build_model
 import utils.util as utils
 from utils.engine import eval_test
-from datasets.proles2021_debug import ProLes2021DatasetDebug
-from datasets.picai2022_old import PICAI2021Dataset
+from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
@@ -140,7 +139,6 @@ if __name__ == '__main__':
     with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
         config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     config = utils.RecursiveNamespace(**config)
-    config.MODEL.PATCH_EMBED.BACKBONE_STAGES = int(math.floor(math.log(config.MODEL.PATCH_SIZE, 2.0))) - 1
     if settings['exp_name'] is None: settings['exp_name'] = settings['config_name']
 
     if config.DATA.OUTPUT_DIR:
