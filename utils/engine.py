@@ -380,6 +380,78 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             }
     # return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
+# def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.device,
+#                     max_norm: float = 0, cls_thresh: float = 0.5, save_attn_dir=None):
+#     with torch.no_grad():
+#         model.eval()
+#         metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
+#         metric_logger = utils.MetricLogger(delimiter="  ")
+#         metric_logger.add_meter('acc', None)
+#         metric_logger.add_meter('sensitivity', None)
+#         metric_logger.add_meter('specificity', None)
+#         metric_logger.add_meter('precision', None)
+#         metric_logger.add_meter('f1', None)
+#         metric_logger.add_meter('auroc', None)
+#         metric_logger.add_meter('auprc', None)
+#         metric_logger.add_meter('cohen_kappa', None)
+#         header = 'Test stats: '
+#         print_freq = 50
+#         for samples, labels, scan_id in metric_logger.log_every(data_loader, print_freq, header):
+#             samples = samples.squeeze(0).float().to(device)
+#             targets = labels[0].float().T.to(device)
+#             lesion_annot = labels[1].float().to(device)
+#             outputs, attn, _ = model(samples)
+#             metrics.update(outputs, targets)
+#             if max_norm > 0:
+#                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+#             metric_logger.update(acc=metrics.accuracy)
+#             metric_logger.update(sensitivity=metrics.sensitivity)
+#             metric_logger.update(specificity=metrics.specificity)
+#             metric_logger.update(precision=metrics.precision)
+#             metric_logger.update(f1=metrics.f1)
+#             metric_logger.update(auroc=metrics.auroc)
+#             metric_logger.update(auprc=metrics.auprc)
+#             metric_logger.update(cohen_kappa=metrics.cohen_kappa)
+#             if save_attn_dir:
+#                 save_dir = os.path.join(save_attn_dir, 'attn_maps')
+#                 os.makedirs(save_dir, exist_ok=True)
+#                 attn_maps = generate_spatial_attention(attn)
+#                 for slice in range(samples.shape[0]):
+#                     cur_slice = samples[slice].permute(1, 2, 0).cpu().numpy()
+#                     cur_annot = lesion_annot[0][slice].cpu().numpy()
+#                     cur_attn = attn_maps[slice].cpu()
+#                     cur_attn_heatmap = extract_heatmap(cur_attn, channel_reduction='select_max', resize_shape=cur_slice.shape[:2])
+#                     attn_over_img = generate_heatmap_over_img(cur_attn_heatmap, cur_slice, alpha=0.3)
+#                     attn_over_annot = generate_heatmap_over_img(cur_attn_heatmap, cur_annot, alpha=0.3)
+#
+#                     if cur_annot.sum() > 0:
+#                         fig, ax = plt.subplots(2, 3, figsize=(10, 7))
+#                         ax[0][0].imshow(cur_slice[...,0], cmap='gray')
+#                         ax[0][0].set_title('t2w')
+#                         ax[0][0].axis('off')
+#                         ax[0][1].imshow(cur_slice[...,1], cmap='gray')
+#                         ax[0][1].set_title('adc')
+#                         ax[0][1].axis('off')
+#                         ax[0][2].imshow(cur_slice[...,2], cmap='gray')
+#                         ax[0][2].set_title('dwi')
+#                         ax[0][2].axis('off')
+#                         ax[1][0].imshow(cur_slice)
+#                         ax[1][0].set_title('Meshed Modalities')
+#                         ax[1][0].axis('off')
+#                         ax[1][1].imshow(attn_over_img)
+#                         ax[1][1].set_title('Attention Over Slice')
+#                         ax[1][1].axis('off')
+#                         ax[1][2].imshow(attn_over_annot)
+#                         ax[1][2].set_title('Attention Over GT')
+#                         ax[1][2].axis('off')
+#                         plt.suptitle(f"Patient ID: {scan_id[0]}  Slice: {slice}\n")
+#                         fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice}.jpg'), dpi=150)
+#                         # plt.show()
+#
+#     return metrics
+
+
+
 def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.device,
                     max_norm: float = 0, cls_thresh: float = 0.5, save_attn_dir=None):
     with torch.no_grad():
@@ -400,52 +472,60 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
             samples = samples.squeeze(0).float().to(device)
             targets = labels[0].float().T.to(device)
             lesion_annot = labels[1].float().to(device)
-            outputs, attn, _ = model(samples)
-            metrics.update(outputs, targets)
-            if max_norm > 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-            metric_logger.update(acc=metrics.accuracy)
-            metric_logger.update(sensitivity=metrics.sensitivity)
-            metric_logger.update(specificity=metrics.specificity)
-            metric_logger.update(precision=metrics.precision)
-            metric_logger.update(f1=metrics.f1)
-            metric_logger.update(auroc=metrics.auroc)
-            metric_logger.update(auprc=metrics.auprc)
-            metric_logger.update(cohen_kappa=metrics.cohen_kappa)
-            if save_attn_dir:
-                save_dir = os.path.join(save_attn_dir, 'attn_maps')
-                os.makedirs(save_dir, exist_ok=True)
-                attn_maps = generate_spatial_attention(attn)
-                for slice in range(samples.shape[0]):
-                    cur_slice = samples[slice].permute(1, 2, 0).cpu().numpy()
-                    cur_annot = lesion_annot[0][slice].cpu().numpy()
-                    cur_attn = attn_maps[slice].cpu()
-                    cur_attn_heatmap = extract_heatmap(cur_attn, channel_reduction='select_max', resize_shape=cur_slice.shape[:2])
-                    attn_over_img = generate_heatmap_over_img(cur_attn_heatmap, cur_slice, alpha=0.3)
-                    attn_over_annot = generate_heatmap_over_img(cur_attn_heatmap, cur_annot, alpha=0.3)
 
-                    if cur_annot.sum() > 0:
-                        fig, ax = plt.subplots(2, 3, figsize=(10, 7))
-                        ax[0][0].imshow(cur_slice[...,0], cmap='gray')
-                        ax[0][0].set_title('t2w')
-                        ax[0][0].axis('off')
-                        ax[0][1].imshow(cur_slice[...,1], cmap='gray')
-                        ax[0][1].set_title('adc')
-                        ax[0][1].axis('off')
-                        ax[0][2].imshow(cur_slice[...,2], cmap='gray')
-                        ax[0][2].set_title('dwi')
-                        ax[0][2].axis('off')
-                        ax[1][0].imshow(cur_slice)
-                        ax[1][0].set_title('Meshed Modalities')
-                        ax[1][0].axis('off')
-                        ax[1][1].imshow(attn_over_img)
-                        ax[1][1].set_title('Attention Over Slice')
-                        ax[1][1].axis('off')
-                        ax[1][2].imshow(attn_over_annot)
-                        ax[1][2].set_title('Attention Over GT')
-                        ax[1][2].axis('off')
-                        plt.suptitle(f"Patient ID: {scan_id[0]}  Slice: {slice}\n")
-                        fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice}.jpg'), dpi=150)
-                        # plt.show()
+            scan_seg_size = 50
+            num_scan_segs = int(np.ceil(samples.shape[0] / scan_seg_size))
+            for scan_seg_idx in range(num_scan_segs):
+                cur_slices = samples[scan_seg_size * scan_seg_idx:scan_seg_size * (scan_seg_idx + 1)]
+                cur_targets = targets[scan_seg_size * scan_seg_idx:scan_seg_size * (scan_seg_idx + 1)]
+                outputs, attn, _ = model(cur_slices)
+                metrics.update(outputs, cur_targets)
+                # outputs, attn, _ = model(samples)
+                # metrics.update(outputs, targets)
+                if max_norm > 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+                metric_logger.update(acc=metrics.accuracy)
+                metric_logger.update(sensitivity=metrics.sensitivity)
+                metric_logger.update(specificity=metrics.specificity)
+                metric_logger.update(precision=metrics.precision)
+                metric_logger.update(f1=metrics.f1)
+                metric_logger.update(auroc=metrics.auroc)
+                metric_logger.update(auprc=metrics.auprc)
+                metric_logger.update(cohen_kappa=metrics.cohen_kappa)
+                if save_attn_dir:
+                    save_dir = os.path.join(save_attn_dir, 'attn_maps')
+                    os.makedirs(save_dir, exist_ok=True)
+                    attn_maps = generate_spatial_attention(attn)
+                    for slice in range(samples.shape[0]):
+                        cur_slice = samples[slice].permute(1, 2, 0).cpu().numpy()
+                        cur_annot = lesion_annot[0][slice].cpu().numpy()
+                        cur_attn = attn_maps[slice].cpu()
+                        cur_attn_heatmap = extract_heatmap(cur_attn, channel_reduction='select_max', resize_shape=cur_slice.shape[:2])
+                        attn_over_img = generate_heatmap_over_img(cur_attn_heatmap, cur_slice, alpha=0.3)
+                        attn_over_annot = generate_heatmap_over_img(cur_attn_heatmap, cur_annot, alpha=0.3)
 
-    return metrics
+                        if cur_annot.sum() > 0:
+                            fig, ax = plt.subplots(2, 3, figsize=(10, 7))
+                            ax[0][0].imshow(cur_slice[...,0], cmap='gray')
+                            ax[0][0].set_title('t2w')
+                            ax[0][0].axis('off')
+                            ax[0][1].imshow(cur_slice[...,1], cmap='gray')
+                            ax[0][1].set_title('adc')
+                            ax[0][1].axis('off')
+                            ax[0][2].imshow(cur_slice[...,2], cmap='gray')
+                            ax[0][2].set_title('dwi')
+                            ax[0][2].axis('off')
+                            ax[1][0].imshow(cur_slice)
+                            ax[1][0].set_title('Meshed Modalities')
+                            ax[1][0].axis('off')
+                            ax[1][1].imshow(attn_over_img)
+                            ax[1][1].set_title('Attention Over Slice')
+                            ax[1][1].axis('off')
+                            ax[1][2].imshow(attn_over_annot)
+                            ax[1][2].set_title('Attention Over GT')
+                            ax[1][2].axis('off')
+                            plt.suptitle(f"Patient ID: {scan_id[0]}  Slice: {slice}\n")
+                            fig.savefig(os.path.join(save_dir, f'Patient_{scan_id[0]}_Slice_{slice}.jpg'), dpi=150)
+                            # plt.show()
+
+        return metrics

@@ -25,17 +25,17 @@ from utils.localization import generate_spatial_attention, extract_heatmap, gene
 
 SETTINGS = {
     'model_1': {
-            'config': 'vit_B16_2D_cls_token_brats20_split3_input256_baseline',
+            'config': 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline',
             'exp_name': None,  # if None default is config_name
             'plot_name': 'ViT-B '},  # if None default is config_name
     'model_2': {
-        'config': 'vit_B16_2D_cls_token_brats20_split3_input256_lgm_fusion_b_learned_i05_kl_a250_gtproc_gauss_51',
+        'config': 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000',
         'exp_name': None,  # if None default is config_name
         'plot_name': 'LGM-ViT'},  # if None default is config_name
-    'dataset_name': 'brats20_split3',
-    'data_path': '/mnt/DATA1/Sagi/Data/BraTS2020_split3/MICCAI_BraTS2020_TrainingData/',
-    'data_split_file': '../datasets/data_splits/brats20_split3/train_val_test_split.json',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/attn_comparison/',
+    'dataset_name': 'brats20',
+    'data_path': '/mnt/DATA1/Sagi/Data/BraTS2020/',
+    'data_split_file': '../datasets/data_splits/brats20/train_val_test_split.json',
+    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/attn_comparison/brats20/',
     'output_name': None,  # if None default is datetime
     'save_results': True,
 
@@ -67,17 +67,17 @@ def main(settings):
     model_1.to(device)
 
     if isinstance(config1.TEST.CHECKPOINT, int):
-        checkpoint_path = os.path.join(config1.DATA.OUTPUT_DIR, settings['model_1']['exp_name'], 'ckpt',
+        checkpoint_path = os.path.join(config1.DATA.OUTPUT_DIR, settings['dataset_name'], settings['model_1']['exp_name'], 'ckpt',
                                        f'checkpoint{config1.TEST.CHECKPOINT:04}.pth')
     elif isinstance(config1.TEST.CHECKPOINT, str):
         if 'best' in config1.TEST.CHECKPOINT:
-            checkpoint_path = os.path.join(config1.DATA.OUTPUT_DIR, settings['model_1']['exp_name'], 'ckpt',
+            checkpoint_path = os.path.join(config1.DATA.OUTPUT_DIR, settings['dataset_name'], settings['model_1']['exp_name'], 'ckpt',
                                            'checkpoint_best.pth')
         elif '/' in config1.TEST.CHECKPOINT:
             checkpoint_path = config1.TEST.CHECKPOINT
         else:
             if (config1.TEST.CHECKPOINT).endswith('.pth'):
-                checkpoint_path = os.path.join(config1.DATA.OUTPUT_DIR, settings['model_1']['exp_name'], 'ckpt',
+                checkpoint_path = os.path.join(config1.DATA.OUTPUT_DIR, settings['dataset_name'], settings['model_1']['exp_name'], 'ckpt',
                                                config1.TEST.CHECKPOINT)
             else:
                 checkpoint_path = ''
@@ -101,17 +101,17 @@ def main(settings):
     model_2.to(device)
 
     if isinstance(config2.TEST.CHECKPOINT, int):
-        checkpoint_path = os.path.join(config2.DATA.OUTPUT_DIR, settings['model_2']['exp_name'], 'ckpt',
+        checkpoint_path = os.path.join(config2.DATA.OUTPUT_DIR, settings['dataset_name'], settings['model_2']['exp_name'], 'ckpt',
                                        f'checkpoint{config2.TEST.CHECKPOINT:04}.pth')
     elif isinstance(config2.TEST.CHECKPOINT, str):
         if 'best' in config2.TEST.CHECKPOINT:
-            checkpoint_path = os.path.join(config2.DATA.OUTPUT_DIR, settings['model_2']['exp_name'], 'ckpt',
+            checkpoint_path = os.path.join(config2.DATA.OUTPUT_DIR, settings['dataset_name'], settings['model_2']['exp_name'], 'ckpt',
                                            'checkpoint_best.pth')
         elif '/' in config2.TEST.CHECKPOINT:
             checkpoint_path = config2.TEST.CHECKPOINT
         else:
             if (config2.TEST.CHECKPOINT).endswith('.pth'):
-                checkpoint_path = os.path.join(config2.DATA.OUTPUT_DIR, settings['model_2']['exp_name'], 'ckpt',
+                checkpoint_path = os.path.join(config2.DATA.OUTPUT_DIR, settings['dataset_name'], settings['model_2']['exp_name'], 'ckpt',
                                                config2.TEST.CHECKPOINT)
             else:
                 checkpoint_path = ''
@@ -332,14 +332,15 @@ def main(settings):
                 # # plt.show()
                 # ###################################
                 #################################
-                fig, ax = plt.subplots(1, 2, figsize=(10, 6))
+                # fig, ax = plt.subplots(1, 2, figsize=(10, 6))
+                fig, ax = plt.subplots(2, 1, figsize=(5, 10))
                 ax[0].imshow(attn_over_slice_w_aanot_1)
-                ax[0].set_title('Vanilla ViT')
-                ax[0].title.set_size(25)
+                # ax[0].set_title('Vanilla ViT')
+                # ax[0].title.set_size(25)
                 ax[0].axis('off')
                 ax[1].imshow(attn_over_slice_w_aanot_2)
-                ax[1].set_title('LGM-ViT')
-                ax[1].title.set_size(25)
+                # ax[1].set_title('LGM-ViT')
+                # ax[1].title.set_size(25)
                 ax[1].axis('off')
                 # ax[1][0].imshow(attn_over_annot_1)
                 # # ax[1][0].imshow(attn_over_pred_mask_1)
