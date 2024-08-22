@@ -1,31 +1,19 @@
 import numpy as np
-import math
 import os
 import time
 import datetime
 import torch
 from torch import nn
-import yaml
 import json
-import wandb
 import random
 from pathlib import Path
-import utils.transforms as T
 
 from configs.config import get_default_config, update_config_from_file
-from datasets.atlasR2 import AtlasR2Dataset
 from datasets.brats20 import BraTS20Dataset
-from datasets.brats21 import BraTS21Dataset
-from datasets.covid1920 import Covid1920Dataset
-from datasets.isles22 import Isles22Dataset
-from datasets.kits21_lesions import KiTS21Dataset
-from datasets.kits23 import KiTS23Dataset
 from datasets.lits17 import LiTS17Dataset
-from datasets.node21 import Node21Dataset
 from models.lgmvit import build_model
 import utils.util as utils
 from utils.engine import train_one_epoch, eval_epoch
-from datasets.picai2022 import PICAI2021Dataset
 
 from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 from utils.losses import FocalLoss, FGBGLoss
@@ -47,341 +35,14 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20',
-    # 'config_name': ['brats20_debug_vit'
-    #                 ],
-    'config_name': [
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_13',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final_seed_13',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_final_seed_13',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100_final_seed_13',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50_final_seed_13',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_1_final_seed_13',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_1_final_seed_13',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_1_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_1_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_1_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_1_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_66',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final_seed_66',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_final_seed_66',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_36',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_77',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_25',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_26',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_1_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_1_final_seed_61',
-        # # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_1_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_1_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_1_final_seed_42',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_5_final_seed_42',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a1_final_seed_42',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a2_final_seed_42',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a10_final_seed_42',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_1_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_5_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a1_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a2_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a10_final_seed_61',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_1_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_1_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_1_final_seed_7',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_5_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a1_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a2_final_seed_88',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a10_final_seed_88',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_86_seed_100',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_86_seed_88',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_172_seed_100',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_172_seed_88',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_86_seed_61',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_172_seed_61',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_86_seed_7',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_172_seed_7',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a100_final_seed_42',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a100_final_seed_88',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a100_final_seed_100',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_1_final_seed_42',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_1_final_seed_88',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_1_final_seed_100',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a10_final_seed_42',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a10_final_seed_88',
-        'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a10_final_seed_100',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final_seed_67',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final_seed_67',
-        # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_final_seed_67',
-        # 'vit_B16_2D_cls_token_lits17_liver_bs32_input256_baseline_final',
-        # 'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_final',
-        # 'vit_B16_2D_cls_token_lits17_liver_bs32_input256_gradmask_relevance_a0_1_final',
-        # 'vit_B16_2D_cls_token_lits17_liver_bs32_input256_robust_vit_a1_final',
-        # 'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_d2_relevance_a0_5_final',
-        # 'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_g_relevance_a0_5_final',
-    ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_baseline_final',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_final',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100_final',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50_final',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_1_final',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_1_final',
-    # ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a100_final',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_relevance_map_kl_a250_final',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_last_layer_attn_kl_a250_final',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_bb_feat_kl_a250_final',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_30_final',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_fusion_b0_95_kl_a250_patients_60_final',
-    # ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_86_final',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_172_final',
-    # ],
-    # 'config_name': [
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_1',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_1',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_25',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_50',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_75',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_100',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_125',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_150',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_175',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_200',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_225',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_last_layer_attn_kl_a750',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_last_layer_attn_kl_a1000',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_bb_feat_kl_a750',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_bb_feat_kl_a1000',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_rollout_attn_kl_a1',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_rollout_attn_kl_a10',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_rollout_attn_kl_a100',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_rollout_attn_kl_a250',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_rollout_attn_kl_a500',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_rollout_attn_kl_a1000',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_relevance_map_kl_a1',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_relevance_map_kl_a10',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_relevance_map_kl_a100',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_relevance_map_kl_a250',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_relevance_map_kl_a500',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_relevance_map_kl_a1000',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_25',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_50',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_75',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_100',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_125',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_150',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_175',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_200',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750_patient_225',
-    # ],
-    # 'config_name': [
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_baseline',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_9_kl_a700',
-    #     # 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_9_kl_a800',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_9_kl_a300',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_9_kl_a250',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a800',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_8_kl_a750',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100',
-    #                 ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_1',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_5',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a10',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a50',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a100',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a250',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a500',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1000',
-    #                 ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_01',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_relevance_a0_01',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_relevance_a0_01',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_rollout_a1',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_rollout_a10',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_rollout_a100',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_rollout_a1',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_rollout_a10',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_rollout_a100',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_rollout_a1',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_rollout_a10',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_rollout_a100',
-    #                 ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_d2_rollout_a0_5',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_d2_rollout_a1',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_d2_rollout_a10',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_d2_rollout_a100',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_g_rollout_a0_5',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_g_rollout_a1',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_g_rollout_a10',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_res_g_rollout_a100',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_gradmask_rollout_a0_5',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_gradmask_rollout_a1',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_gradmask_rollout_a10',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_gradmask_rollout_a100',
-    # ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_86',
-    #     'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_patient_172',
-    # ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a1',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a10',
-    #     'vit_B16_2D_cls_token_lits17_liver_bs32_input256_lgm_rollout_attn_kl_a100'
-    # ],
-    # 'config_name': [
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a0_1',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a0_5',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a1',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a10',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_robust_vit_a100',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a0_1',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a0_5',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a1',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a10',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_res_d2_relevance_a10',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a0_1',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a0_5',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a1',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a10',
-    #     'vit_B16_2D_cls_token_brats21_bs32_input256_gradmask_relevance_a100',
-    # ],
-    # 'config_name': [
-    #                 # # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a500',
-    #                 # # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a750',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a1000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a1500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a2000',
-    #                 # # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a2500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_05_kl_a3000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a750',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a1000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a1500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a2000',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a2500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_1_kl_a3000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a750',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a1000',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a1500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a2000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a2500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_25_kl_a3000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a750',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a1000',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a1500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a2000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a2500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_5_kl_a3000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a750',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a1000',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a1500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a2000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a2500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_75_kl_a3000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a500',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a750',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a1000',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a1500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a2000',
-    #                 # 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a2500',
-    #                 'vit_B16_2D_cls_token_brats21_bs32_input256_lgm_fusion_b0_9_kl_a3000',
-    #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_75_kl_a250',
-    #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_9_kl_a250',
-    #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_95_kl_a250',
-    #                 'vit_B16_2D_cls_token_kits23_lesions_bs32_input256_mask_kidney_crop_all_dims_lgm_fusion_b0_99_kl_a250',
-    #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a0_001',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a10',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a100',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a250',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a500',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_relevance_a0_01',
-    #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a0_5',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a10',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a100',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a250',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a500',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1000',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a0_5',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a10',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a100',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a250',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a500',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1000',
-    #                 ],
-    # 'config_name': ['vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a0_5',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a10',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a100',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a250',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a500',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_robust_vit_a1000',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a0_5',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a10',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a100',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a250',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a500',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_gradmask_a1000',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a0_5',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a10',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a100',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a250',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a500',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_d2_a1000',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a0_5',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a10',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a100',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a250',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a500',
-    #                 'vit_B16_2D_cls_token_brats20_bs32_input256_res_g_a1000',
-    #                 ],
+    'config_name': ['brats_debug_vit'
+                    ],
     'exp_name': None,  # if None default is config_name
-    'data_fold': None,  # None to take fold number from config
-    'use_wandb': True,
+    'use_wandb': False,
     'wandb_proj_name': 'LGMViT_brats20_new',  # LGMViT_brats20_new LGMViT_lits17_liver LGMViT_atlasR2 LGMViT_isles22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
-    'save_ckpt_interval': 5,
-    'seed': 61
+    'seed': 42
 }
 
 def main(config, settings):
@@ -416,10 +77,8 @@ def main(config, settings):
     optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,weight_decay=config.TRAINING.WEIGHT_DECAY)
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.TRAINING.EPOCHS, eta_min=config.TRAINING.LR/100)
-    # criterion = nn.BCELoss()
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
-        # criterion = nn.CrossEntropyLoss()
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
     if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
@@ -435,60 +94,11 @@ def main(config, settings):
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} localization loss type not supported")
 
-    # # transforms
-    # transforms = T.Compose([
-    #     T.ToTensor()
-    # ])
     # Data loading
     data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
     with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
         split_dict = json.load(f)
-    if 'picai' in config.DATA.DATASETS:
-        dataset_train = PICAI2021Dataset(data_dir,
-                                         split_dict=split_dict,
-                                         scan_set='train',
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         prostate_mask_dir=config.DATA.PREPROCESS.GLAND_SEG_DIR,
-                                         prostate_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                         crop_prostate_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                         crop_prostate_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
-        dataset_val = PICAI2021Dataset(data_dir,
-                                       split_dict=split_dict,
-                                       scan_set='val',
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       prostate_mask_dir=config.DATA.PREPROCESS.GLAND_SEG_DIR,
-                                       prostate_masking=config.DATA.PREPROCESS.MASK_PROSTATE,
-                                       crop_prostate_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                       crop_prostate_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
-    elif 'node21' in config.DATA.DATASETS:
-        dataset_train = Node21Dataset(data_dir,
-                                         scan_set='train',
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
-        dataset_val = Node21Dataset(data_dir,
-                                       scan_set='val',
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
-    elif 'covid_19_20' in config.DATA.DATASETS:
-        dataset_train = Covid1920Dataset(data_dir,
-                                         scan_set='train',
-                                         split_dict=split_dict,
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
-        dataset_val = Covid1920Dataset(data_dir,
-                                       scan_set='val',
-                                       split_dict=split_dict,
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
-    elif 'BraTS2020' in config.DATA.DATASETS:
+    if 'BraTS2020' in config.DATA.DATASETS:
         dataset_train = BraTS20Dataset(data_dir,
                                          scan_set='train',
                                          split_dict=split_dict,
@@ -505,51 +115,6 @@ def main(config, settings):
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
                                        scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
-    elif 'BraTS2021' in config.DATA.DATASETS:
-        dataset_train = BraTS21Dataset(data_dir,
-                                         scan_set='train',
-                                         split_dict=split_dict,
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
-                                         random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
-        dataset_val = BraTS21Dataset(data_dir,
-                                       scan_set='val',
-                                       split_dict=split_dict,
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE,
-                                       random_slice_segment=config.TRAINING.MAX_SCAN_SIZE)
-    elif 'ATLAS_R2_0' in config.DATA.DATASETS:
-        dataset_train = AtlasR2Dataset(data_dir,
-                                         scan_set='train',
-                                         split_dict=split_dict,
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
-        dataset_val = AtlasR2Dataset(data_dir,
-                                       scan_set='val',
-                                       split_dict=split_dict,
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
-    elif 'isles2022' in config.DATA.DATASETS:
-        dataset_train = Isles22Dataset(data_dir,
-                                         modality='dwi',
-                                         scan_set='train',
-                                         split_dict=split_dict,
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
-        dataset_val = Isles22Dataset(data_dir,
-                                       modality='dwi',
-                                       scan_set='val',
-                                       split_dict=split_dict,
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
     elif 'LiTS17' in config.DATA.DATASETS:
         dataset_train = LiTS17Dataset(data_dir,
                                          scan_set='train',
@@ -578,55 +143,6 @@ def main(config, settings):
                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
                                        scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
-    elif 'kits21' in config.DATA.DATASETS:
-        dataset_train = KiTS21Dataset(data_dir,
-                                         scan_set='train',
-                                         split_dict=split_dict,
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                         crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                         crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                         random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING)
-        dataset_val = KiTS21Dataset(data_dir,
-                                       scan_set='val',
-                                       split_dict=split_dict,
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                       crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                       crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                       random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING)
-    elif 'kits23' in config.DATA.DATASETS:
-        dataset_train = KiTS23Dataset(data_dir,
-                                         scan_set='train',
-                                         split_dict=split_dict,
-                                         input_size=config.TRAINING.INPUT_SIZE,
-                                         batch_size=config.TRAINING.BATCH_SIZE,
-                                         annot_type=config.DATA.ANNOT_TYPE,
-                                         resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                         kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                         crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                         crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                         random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                         last_batch_min_ratio=config.TRAINING.LAST_BATCH_MIN_RATIO,
-                                         padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                         scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
-        dataset_val = KiTS23Dataset(data_dir,
-                                       scan_set='val',
-                                       split_dict=split_dict,
-                                       input_size=config.TRAINING.INPUT_SIZE,
-                                       batch_size=config.TRAINING.BATCH_SIZE,
-                                       annot_type=config.DATA.ANNOT_TYPE,
-                                       resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
-                                       kidney_masking=config.DATA.PREPROCESS.MASK_ORGAN,
-                                       crop_kidney_slices=config.DATA.PREPROCESS.CROP_ORGAN_SLICES,
-                                       crop_kidney_spatial=config.DATA.PREPROCESS.CROP_ORGAN_SPATIAL,
-                                       random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
-                                       padding=config.DATA.PREPROCESS.CROP_PADDING,
-                                       scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
 
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
@@ -637,17 +153,15 @@ def main(config, settings):
 
     batch_sampler_train = BatchSampler(sampler_train, 1, drop_last=True)
     data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train, num_workers=config.TRAINING.NUM_WORKERS)
-    # data_loader_train = DataLoader(dataset_train, num_workers=config.TRAINING.NUM_WORKERS)
 
     batch_sampler_val = BatchSampler(sampler_val, 1, drop_last=True)
     data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
-    # data_loader_val = DataLoader(dataset_val, num_workers=config.TRAINING.NUM_WORKERS)
 
     output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['dataset_name'], settings['exp_name'])
     ckpt_dir = os.path.join(output_dir, 'ckpt')
     os.makedirs(ckpt_dir, exist_ok=True)
 
-    if config.TRAINING.RESUME:
+    if config.TRAINING.RESUME: # TODO
         if config.TRAINING.RESUME.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
                 config.TRAINING.RESUME, map_location='cpu', check_hash=True)
@@ -670,7 +184,7 @@ def main(config, settings):
     best_epoch_stat = -np.inf
     best_epoch_stat_multi = -np.inf
     for epoch in range(config.TRAINING.START_EPOCH, config.TRAINING.EPOCHS + 1):
-        # if config.distributed:
+        # if config.distributed: # TODO
         #     sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, criterion, localization_criterion, data_loader_train, optimizer, device, epoch,
@@ -695,17 +209,7 @@ def main(config, settings):
                 wandb_logger(train_stats, epoch=epoch)
         lr_scheduler.step()
         if config.DATA.OUTPUT_DIR:
-            # checkpoint_paths = [os.path.join(ckpt_dir, 'checkpoint.pth')]
             checkpoint_paths = []
-            ##### old ########
-            # try:
-            #     if val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION] >= best_epoch_stat:
-            #         checkpoint_paths.append(os.path.join(ckpt_dir, 'checkpoint_best.pth'))
-            #         best_epoch_stat = val_stats[config.TRAINING.SAVE_BEST_CKPT_CRITERION]
-            # except:
-            #     print('WARNING: Cant save best epoch checkpoint - unsupported validation metric or validation stats not available')
-            ####### old #######
-            # # extra checkpoint before LR drop and every epochs
             if isinstance(config.TRAINING.SAVE_BEST_CKPT_CRITERION, list):
                 single_stat = config.TRAINING.SAVE_BEST_CKPT_CRITERION[0]
                 if len(config.TRAINING.SAVE_BEST_CKPT_CRITERION) > 1:
@@ -751,7 +255,6 @@ def main(config, settings):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-    # print('hi')
 
 # # Single Run Mode
 # if __name__ == '__main__':
@@ -777,18 +280,7 @@ if __name__ == '__main__':
     for config_name in settings['config_name']:
         config = get_default_config()
         update_config_from_file(f"configs/{settings['dataset_name']}/{config_name}.yaml", config)
-        if settings['data_fold'] is not None:
-            config.DATA.DATA_FOLD = settings['data_fold']
-        if settings['save_ckpt_interval'] is not None:
-            config.TRAINING.SAVE_CKPT_INTERVAL = settings['save_ckpt_interval']
-        # with open('configs/'+settings['config_name']+'.yaml', "r") as yamlfile:
-        #     config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-        # config = utils.RecursiveNamespace(**config)
-        fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
         settings['exp_name'] = config_name
-
-        if settings['seed'] != int(config_name.split('_')[-1]):
-            settings['seed'] = int(config_name.split('_')[-1])
 
         # W&B logger initialization
         if settings['use_wandb']:

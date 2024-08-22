@@ -1,11 +1,5 @@
-import json
-from collections import OrderedDict
-from pathlib import Path
 import os
-import pickle
-import matplotlib.pyplot as plt
 import cv2
-
 import numpy as np
 import scipy
 import torch
@@ -18,8 +12,6 @@ class LiTS17Dataset:
                  random_slice_segment=None, last_batch_min_ratio=0, padding=0, scan_norm_mode='slice'):
         self.data_dir = data_dir
         self.scan_list = split_dict[scan_set]
-        # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
-
         self.input_size = input_size
         self.batch_size = batch_size
         self.annot_type = annot_type
@@ -37,8 +29,6 @@ class LiTS17Dataset:
         return len(self.scan_list)
 
     def __getitem__(self, idx):
-        # scan_id = self.scan_list[idx]
-        # R_num, scan_id  = self.scan_list[idx].split('/')
         scan_id = self.scan_list[idx].split('.')[0].split('-')[1]
         ct_path = os.path.join(self.data_dir, 'scans', f'volume-{scan_id}.nii')
         seg_path = os.path.join(self.data_dir, 'segmentations', f'segmentation-{scan_id}.nii')
@@ -89,13 +79,6 @@ class LiTS17Dataset:
                 binary_seg_labels = binary_seg_labels[random_idx:random_idx + random_slice_segment]
                 cls_labels = cls_labels[random_idx:random_idx + random_slice_segment]
 
-        # f, ax = plt.subplots(1, 3)
-        # slice = 10
-        # ax[0].imshow(img_t2w[slice,:,:], cmap='gray')
-        # ax[1].imshow(img_adc[slice,:,:], cmap='gray')
-        # ax[2].imshow(img_dwi[slice,:,:], cmap='gray')
-        # plt.show()
-
         if self.input_size != ct.shape[1]:
             if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < ct.shape[1]):
                 ct = resize_scan(ct, size=self.input_size)
@@ -109,22 +92,6 @@ class LiTS17Dataset:
             scale_factor_h = self.input_size / binary_seg_labels.shape[-2]
             scale_factor_w = self.input_size / binary_seg_labels.shape[-1]
             binary_seg_labels = scipy.ndimage.zoom(binary_seg_labels, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
-            # liver_masks = scipy.ndimage.zoom(liver_masks, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
-
-        # for slice_num in range(binary_seg_labels.shape[0]):
-        #     if binary_seg_labels[slice_num].sum() > 0:
-        #         f, ax = plt.subplots(1, 3, figsize=(14, 4))
-        #         ax[0].imshow(ct[slice_num], cmap='gray')
-        #         ax[1].imshow(liver_masks[slice_num], cmap='gray')
-        #         ax[2].imshow(binary_seg_labels[slice_num], cmap='gray')
-        #         plt.show()
-
-        # f, ax = plt.subplots(1, 3)
-        # slice = 10
-        # ax[0].imshow(img_t2w[slice,:,:], cmap='gray')
-        # ax[1].imshow(img_adc[slice,:,:], cmap='gray')
-        # ax[2].imshow(img_dwi[slice,:,:], cmap='gray')
-        # plt.show()
 
         scan = np.stack([ct, ct, ct], axis=1)
 
@@ -138,23 +105,13 @@ class LiTS17Dataset:
         #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], binary_seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
         #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
 
-        # if True:
-        #     str_idx = 0
-        #     seg_size = 16
-        #     labels = [cls_labels[str_idx:str_idx+seg_size], binary_seg_labels[str_idx:str_idx+seg_size]]
-        #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
-
         labels = [cls_labels, binary_seg_labels]
         return tuple([scan, labels, scan_id])
-        # return tuple([img_concat, binary_seg_labels if self.get_binary_seg_labels else cls_labels])
 
 def resize_scan(scan, size=256):
-    # zoom_factor = (1, size/scan.shape[1], size/scan.shape[2])
-    # scan_rs = scipy.ndimage.zoom(scan,zoom_factor)
     scan_rs = np.zeros((len(scan), size, size))
     for idx in range(len(scan)):
         cur_slice = scan[idx, :, :]
-        # cur_slice_rs = skimage.transform.resize(cur_slice, (size, size),anti_aliasing=True)
         cur_slice_rs = cv2.resize(cur_slice, (size, size), interpolation=cv2.INTER_CUBIC)
         scan_rs[idx, :, :] = cur_slice_rs
     return scan_rs
@@ -170,7 +127,6 @@ def min_max_norm_slice(scan):
             cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
             scan_norm[idx, :, :] = cur_slice_norm
     return scan_norm
-
 
 def get_square_crop_coords(mask, padding=0):
     y1 = x1 = np.inf

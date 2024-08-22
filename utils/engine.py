@@ -4,19 +4,12 @@ Modified from DETR (https://github.com/facebookresearch/detr)
 """
 import numbers
 import numpy as np
-import math
 import os
-import sys
 import json
 from typing import Iterable
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch import sigmoid
 import matplotlib.pyplot as plt
-import cv2
-from pytorch_grad_cam import GradCAM
-# from mmengine.visualization import Visualizer
 
 import utils.util as utils
 from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attention, \
@@ -24,16 +17,6 @@ from utils.localization import extract_heatmap, generate_heatmap_over_img, gener
     generate_learned_processed_annotations, attention_rollout
 
 
-# from datasets.coco_eval import CocoEvaluator
-# from datasets.panoptic_eval import PanopticEvaluator
-def reshape_transform(tensor, height=16, width=16):
-    result = tensor[:, 1:, :].reshape(tensor.size(0),
-                                      height, width, tensor.size(2))
-
-    # Bring the channels to the first dimension,
-    # like in CNNs.
-    result = result.transpose(2, 3).transpose(1, 2)
-    return result
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localization_criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, localization_loss_params: dict,
@@ -56,7 +39,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
     metric_logger.add_meter('cohen_kappa', None)
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 50
-    # count = 0
     metric_logger.update(localization_loss=0)
     if localization_loss_params.USE and localization_loss_params.PATIENT_LIST is not None:
         with open(localization_loss_params.PATIENT_LIST, 'r') as f:
@@ -80,20 +62,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
 
             cls_loss = criterion(outputs, cur_targets)
 
-            # localization loss
+            # Localization Loss
             if localization_loss_params.USE and cur_targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
                 reduced_attn_maps = reduced_bb_feat_maps = None
-                # if localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
-                #     attn_maps = generate_spatial_attention(attn, mode='cls_token')
-                #     bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
-                #     fusion_experimental_maps = torch.cat([attn_maps, bb_feat_map], dim=1)
-                #     reduced_fusion_experimental_maps = model.channel_reduction_exp_fusion(fusion_experimental_maps).permute(1,0,2,3)
-                #     reduced_fusion_experimental_maps = F.interpolate(reduced_fusion_experimental_maps,
-                #                              cur_lesion_annot.shape[-2:],
-                #                              mode=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                #                              align_corners=False).to(device)
                 if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
-                    # spatial_feat_maps = attn_maps
                     if localization_loss_params.ATTENTION_METHOD == 'raw_attn':
                         if use_cls_token:
                             attn_maps = generate_spatial_attention(attn, mode='cls_token')
@@ -117,10 +89,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                                                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                                                                     resize_shape=cur_lesion_annot.shape[-2:])
-                            # reduced_attn_maps = extract_heatmap(attn_maps,
-                            #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                            #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                            #                                     resize_shape=attn_maps.shape[-2:])
                         reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
                     elif localization_loss_params.ATTENTION_METHOD == 'relevance_map':
                         if 'res' in localization_loss_params.TYPE:
@@ -136,7 +104,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                         if 'res' not in localization_loss_params.TYPE:
                             reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
                 if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
-                    # spatial_feat_maps = bb_feat_map
                     if use_cls_token:
                         bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
                     else:
@@ -153,27 +120,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                                                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
                                                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
                                                                     resize_shape=cur_lesion_annot.shape[-2:])
-                    # reduced_bb_feat_maps = extract_heatmap(bb_feat_map,
-                    #                                             feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                    #                                             channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                    #                                             resize_shape=attn_maps.shape[-2:])
                     reduced_bb_feat_maps = reduced_bb_feat_maps.unsqueeze(0).to(device)
-                # if localization_loss_params.SPATIAL_FEAT_SRC in ['relevance_map']:
-                #     attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh)
-                # reduced_spatial_feat_maps = extract_heatmap(spatial_feat_maps,
-                #                                     feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
-                #                                     channel_reduction=localization_loss_params.FEAT_CHANNEL_REDUCTION,
-                #                                     resize_shape=cur_lesion_annot.shape[-2:])
-                # reduced_spatial_feat_maps = reduced_spatial_feat_maps.unsqueeze(0).to(device)
-                # cur_lesion_annot = F.interpolate(cur_lesion_annot, scale_factor=(scale_factor_h, scale_factor_w), mode='bilinear')
-                # ################
-                # import matplotlib.pyplot as plt
-                # slice = 7
-                # fig, (ax1, ax2) = plt.subplots(1, 2)
-                # ax1.imshow(attn_map[0, slice, :, :].cpu().detach().numpy())
-                # ax2.imshow(cur_lesion_annot[0, slice, :, :].cpu().detach().numpy())
-                # plt.show()
-                ################
 
                 if localization_loss_params.SPATIAL_FEAT_SRC == 'attn':
                     reduced_spatial_feat_maps = reduced_attn_maps
@@ -185,28 +132,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                     else:
                         beta = model.beta
                     reduced_spatial_feat_maps = reduced_attn_maps * beta + reduced_bb_feat_maps * (1 - beta)
-                # elif localization_loss_params.SPATIAL_FEAT_SRC == 'fusion_experimental':
-                #     reduced_spatial_feat_maps = reduced_fusion_experimental_maps
-                # elif localization_loss_params.SPATIAL_FEAT_SRC == 'relevance_map':
-                #     reduced_spatial_feat_maps = relevance_maps
 
                 if 'res' in localization_loss_params.TYPE:
                     width = height = reduced_spatial_feat_maps.shape[-1]
-                    # cur_lesion_annot_org_ds = resize_binary_masks(cur_lesion_annot, target_size=(width, height))
                     cur_lesion_annot_org_ds = torch.nn.functional.interpolate(cur_lesion_annot, (width, height), mode='nearest')
 
                 if localization_loss_params.GT_SEG_PROCESS_METHOD == 'gauss' and localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0:
                     cur_lesion_annot = generate_gauss_blur_annotations(cur_lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
                 elif 'learned' in localization_loss_params.GT_SEG_PROCESS_METHOD:
                     cur_lesion_annot = generate_learned_processed_annotations(model, cur_lesion_annot, cur_slices, mode=localization_loss_params.GT_SEG_PROCESS_METHOD)
-                # if 'res' not in localization_loss_params.TYPE or localization_loss_params.TYPE == 'res_gauss':
-                #     if localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0 and localization_loss_params.GT_SEG_PROCESS_METHOD == 'gauss':
-                #         cur_lesion_annot = generate_gauss_blur_annotations(cur_lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
-                #     elif 'learned' in localization_loss_params.GT_SEG_PROCESS_METHOD:
-                #         cur_lesion_annot = generate_learned_processed_annotations(model, cur_lesion_annot, cur_slices, mode=localization_loss_params.TYPE)
-                # else:
-                #     cur_lesion_annot = generate_learned_processed_annotations(model, cur_lesion_annot, cur_slices, mode=localization_loss_params.TYPE)
-                #     # cur_lesion_annot_res_trans = generate_learned_processed_annotations(model, cur_lesion_annot, cur_slices, mode=localization_loss_params.TYPE)
                 if localization_loss_params.TYPE == 'mse':
                     localization_loss = localization_loss_params.ALPHA * \
                                          localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()),
@@ -265,11 +199,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             loss_value += loss.item()
             cls_loss_value += cls_loss.item()
             metrics.update(outputs, cur_targets)
-            # optimizer.zero_grad()
             loss.backward()
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-            # optimizer.step()
 
             if ((scan_seg_idx + 1) % acc_steps == 0) or ((scan_seg_idx + 1) == num_scan_segs):
                 optimizer.step()
@@ -285,10 +217,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                 metric_logger.update(auroc=metrics.auroc)
                 metric_logger.update(auprc=metrics.auprc)
                 metric_logger.update(cohen_kappa=metrics.cohen_kappa)
-                # metric_logger.update(class_error=loss_dict_reduced['class_error'])
                 metric_logger.update(lr=optimizer.param_groups[0]["lr"])
-                # with torch.no_grad():
-                #     torch.cuda.empty_cache()
                 loss_value = 0
                 cls_loss_value = 0
 
@@ -299,7 +228,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
-    # test = metric_logger.meters['sensitivity'].global_avg
     return {'loss': metric_logger.meters['loss'].global_avg,
             'cls_loss': metric_logger.meters['cls_loss'].global_avg,
             'localization_loss': metric_logger.meters['localization_loss'].global_avg,
@@ -313,7 +241,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             'cohen_kappa': metrics.cohen_kappa,
             'lr': metric_logger.meters['lr'].global_avg,
             }
-    # return {k: meter.avg for k, meter in metric_logger.meters.items()}
 
 def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, device: torch.device, epoch: int,
@@ -348,8 +275,6 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                 loss = criterion(outputs, cur_targets)
                 loss_value += loss.item()
                 metrics.update(outputs, cur_targets)
-                # acc = calc_accuracy(outputs, cur_targets)
-                # sensitivity, specificity, f1, accuracy = calc_metrics(outputs, cur_targets)
                 if max_norm > 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
                 if ((scan_seg_idx + 1) % acc_steps == 0) or ((scan_seg_idx + 1) == num_scan_segs):
@@ -362,7 +287,6 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     metric_logger.update(auroc=metrics.auroc)
                     metric_logger.update(auprc=metrics.auprc)
                     metric_logger.update(cohen_kappa=metrics.cohen_kappa)
-                    # metric_logger.update(class_error=loss_dict_reduced['class_error'])
                     loss_value = 0
 
     # gather the stats from all processes
@@ -378,7 +302,6 @@ def eval_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             'auprc': metrics.auprc,
             'cohen_kappa': metrics.cohen_kappa,
             }
-    # return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 # def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.device,
 #                     max_norm: float = 0, cls_thresh: float = 0.5, save_attn_dir=None):

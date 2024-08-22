@@ -34,8 +34,6 @@ class PositionalEncodingSine3D(nn.Module):
         d, embed, h, w = scan.size()
         mask = torch.ones((self.z_size, h, w))
         mask = mask.reshape(1, self.z_size,h,w).to(self.device)
-        # assert mask is not None
-        # not_mask = ~mask
         z_embed = mask.cumsum(1, dtype=torch.float32)
         y_embed = mask.cumsum(2, dtype=torch.float32)
         x_embed = mask.cumsum(3, dtype=torch.float32)
@@ -57,7 +55,6 @@ class PositionalEncodingSine3D(nn.Module):
         pos_z = torch.stack((pos_z[:, :, :, :, 0::2].sin(), pos_z[:, :, :, :, 1::2].cos()), dim=5).flatten(4)
 
         pos = torch.cat((pos_z, pos_y, pos_x), dim=4).flatten(2, 3).squeeze(0)
-        # pos = torch.cat((pos_z, pos_y, pos_x), dim=4).permute(0, 1, 4, 2, 3)
         if pos.shape[2] != embed or pos.shape[0] != d:
             if self.fit_mode == 'interpolate':
                 pos = pos.reshape(1,1,self.z_size,h*w,-1)
@@ -141,9 +138,7 @@ class LearnedPositionalEmbedding3D(nn.Module):
         nn.init.uniform_(self.depth_embed.weight)
 
     def forward(self, scan: NestedTensor):
-        # x = tensor_list.tensors
         d, em, h, w = scan.size()
-        # d, h, w = x.shape[-3:]
         i = torch.arange(w, device=scan.device)
         j = torch.arange(h, device=scan.device)
         k = torch.arange(d, device=scan.device)
@@ -155,11 +150,6 @@ class LearnedPositionalEmbedding3D(nn.Module):
             y_emb.unsqueeze(1).unsqueeze(0).repeat(d, 1, w, 1),
             z_emb.unsqueeze(1).unsqueeze(1).repeat(1, h, w, 1),
         ], dim=-1)
-        # pos = torch.cat([
-        #     x_emb.unsqueeze(0).unsqueeze(0).repeat(d, h, 1, 1),
-        #     y_emb.unsqueeze(1).unsqueeze(0).repeat(d, 1, w, 1),
-        #     z_emb.unsqueeze(1).unsqueeze(1).repeat(1, h, w, 1),
-        # ], dim=-1).permute(3, 0, 1, 2).unsqueeze(0).repeat(1, 1, 1, 1, 1)
         return pos
 
 

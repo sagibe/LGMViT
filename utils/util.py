@@ -7,8 +7,6 @@ import datetime
 from collections import defaultdict, deque
 from torch import sigmoid
 from torchmetrics.classification import BinaryAUROC, AveragePrecision, BinaryCohenKappa
-# from torcheval.metrics.functional import binary_auroc, binary_auprc
-
 
 class RecursiveNamespace(SimpleNamespace):
 
@@ -181,6 +179,7 @@ class SmoothedValue(object):
             global_avg=self.global_avg,
             max=self.max,
             value=self.value)
+
 class MetricLogger(object):
     def __init__(self, delimiter="\t"):
         self.meters = defaultdict(SmoothedValue)
@@ -332,14 +331,6 @@ class PerformanceMetrics(object):
     def cohen_kappa(self):
         cohen_kappa = BinaryCohenKappa().to(self.device)
         return cohen_kappa(self.preds, self.targets).item()
-
-    # def __str__(self):
-    #     return self.fmt.format(
-    #         median=self.median,
-    #         avg=self.avg,
-    #         global_avg=self.global_avg,
-    #         max=self.max,
-    #         value=self.value)
 
 def attention_softmax_2d(attn, apply_log=True):
     if apply_log:
