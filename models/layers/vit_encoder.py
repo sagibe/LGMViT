@@ -97,7 +97,6 @@ class TransformerEncoderBlock(nn.Sequential):
         self.norm1 = norm_layer(embed_size)
         self.attn = Attention(embed_size, num_heads=num_heads)
         self.norm2 = norm_layer(embed_size)
-        # self.mlp = Mlp(in_features=embed_size, hidden_features=forward_expansion, drop=forward_drop_p)
         mlp_hidden_dim = int(embed_size * forward_expansion)
         self.mlp = Mlp(in_features=embed_size, hidden_features=mlp_hidden_dim, drop=forward_drop_p)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
@@ -106,7 +105,6 @@ class TransformerEncoderBlock(nn.Sequential):
     def forward(self, x, return_attention=False, store_layers_attn=False):
         out_attn, attn_map = self.attn(self.norm1(x), store_layers_attn=store_layers_attn)
         x = x + self.drop_path(out_attn)
-        # x = x + self.drop_path(self.attn(self.norm1(x)))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         if return_attention:
             return x, attn_map
@@ -146,7 +144,6 @@ class TransformerEncoder(nn.Module):
         return output, attn
 
 def build_vit_encoder(args):
-    # store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.SPATIAL_FEAT_SRC == 'relevance_map'
     store_layers_attn = args.TRAINING.LOSS.LOCALIZATION_LOSS.ATTENTION_METHOD in ['relevance_map', 'rollout']
     return TransformerEncoder(
         embed_size=args.MODEL.VIT_ENCODER.EMBED_SIZE,

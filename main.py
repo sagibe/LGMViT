@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import glob
 import time
 import datetime
 import torch
@@ -35,7 +36,7 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20',
-    'config_name': ['brats_debug_vit'
+    'config_name': ['LGMViT_86_localization_cases_brats20'
                     ],
     'exp_name': None,  # if None default is config_name
     'use_wandb': False,
@@ -86,7 +87,7 @@ def main(config, settings):
     elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse' or config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'gradmask':
         localization_criterion = torch.nn.MSELoss(reduction="mean")
     elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'l1':
-        localization_criterion = torch.nn.MSELoss(reduction="mean")
+        localization_criterion = torch.nn.L1Loss(reduction="mean")
     elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse_fgbg':
         localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
     elif 'res' in config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE:
@@ -157,12 +158,24 @@ def main(config, settings):
     batch_sampler_val = BatchSampler(sampler_val, 1, drop_last=True)
     data_loader_val = DataLoader(dataset_val, batch_sampler=batch_sampler_val, num_workers=config.TRAINING.NUM_WORKERS)
 
-    output_dir = os.path.join(Path(config.DATA.OUTPUT_DIR), settings['dataset_name'], settings['exp_name'])
+    output_dir = os.path.join(Path(config.TRAINING.OUTPUT_DIR), settings['dataset_name'], settings['exp_name'])
     ckpt_dir = os.path.join(output_dir, 'ckpt')
     os.makedirs(ckpt_dir, exist_ok=True)
 
-    if config.TRAINING.RESUME: # TODO
-        if config.TRAINING.RESUME.startswith('https'):
+    best_epoch_stat = -np.inf
+    if config.TRAINING.RESUME:
+        if config.TRAINING.RESUME == 'latest':
+            # Define the pattern to match checkpoint files
+            checkpoint_pattern = os.path.join(output_dir, 'ckpt', 'checkpoint*.pth')
+            # Get all checkpoint files that match the pattern
+            checkpoint_files = glob.glob(checkpoint_pattern)
+            if checkpoint_files:
+                # Find the latest checkpoint based on the epoch number
+                valid_checkpoint_files = [f for f in checkpoint_files if f.split('.')[0][-4:].isdigit()]
+                latest_checkpoint_file = max(valid_checkpoint_files, key=lambda f: int(f.split('.')[0][-4:]))
+                # Load the latest checkpoint
+                checkpoint = torch.load(latest_checkpoint_file, map_location='cpu')
+        elif config.TRAINING.RESUME.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
                 config.TRAINING.RESUME, map_location='cpu', check_hash=True)
         else:
@@ -172,6 +185,8 @@ def main(config, settings):
             optimizer.load_state_dict(checkpoint['optimizer'])
             lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
             config.TRAINING.START_EPOCH = checkpoint['epoch'] + 1
+        if 'best_epoch_stat' in checkpoint:
+            best_epoch_stat = checkpoint['best_epoch_stat']
     elif config.MODEL.PRETRAINED_WEIGHTS:
         if config.MODEL.PRETRAINED_WEIGHTS.endswith('.pth'):
             checkpoint = torch.load(config.MODEL.PRETRAINED_WEIGHTS, map_location='cpu')
@@ -181,8 +196,6 @@ def main(config, settings):
 
     print("Start training")
     start_time = time.time()
-    best_epoch_stat = -np.inf
-    best_epoch_stat_multi = -np.inf
     for epoch in range(config.TRAINING.START_EPOCH, config.TRAINING.EPOCHS + 1):
         # if config.distributed: # TODO
         #     sampler_train.set_epoch(epoch)
@@ -208,39 +221,16 @@ def main(config, settings):
             else:
                 wandb_logger(train_stats, epoch=epoch)
         lr_scheduler.step()
-        if config.DATA.OUTPUT_DIR:
+        if config.TRAINING.OUTPUT_DIR:
             checkpoint_paths = []
-            if isinstance(config.TRAINING.SAVE_BEST_CKPT_CRITERION, list):
-                single_stat = config.TRAINING.SAVE_BEST_CKPT_CRITERION[0]
-                if len(config.TRAINING.SAVE_BEST_CKPT_CRITERION) > 1:
-                    multi_stat = config.TRAINING.SAVE_BEST_CKPT_CRITERION
-                else:
-                    multi_stat = None
-            else:
-                single_stat = config.TRAINING.SAVE_BEST_CKPT_CRITERION
-                multi_stat = None
+            best_ckpt_criterion = config.TRAINING.SAVE_BEST_CKPT_CRITERION
             try:
-                # single stat
-                if val_stats[single_stat] >= best_epoch_stat:
+                if val_stats[best_ckpt_criterion] >= best_epoch_stat:
                     checkpoint_paths.append(os.path.join(ckpt_dir, 'checkpoint_best.pth'))
-                    best_epoch_stat = val_stats[single_stat]
+                    best_epoch_stat = val_stats[best_ckpt_criterion]
             except:
                 print('WARNING: Cant save best epoch checkpoint - unsupported validation metric or validation stats not available')
-            # multi stat
-            if multi_stat is not None:
-                try:
-                    multi_stat_val = 0
-                    name_suffix = ''
-                    for cur_stat in multi_stat:
-                        name_suffix += f'_{cur_stat}'
-                        multi_stat_val += val_stats[cur_stat]
-                    multi_stat_val = multi_stat_val / len(multi_stat)
-                    if multi_stat_val >= best_epoch_stat_multi:
-                        checkpoint_paths.append(os.path.join(ckpt_dir, f'checkpoint_best{name_suffix}.pth'))
-                        best_epoch_stat_multi = multi_stat_val
-                except:
-                    print('WARNING: Cant save best epoch checkpoint - unsupported validation metric or validation stats not available')
-            if epoch % config.TRAINING.LR_DROP == 0 or epoch % config.TRAINING.SAVE_CKPT_INTERVAL == 0:
+            if epoch % config.TRAINING.SAVE_CKPT_INTERVAL == 0:
                 checkpoint_paths.append(os.path.join(ckpt_dir, f'checkpoint{epoch:04}.pth'))
             for checkpoint_path in checkpoint_paths:
                 utils.save_on_master({
@@ -249,6 +239,7 @@ def main(config, settings):
                     'lr_scheduler': lr_scheduler.state_dict(),
                     'epoch': epoch,
                     'args': config,
+                    'best_epoch_stat': best_epoch_stat,
                 }, checkpoint_path)
 
     total_time = time.time() - start_time
@@ -269,8 +260,8 @@ def main(config, settings):
 #     # W&B logger initialization
 #     if settings['use_wandb']:
 #         wandb_run = init_wandb(settings['wandb_proj_name'], settings['exp_name'], settings['wandb_group'], cfg=config)
-#     if config.DATA.OUTPUT_DIR:
-#         Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+#     if config.TRAINING.OUTPUT_DIR:
+#         Path(config.TRAINING.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 #     main(config, settings)
 
 
@@ -286,8 +277,8 @@ if __name__ == '__main__':
         if settings['use_wandb']:
             wandb_run = init_wandb(settings['wandb_proj_name'], settings['exp_name'], settings['wandb_group'], cfg=config)
 
-        if config.DATA.OUTPUT_DIR:
-            Path(config.DATA.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+        if config.TRAINING.OUTPUT_DIR:
+            Path(config.TRAINING.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
         main(config, settings)
         if settings['use_wandb']:
             wandb_run.finish()

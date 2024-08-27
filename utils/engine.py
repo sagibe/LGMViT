@@ -66,7 +66,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             if localization_loss_params.USE and cur_targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
                 reduced_attn_maps = reduced_bb_feat_maps = None
                 if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
-                    if localization_loss_params.ATTENTION_METHOD == 'raw_attn':
+                    if localization_loss_params.ATTENTION_METHOD == 'last_layer_attn':
                         if use_cls_token:
                             attn_maps = generate_spatial_attention(attn, mode='cls_token')
                         else:
@@ -137,10 +137,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                     width = height = reduced_spatial_feat_maps.shape[-1]
                     cur_lesion_annot_org_ds = torch.nn.functional.interpolate(cur_lesion_annot, (width, height), mode='nearest')
 
-                if localization_loss_params.GT_SEG_PROCESS_METHOD == 'gauss' and localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0:
-                    cur_lesion_annot = generate_gauss_blur_annotations(cur_lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
-                elif 'learned' in localization_loss_params.GT_SEG_PROCESS_METHOD:
-                    cur_lesion_annot = generate_learned_processed_annotations(model, cur_lesion_annot, cur_slices, mode=localization_loss_params.GT_SEG_PROCESS_METHOD)
+                if localization_loss_params.GT_SEG_PROCESS_METHOD is not None:
+                    if localization_loss_params.GT_SEG_PROCESS_METHOD == 'gauss' and localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE > 0:
+                        cur_lesion_annot = generate_gauss_blur_annotations(cur_lesion_annot, kernel_size=localization_loss_params.GT_SEG_PROCESS_KERNEL_SIZE)
+                    elif 'learned' in localization_loss_params.GT_SEG_PROCESS_METHOD:
+                        cur_lesion_annot = generate_learned_processed_annotations(model, cur_lesion_annot, cur_slices, mode=localization_loss_params.GT_SEG_PROCESS_METHOD)
                 if localization_loss_params.TYPE == 'mse':
                     localization_loss = localization_loss_params.ALPHA * \
                                          localization_criterion(torch.cat(utils.attention_softmax_2d(reduced_spatial_feat_maps[:,cur_targets[:,0].to(bool),:,:], apply_log=False).unbind()),

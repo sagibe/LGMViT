@@ -19,15 +19,25 @@ from utils.engine import eval_test
 # BraTS20 Test
 SETTINGS = {
     'models': [
+        # {
+        #     'config': 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_seed_42',
+        #     'exp_name': 'final_for_paper/general/lgmvit/vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_seed_42/',  # if None default is config_name
+        #     'plot_name': 'LGM-ViT Fusion b0_85_kl_a1000'},  # if None default is config_name
+        # {
+        #     'config': 'brats_debug_vit',
+        #     'exp_name': None,
+        #     # if None default is config_name
+        #     'plot_name': 'Debug'},  # if None default is config_name
         {
-            'config': 'vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_seed_42',
-            'exp_name': 'final_for_paper/general/lgmvit/vit_B16_2D_cls_token_brats20_bs32_input256_lgm_fusion_b0_85_kl_a1000_seed_42/',  # if None default is config_name
-            'plot_name': 'LGM-ViT Fusion b0_85_kl_a1000'},  # if None default is config_name
+            'config': 'RES_G_brats20',
+            'exp_name': None,
+            # if None default is config_name
+            'plot_name': 'Test'},  # if None default is config_name
     ],
     'dataset_name': 'brats20',
     'data_path': '',
     'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
-    'ckpt_load': 'best',
+    'ckpt_load': None,
     'output_name': 'test', # 'for_presentaraion3',  # if None default is datetime
     'save_results': False,
     'save_attn': False,
@@ -597,26 +607,24 @@ def main(settings):
         update_config_from_file(f"configs/{settings['dataset_name']}/{model_settings['config']}.yaml", config)
         if model_settings['exp_name'] is None: model_settings['exp_name'] = model_settings['config']
         if settings['ckpt_load'] is not None: config.TEST.CHECKPOINT = settings['ckpt_load']
+        if config.TEST.CHECKPOINT_PARENT_DIR is None: config.TEST.CHECKPOINT_PARENT_DIR = config.TRAINING.OUTPUT_DIR
 
         utils.init_distributed_mode(config)
         device = torch.device(settings['device'])
         config.DEVICE = device
-        config.TEST.DATASET_PATH = settings['data_path']
 
         model = build_model(config)
         model.to(device)
         if isinstance(config.TEST.CHECKPOINT, int):
-            checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
+            checkpoint_path = os.path.join(config.TEST.CHECKPOINT_PARENT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
         elif isinstance(config.TEST.CHECKPOINT, str):
-            if 'best_f1_auroc_sensitivity' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best_f1_auroc_sensitivity.pth')
-            elif 'best' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
-            elif '/' in config.TEST.CHECKPOINT:
+            if '/' in config.TEST.CHECKPOINT:
                 checkpoint_path = config.TEST.CHECKPOINT
+            elif 'best' in config.TEST.CHECKPOINT:
+                checkpoint_path = os.path.join(config.TEST.CHECKPOINT_PARENT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
             else:
                 if (config.TEST.CHECKPOINT).endswith('.pth'):
-                    checkpoint_path = os.path.join(config.DATA.OUTPUT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
+                    checkpoint_path = os.path.join(config.TEST.CHECKPOINT_PARENT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
                 else:
                     checkpoint_path = ''
         else:
@@ -640,15 +648,11 @@ def main(settings):
             },
         ]
 
-        if config.TEST.DATASET_PATH:
-            data_dir = config.TEST.DATASET_PATH
-            split_dict = None
-            scan_set = ''
-        else:
-            data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
-            with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
-                split_dict = json.load(f)
-            scan_set = 'test'
+        data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
+        with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
+            split_dict = json.load(f)
+        scan_set = 'test'
+
         if 'BraTS2020' in config.DATA.DATASETS:
             dataset_test = BraTS20Dataset(data_dir,
                                           scan_set=scan_set,
