@@ -7,6 +7,7 @@ import json
 from sklearn import metrics
 import matplotlib.pyplot as plt
 from sklearn.metrics import precision_recall_curve
+from tabulate import tabulate
 
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
@@ -29,10 +30,15 @@ SETTINGS = {
         #     # if None default is config_name
         #     'plot_name': 'Debug'},  # if None default is config_name
         {
-            'config': 'RES_G_brats20',
+            'config': 'ViT_B16_baseline_brats20',
             'exp_name': None,
             # if None default is config_name
-            'plot_name': 'Test'},  # if None default is config_name
+            'plot_name': 'ViT_B16_baseline_brats20'},  # if None default is config_name
+        {
+            'config': 'LGMViT_brats20',
+            'exp_name': None,
+            # if None default is config_name
+            'plot_name': 'LGMViT_brats20'},  # if None default is config_name
     ],
     'dataset_name': 'brats20',
     'data_path': '',
@@ -40,7 +46,6 @@ SETTINGS = {
     'ckpt_load': None,
     'output_name': 'test', # 'for_presentaraion3',  # if None default is datetime
     'save_results': False,
-    'save_attn': False,
     'device': 'cuda',
 }
 
@@ -587,22 +592,17 @@ SETTINGS = {
 # }
 
 def main(settings):
-    df_list = []
-    if settings['save_results']:
-        date_time_stamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
-        if settings['output_name']:
-            save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], settings['output_name'])
-            if os.path.isdir(save_dir):
-                save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], settings['output_name'] + date_time_stamp)
-        else:
-            save_dir = os.path.join(settings['output_dir'], settings['dataset_name'], date_time_stamp)
-        os.makedirs(save_dir, exist_ok=True)
-
     cur_df = pd.DataFrame(
-        columns=['Model Name', 'F1 Score', 'Sensitivity', 'Specificity', 'AUROC', 'AUPRC', 'Cohens Kappa',
-                 'Precision', 'Accuracy'])
-    fig, ax = plt.subplots(1, 2, figsize=(15, 6))
+        columns=['Model Name',
+                 'F1 Score',
+                 'Accuracy',
+                 'AUROC',
+                 'AUPRC',
+                 'Cohens Kappa',
+                 ])
+    # fig, ax = plt.subplots(1, 2, figsize=(15, 6))
     for model_settings in settings['models']:
+        print(f"\nConfig Name: {model_settings['config']}")
         config = get_default_config()
         update_config_from_file(f"configs/{settings['dataset_name']}/{model_settings['config']}.yaml", config)
         if model_settings['exp_name'] is None: model_settings['exp_name'] = model_settings['config']
@@ -632,21 +632,11 @@ def main(settings):
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
 
-        model_without_ddp = model
         if config.distributed:
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[config.gpu])
-            model_without_ddp = model.module
 
         n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print('number of params:', n_parameters)
-
-        param_dicts = [
-            {"params": [p for n, p in model_without_ddp.named_parameters() if "backbone" not in n and p.requires_grad]},
-            {
-                "params": [p for n, p in model_without_ddp.named_parameters() if "backbone" in n and p.requires_grad],
-                "lr": config.TRAINING.LR,
-            },
-        ]
 
         data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
         with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
@@ -682,46 +672,24 @@ def main(settings):
         batch_sampler_test = BatchSampler(sampler_test, 1, drop_last=True)
         data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=config.TEST.NUM_WORKERS)
 
-        if settings['save_results'] and settings['save_attn']:
-            save_attn_dir = save_dir
-        else:
-            save_attn_dir = None
-        test_stats = eval_test(model, data_loader_test, device, config.TEST.CLIP_MAX_NORM, config.TEST.CLS_THRESH, save_attn_dir)
+        test_stats = eval_test(model,
+                               data_loader_test,
+                               device=device,
+                               max_seg_size=config.TEST.SCAN_SEG_SIZE,
+                               max_norm=config.TEST.CLIP_MAX_NORM,
+                               cls_thresh=config.TEST.CLS_THRESH)
 
-        cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': model_settings['plot_name'], 'F1 Score': test_stats.f1, 'Sensitivity': test_stats.sensitivity, 'Specificity': test_stats.specificity,
-                        'AUROC': test_stats.auroc, 'AUPRC': test_stats.auprc, 'Cohens Kappa': test_stats.cohen_kappa,
-                        'Precision': test_stats.precision, 'Accuracy': test_stats.accuracy}])
+        cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': model_settings['plot_name'],
+                                                   'F1 Score': test_stats.f1,
+                                                   'Accuracy': test_stats.accuracy,
+                                                   'AUROC': test_stats.auroc,
+                                                   'AUPRC': test_stats.auprc,
+                                                   'Cohens Kappa': test_stats.cohen_kappa,
+                                                   }])
                             ], ignore_index=True)
-        fpr, tpr, _ = metrics.roc_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
-        lr_precision, lr_recall, _ = precision_recall_curve(test_stats.targets.cpu().numpy(), test_stats.preds.cpu().numpy())
 
-        # Plot ROC Curve
-        ax[0].plot(fpr, tpr, label=f"{model_settings['plot_name']}-{test_stats.auroc:.4f}")
-        ax[1].plot(lr_recall, lr_precision, label=f"{model_settings['plot_name']}-{test_stats.auprc:.4f}")
-
-    # Plot ROC Curve and Confusion Matrix
-    ax[0].set_title('ROC Curve')
-    ax[0].set_xlabel('False Positive Rate')
-    ax[0].set_ylabel('True Positive Rate')
-    ax[0].legend()
-    ax[1].set_title('Precision-Recall Curve')
-    ax[1].set_xlabel('Recall')
-    ax[1].set_ylabel('Precision')
-    ax[1].legend()
-    plt.suptitle(f'Metrics Curves')
-
-    df_list.append(cur_df.iloc[:,1:])
-    if settings['save_results']:
-        fig.savefig(os.path.join(save_dir, f'ROC_PR_Curves.jpg'), dpi=200)
-        cur_df.round(6).to_csv(os.path.join(save_dir, f'metrics_table{date_time_stamp}.csv'), index=False)
-    else:
-        plt.show()
-        pd.set_option('display.max_columns', None)
-        pd.set_option('display.expand_frame_repr', False)
-        pd.set_option('max_colwidth', 100)
-        with pd.option_context('display.max_rows', 20, 'display.max_columns', 10):
-            print(cur_df.round(6))
-
+    print('\nPerformance Metrics:')
+    print(tabulate(cur_df.round(4), headers='keys', tablefmt='psql', showindex=False, maxcolwidths=120, numalign="center"))
     print('Done!')
 
 if __name__ == '__main__':

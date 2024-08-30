@@ -89,6 +89,7 @@ def get_default_config():
     cfg.TEST.CLS_THRESH = 0.5   # Binary classification threshold for evaluation of the model's prediction
     cfg.TEST.CLIP_MAX_NORM = 0
     cfg.TEST.NUM_WORKERS = 4
+    cfg.TEST.SCAN_SEG_SIZE = None  # Maximum number of slices for each forward pass. Default (None) is no limit. Reduce this number in cases where the inference exceeds the GPU memory.
 
     # DISTRIBUTED
     cfg.DISTRIBUTED = edict()

@@ -300,17 +300,6 @@ class PerformanceMetrics(object):
         self.tn += sum(~targets_bools * ~preds_bools)
         self.fp += sum(~targets_bools * preds_bools)
         self.fn += sum(targets_bools * ~preds_bools)
-    @property
-    def sensitivity(self):
-        return (self.tp / (self.tp + self.fn)).item()
-
-    @property
-    def specificity(self):
-        return (self.tn / (self.tn + self.fp)).item()
-
-    @property
-    def precision(self):
-        return (self.tp / (self.tp + self.fp)).item()
 
     @property
     def f1(self):
@@ -319,14 +308,17 @@ class PerformanceMetrics(object):
     @property
     def accuracy(self):
         return ((self.tp + self.tn) / (self.tp + self.tn + self.fp + self.fn)).item()
+
     @property
     def auroc(self):
         auroc = BinaryAUROC(thresholds=None).to(self.device)
         return auroc(self.preds, self.targets).item()
+
     @property
     def auprc(self):
         auprc = AveragePrecision(task="binary").to(self.device)
         return auprc(self.preds, self.targets).item()
+
     @property
     def cohen_kappa(self):
         cohen_kappa = BinaryCohenKappa().to(self.device)

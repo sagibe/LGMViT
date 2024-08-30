@@ -36,10 +36,11 @@ from utils.wandb import init_wandb, wandb_logger
 # Multi Run Mode
 SETTINGS = {
     'dataset_name': 'brats20',
-    'config_name': ['LGMViT_86_localization_cases_brats20'
+    'config_name': ['ViT_B16_baseline_brats20',
+                    'LGMViT_brats20',
                     ],
     'exp_name': None,  # if None default is config_name
-    'use_wandb': False,
+    'use_wandb': True,
     'wandb_proj_name': 'LGMViT_brats20_new',  # LGMViT_brats20_new LGMViT_lits17_liver LGMViT_atlasR2 LGMViT_isles22 LGMViT_kits21_lesions LGMViT_kits23_lesions
     'wandb_group': None,
     'device': 'cuda',
@@ -202,7 +203,7 @@ def main(config, settings):
         train_stats = train_one_epoch(
             model, criterion, localization_criterion, data_loader_train, optimizer, device, epoch,
             localization_loss_params=config.TRAINING.LOSS.LOCALIZATION_LOSS,
-            scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
+            max_seg_size=config.TRAINING.SCAN_SEG_SIZE,
             batch_size=config.TRAINING.BATCH_SIZE,
             max_norm=config.TRAINING.CLIP_MAX_NORM,
             cls_thresh=config.TRAINING.CLS_THRESH,
@@ -211,7 +212,7 @@ def main(config, settings):
         if epoch % config.TRAINING.EVAL_INTERVAL == 0:
             val_stats = eval_epoch(
                 model, criterion, data_loader_val, device, epoch,
-                scan_seg_size=config.TRAINING.SCAN_SEG_SIZE,
+                max_seg_size=config.TRAINING.SCAN_SEG_SIZE,
                 batch_size=config.TRAINING.BATCH_SIZE,
                 max_norm=config.TRAINING.CLIP_MAX_NORM,
                 cls_thresh=config.TRAINING.CLS_THRESH)
