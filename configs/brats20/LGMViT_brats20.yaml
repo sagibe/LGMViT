@@ -56,12 +56,6 @@ MODEL:
     USE_CLS_TOKEN: true   # Use class token (currently mandatory)
     ATTENTION_3D: false   # Apply 3D attention instead of 2D
 
-TEST:
-  CHECKPOINT: 'best'    # Checkpoint to load. Options: 'best' (loads the best epoch saved during training), number of type int (loads a specific checkpoint by number), or insert full path to checkpoint(.pth).
-  CHECKPOINT_PARENT_DIR: null   # Path to parent directory where the checkpoint are saved (relevant for 'best' and int options of cfg.TEST.CHECKPOINT). Default (or None) is set to cfg.TRAINING.OUTPUT_DIR where the training checkpoints of this config are saved.
-  CLS_THRESH: 0.5   # Binary classification threshold for evaluation of the model's prediction
-  NUM_WORKERS: 4
-
 DISTRIBUTED:
   WORLD_SIZE: 1
   DIST_URL: env://

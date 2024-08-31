@@ -60,7 +60,6 @@ def get_default_config():
     cfg.TRAINING.LOSS.LOCALIZATION_LOSS.ALPHA = 10  # Weighting parameter of the localization loss
     cfg.TRAINING.LOSS.LOCALIZATION_LOSS.PATIENT_LIST = None # Path to file of the list of cases to apply localization loss on (for ablation). Files located at: datasets/LGS_patient_lists
 
-
     # MODEL
     cfg.MODEL = edict()
     cfg.MODEL.PRETRAINED_WEIGHTS = ''   # Path to pretrained weights
@@ -81,15 +80,6 @@ def get_default_config():
     cfg.MODEL.VIT_ENCODER.FORWARD_DROP_P = 0.1  # Drop path ratio
     cfg.MODEL.VIT_ENCODER.USE_CLS_TOKEN = True  # Use class token (currently mandatory)
     cfg.MODEL.VIT_ENCODER.ATTENTION_3D = False  # Apply 3D attention instead of 2D
-
-    # TEST
-    cfg.TEST = edict()
-    cfg.TEST.CHECKPOINT = 'best'    # Checkpoint to load. Options: 'best' (loads the best epoch saved during training), number of type int (loads a specific checkpoint by number), or insert full path to checkpoint.
-    cfg.TEST.CHECKPOINT_PARENT_DIR = cfg.TRAINING.OUTPUT_DIR # Path to parent directory where the checkpoint are saved (relevant for 'best' and int options of cfg.TEST.CHECKPOINT). Default (or None) is cfg.TRAINING.OUTPUT_DIR where the training checkpoints of this config are saved.
-    cfg.TEST.CLS_THRESH = 0.5   # Binary classification threshold for evaluation of the model's prediction
-    cfg.TEST.CLIP_MAX_NORM = 0
-    cfg.TEST.NUM_WORKERS = 4
-    cfg.TEST.SCAN_SEG_SIZE = None  # Maximum number of slices for each forward pass. Default (None) is no limit. Reduce this number in cases where the inference exceeds the GPU memory.
 
     # DISTRIBUTED
     cfg.DISTRIBUTED = edict()
