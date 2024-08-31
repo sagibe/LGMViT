@@ -8,6 +8,7 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 from sklearn.metrics import precision_recall_curve
 from tabulate import tabulate
+import argparse
 
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
@@ -41,12 +42,7 @@ SETTINGS = {
             'plot_name': 'LGMViT_brats20'},  # if None default is config_name
     ],
     'dataset_name': 'brats20',
-    'data_path': '',
-    'output_dir': '/mnt/DATA1/Sagi/Results/LGMViT/Metrics/',
-    'ckpt_load': None,
-    'output_name': 'test', # 'for_presentaraion3',  # if None default is datetime
-    'save_results': False,
-    'device': 'cuda',
+    'device': 'cpu',
 }
 
 # # LiTS17 Test
@@ -591,7 +587,53 @@ SETTINGS = {
 #     'device': 'cuda',
 # }
 
-def main(settings):
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='LGMViT test')
+    parser.add_argument('config_name', nargs='+', help='Config file names of the models (without .yaml suffix)')
+    parser.add_argument('-d', '--dataset',
+                        default='brats20',
+                        help='Name of dataset as presented in /configs directory. Currently supports: "brats20", "lits17_liver"')
+    parser.add_argument('-c', '--checkpoint',
+                        default=['best'],
+                        nargs='*',
+                        help='Checkpoint to load. For test of multiple configs insert checkpoint for each config'
+                             'in the same order of the config file names in the configs argument'
+                             'Options:'
+                             '- "best" (loads the best epoch saved during training). Can be used as a single argument for multiple configs if you want to load the best checkpoint saved during training for each of the models'
+                             '- number of type int (loads a specific checkpoint by number)'
+                             '- or full path to checkpoint.'
+                             'Examples for test of 3 configs:'
+                             '-c 20 best 25'
+                             '-c /full_path_to_checkpoint_of_first_model /full_path_to_checkpoint_of_second_model /full_path_to_checkpoint_of_third_model'
+                             '-c best')
+    parser.add_argument('--ckpt_parent_dir', help='Path to parent directory where the experiments (checkpoints) are saved.'
+                                                  'Default (None) is the parent directory where the checkpoints of the model where saved during training(specified by TRAINING.OUTPUT_DIR in the config file of the model).'
+                                                  'This is relevant for "best" and int options of --checkpoint. For these options to work the checkpoints must be located in the following directory hierarchy:'
+                                                  '- ckpt_parent_dir'
+                                                  '    - config file name (for example LGMViT_brats20)'
+                                                  '         - ckpt'
+                                                  '             -checkpoint0001'
+                                                  '             -checkpoint0002'
+                                                  '                    ...     '
+                                                  '             -checkpoint0025'
+                                                  '             -checkpoint_best')
+    parser.add_argument('--cls_thresh', default=0.5, type=float, help="Binary classification threshold for evaluation of the model's prediction")
+    parser.add_argument('--max_seg_slice',
+                        type=int,
+                        help='Maximum number of slices for each forward pass. Default (None) is no limit.'
+                             'Reduce this number in cases where the inference exceeds the GPU memory.')
+    parser.add_argument('--device',
+                        choices=['cuda', 'cpu'],
+                        default='cuda',
+                        help='Device to run the model on')
+    parser.add_argument('--num_workers', default=4, type=int)
+    parser.add_argument('--clip_max_norm', default=0, type=float, help='gradient clipping max norm')
+    args = parser.parse_args()
+    return args
+
+
+def main(args):
     cur_df = pd.DataFrame(
         columns=['Model Name',
                  'F1 Score',
@@ -601,30 +643,30 @@ def main(settings):
                  'Cohens Kappa',
                  ])
     # fig, ax = plt.subplots(1, 2, figsize=(15, 6))
-    for model_settings in settings['models']:
-        print(f"\nConfig Name: {model_settings['config']}")
+    for idx, config_name in enumerate(args.config_name):
+        print(f"\nConfig Name: {config_name}")
         config = get_default_config()
-        update_config_from_file(f"configs/{settings['dataset_name']}/{model_settings['config']}.yaml", config)
-        if model_settings['exp_name'] is None: model_settings['exp_name'] = model_settings['config']
-        if settings['ckpt_load'] is not None: config.TEST.CHECKPOINT = settings['ckpt_load']
-        if config.TEST.CHECKPOINT_PARENT_DIR is None: config.TEST.CHECKPOINT_PARENT_DIR = config.TRAINING.OUTPUT_DIR
+        update_config_from_file(f"configs/{args.dataset}/{config_name}.yaml", config)
+        if args.ckpt_parent_dir is None:
+            ckpt_parent_dir = config.TRAINING.OUTPUT_DIR
+        else:
+            ckpt_parent_dir = args.ckpt_parent_dir
 
         utils.init_distributed_mode(config)
-        device = torch.device(settings['device'])
-        config.DEVICE = device
+        device = torch.device(args.device)
 
         model = build_model(config)
         model.to(device)
-        if isinstance(config.TEST.CHECKPOINT, int):
-            checkpoint_path = os.path.join(config.TEST.CHECKPOINT_PARENT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', f'checkpoint{config.TEST.CHECKPOINT:04}.pth')
-        elif isinstance(config.TEST.CHECKPOINT, str):
-            if '/' in config.TEST.CHECKPOINT:
-                checkpoint_path = config.TEST.CHECKPOINT
-            elif 'best' in config.TEST.CHECKPOINT:
-                checkpoint_path = os.path.join(config.TEST.CHECKPOINT_PARENT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', 'checkpoint_best.pth')
+        if isinstance(args.checkpoint[idx], int):
+            checkpoint_path = os.path.join(ckpt_parent_dir, args.dataset, config_name, 'ckpt', f'checkpoint{args.checkpoint[idx]:04}.pth')
+        elif isinstance(args.checkpoint[idx], str):
+            if '/' in args.checkpoint[idx]:
+                checkpoint_path = args.checkpoint[idx]
+            elif 'best' in args.checkpoint[idx]:
+                checkpoint_path = os.path.join(ckpt_parent_dir, args.dataset, config_name, 'ckpt', 'checkpoint_best.pth')
             else:
-                if (config.TEST.CHECKPOINT).endswith('.pth'):
-                    checkpoint_path = os.path.join(config.TEST.CHECKPOINT_PARENT_DIR, settings['dataset_name'], model_settings['exp_name'], 'ckpt', config.TEST.CHECKPOINT)
+                if (args.checkpoint[idx]).endswith('.pth'):
+                    checkpoint_path = os.path.join(ckpt_parent_dir, args.dataset, config_name, 'ckpt', args.checkpoint[idx])
                 else:
                     checkpoint_path = ''
         else:
@@ -670,16 +712,16 @@ def main(settings):
             sampler_test = RandomSampler(dataset_test)
 
         batch_sampler_test = BatchSampler(sampler_test, 1, drop_last=True)
-        data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=config.TEST.NUM_WORKERS)
+        data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=args.num_workers)
 
         test_stats = eval_test(model,
                                data_loader_test,
                                device=device,
-                               max_seg_size=config.TEST.SCAN_SEG_SIZE,
-                               max_norm=config.TEST.CLIP_MAX_NORM,
-                               cls_thresh=config.TEST.CLS_THRESH)
+                               max_seg_size=args.max_seg_slice,
+                               max_norm=args.clip_max_norm,
+                               cls_thresh=args.cls_thresh)
 
-        cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': model_settings['plot_name'],
+        cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': config_name,
                                                    'F1 Score': test_stats.f1,
                                                    'Accuracy': test_stats.accuracy,
                                                    'AUROC': test_stats.auroc,
@@ -693,5 +735,12 @@ def main(settings):
     print('Done!')
 
 if __name__ == '__main__':
-    settings = SETTINGS
-    main(settings)
+    args = parse_args()
+
+    if len(args.checkpoint) == 1 and args.checkpoint[0] == 'best':
+        args.checkpoint = ['best'] * len(args.config_name)
+    else:
+        assert len(args.config_name) == len(args.checkpoint), \
+            'Number of specified checkpoints (either by checkpoint number or full path) Must match the number of configs'
+    args.checkpoint = [int(item) if item.isdigit() else item for item in args.checkpoint]
+    main(args)

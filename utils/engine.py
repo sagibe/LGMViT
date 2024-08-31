@@ -1,5 +1,5 @@
 """
-Train and eval functions used in main.py
+Train and eval functions used in train.py  and test.py
 Modified from DETR (https://github.com/facebookresearch/detr)
 """
 import numbers
