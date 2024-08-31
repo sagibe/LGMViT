@@ -9,6 +9,7 @@ import json
 import random
 from pathlib import Path
 import argparse
+from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 
 from configs.config import get_default_config, update_config_from_file
 from datasets.brats20 import BraTS20Dataset
@@ -16,36 +17,9 @@ from datasets.lits17 import LiTS17Dataset
 from models.lgmvit import build_model
 import utils.util as utils
 from utils.engine import train_one_epoch, eval_epoch
-
-from torch.utils.data import DataLoader, RandomSampler, DistributedSampler, BatchSampler
 from utils.losses import FocalLoss, FGBGLoss
 from utils.wandb import init_wandb, wandb_logger
 
-# # Single Run Mode
-# SETTINGS = {
-#     'dataset_name': 'brats20',
-#     'config_name': 'brats20_debug_vit',
-#     'exp_name': None,  # if None default is config_name
-#     'data_fold': None,  # None to take fold number from config
-#     'use_wandb': True,
-#     'wandb_group': None,
-#     'wandb_proj_name': 'LGMViT_brats20',  # ProLesClassifier_covid1920 ProLesClassifier_brats20
-#     'device': 'cuda',
-#     'seed': 42
-# }
-
-# Multi Run Mode
-SETTINGS = {
-    'dataset_name': 'brats20',
-    'config_name': ['debug_brats20',
-                    ],
-    'exp_name': None,  # if None default is config_name
-    'use_wandb': False,
-    'wandb_proj_name': 'LGMViT_brats20_new',  # LGMViT_brats20_new LGMViT_lits17_liver LGMViT_atlasR2 LGMViT_isles22 LGMViT_kits21_lesions LGMViT_kits23_lesions
-    'wandb_group': None,
-    'device': 'cuda',
-    'seed': 42
-}
 
 def parse_args():
     parser = argparse.ArgumentParser(description='LGMViT train')
@@ -87,14 +61,6 @@ def main(config, args):
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
 
-    # param_dicts = [
-    #     {"params": [p for n, p in model_without_ddp.named_parameters() if "backbone" not in n and p.requires_grad]},
-    #     {
-    #         "params": [p for n, p in model_without_ddp.named_parameters() if "backbone" in n and p.requires_grad],
-    #         "lr": config.TRAINING.LR,
-    #     },
-    # ]
-    # optimizer = torch.optim.AdamW(param_dicts, lr=config.TRAINING.LR,weight_decay=config.TRAINING.WEIGHT_DECAY)
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.TRAINING.LR,weight_decay=config.TRAINING.WEIGHT_DECAY)
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.TRAINING.EPOCHS, eta_min=config.TRAINING.LR/100)
@@ -266,25 +232,6 @@ def main(config, args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-
-# # Single Run Mode
-# if __name__ == '__main__':
-#     settings = SETTINGS
-#     config = get_default_config()
-#     update_config_from_file(f"configs/{settings['dataset_name']}/{settings['config_name']}.yaml", config)
-#     if settings['data_fold'] is not None:
-#         config.DATA.DATA_FOLD = settings['data_fold']
-#     fold_suffix = f"_fold_{settings['data_fold']}" if settings['data_fold'] is not None else ''
-#     if settings['exp_name'] is None: settings['exp_name'] = settings['config_name'] + fold_suffix
-#
-#     # W&B logger initialization
-#     if settings['use_wandb']:
-#         wandb_run = init_wandb(settings['wandb_proj_name'], settings['exp_name'], settings['wandb_group'], cfg=config)
-#     if config.TRAINING.OUTPUT_DIR:
-#         Path(config.TRAINING.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-#     main(config, settings)
-
-
 if __name__ == '__main__':
     args = parse_args()
 
@@ -302,20 +249,3 @@ if __name__ == '__main__':
     if config.TRAINING.OUTPUT_DIR:
         Path(config.TRAINING.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
     main(config, args)
-
-
-    # settings = SETTINGS
-    # for config_name in settings['config_name']:
-    #     config = get_default_config()
-    #     update_config_from_file(f"configs/{settings['dataset_name']}/{config_name}.yaml", config)
-    #     settings['exp_name'] = config_name
-    #
-    #     # W&B logger initialization
-    #     if settings['use_wandb']:
-    #         wandb_run = init_wandb(settings['wandb_proj_name'], settings['exp_name'], settings['wandb_group'], cfg=config)
-    #
-    #     if config.TRAINING.OUTPUT_DIR:
-    #         Path(config.TRAINING.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-    #     main(config, settings)
-    #     if settings['use_wandb']:
-    #         wandb_run.finish()
