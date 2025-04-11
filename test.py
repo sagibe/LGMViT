@@ -88,21 +88,7 @@ def main(args):
         model.to(device)
 
         # Load model weights
-        if isinstance(args.checkpoint[idx], int):
-            checkpoint_path = os.path.join(ckpt_parent_dir, args.dataset, config_name, 'ckpt', f'checkpoint{args.checkpoint[idx]:04}.pth')
-        elif isinstance(args.checkpoint[idx], str):
-            if '/' in args.checkpoint[idx]:
-                checkpoint_path = args.checkpoint[idx]
-            elif 'best' in args.checkpoint[idx]:
-                checkpoint_path = os.path.join(ckpt_parent_dir, args.dataset, config_name, 'ckpt', 'checkpoint_best.pth')
-            else:
-                if (args.checkpoint[idx]).endswith('.pth'):
-                    checkpoint_path = os.path.join(ckpt_parent_dir, args.dataset, config_name, 'ckpt', args.checkpoint[idx])
-                else:
-                    checkpoint_path = ''
-        else:
-            checkpoint_path = ''
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        checkpoint = load_checkpoint(args.checkpoint[idx], args.dataset, ckpt_parent_dir, config_name)
         model.load_state_dict(checkpoint['model'])
 
         if config.distributed:
@@ -115,10 +101,9 @@ def main(args):
         data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
         with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
             split_dict = json.load(f)
-        scan_set = 'test'
         if 'BraTS2020' in config.DATA.DATASETS:
             dataset_test = BraTS20Dataset(data_dir,
-                                          scan_set=scan_set,
+                                          scan_set='test',
                                           split_dict=split_dict,
                                           input_size=config.TRAINING.INPUT_SIZE,
                                           resize_mode=config.DATA.PREPROCESS.RESIZE_MODE,
@@ -126,7 +111,7 @@ def main(args):
                                           scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
         elif 'LiTS17' in config.DATA.DATASETS:
             dataset_test = LiTS17Dataset(data_dir,
-                                        scan_set=scan_set,
+                                        scan_set='test',
                                         split_dict=split_dict,
                                         input_size=config.TRAINING.INPUT_SIZE,
                                         annot_type=config.DATA.ANNOT_TYPE,
@@ -166,6 +151,24 @@ def main(args):
     print('\nPerformance Metrics:')
     print(tabulate(cur_df.round(4), headers='keys', tablefmt='psql', showindex=False, maxcolwidths=120, numalign="center"))
     print('Done!')
+
+def load_checkpoint(checkpoint, dataset_name, ckpt_parent_dir, config_name):
+    if isinstance(checkpoint, int):
+        checkpoint_path = os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt',
+                                       f'checkpoint{checkpoint:04}.pth')
+    elif isinstance(checkpoint, str):
+        if '/' in checkpoint:
+            checkpoint_path = checkpoint
+        elif 'best' in checkpoint:
+            checkpoint_path = os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt', 'checkpoint_best.pth')
+        else:
+            if (checkpoint).endswith('.pth'):
+                checkpoint_path = os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt', checkpoint)
+            else:
+                checkpoint_path = ''
+    else:
+        checkpoint_path = ''
+    return torch.load(checkpoint_path, map_location='cpu')
 
 if __name__ == '__main__':
     args = parse_args()

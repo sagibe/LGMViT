@@ -1,13 +1,13 @@
 import os
-import cv2
 import numpy as np
 import scipy
 import SimpleITK as sitk
+from torch.utils.data import Dataset
 
 from utils.util import resize_scan, min_max_norm_scan, min_max_norm_slice
 
 
-class BraTS20Dataset:
+class BraTS20Dataset(Dataset):
     """
     A PyTorch Dataset class for loading and preprocessing the BraTS 2020 (Brain Tumor Segmentation) dataset.
 
@@ -105,7 +105,6 @@ class BraTS20Dataset:
             scale_factor_h = self.input_size / seg_labels.shape[-2]
             scale_factor_w = self.input_size / seg_labels.shape[-1]
             seg_labels = scipy.ndimage.zoom(seg_labels, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
-
 
         scan = np.stack([t1, t2, flair], axis=1)
 

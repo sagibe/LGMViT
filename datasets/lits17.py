@@ -1,14 +1,13 @@
 import os
-import cv2
 import numpy as np
 import scipy
-import torch
+from torch.utils.data import Dataset
 import SimpleITK as sitk
 
 from utils.util import resize_scan, min_max_norm_slice, min_max_norm_scan
 
 
-class LiTS17Dataset:
+class LiTS17Dataset(Dataset):
     """
     A PyTorch Dataset class for loading and preprocessing the LiTS17 dataset.
 

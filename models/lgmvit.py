@@ -12,7 +12,7 @@ class VisionTransformerLGM(nn.Module):
     Localization-Guided Medical Vision Transformer (LGM-ViT) module.
     """
     def __init__(self, patch_embed, pos_encode, vit_encoder, feat_size, num_classes=2,
-                 embed_dim=768, use_cls_token=True, attention_3d=False, store_layers_attn=False): # channel_reduction_srcs=[]
+                 embed_dim=768, use_cls_token=True, attention_3d=False, store_layers_attn=False):
         """
         Initializes the model.
         Parameters:

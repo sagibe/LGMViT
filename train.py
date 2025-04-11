@@ -39,7 +39,6 @@ def parse_args():
     return args
 
 
-
 def main(config, args):
     utils.init_distributed_mode(config)
     device = torch.device(args.device)
@@ -66,22 +65,13 @@ def main(config, args):
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.TRAINING.LR,weight_decay=config.TRAINING.WEIGHT_DECAY)
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAINING.LR_DROP)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.TRAINING.EPOCHS, eta_min=config.TRAINING.LR/100)
+
+    # Losses
     if config.TRAINING.LOSS.TYPE == 'bce':
         criterion = nn.BCEWithLogitsLoss()
     else:
         raise ValueError(f"{config.TRAINING.LOSS.TYPE} loss type not supported")
-    if config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'kl':
-        localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse' or config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'gradmask':
-        localization_criterion = torch.nn.MSELoss(reduction="mean")
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'l1':
-        localization_criterion = torch.nn.L1Loss(reduction="mean")
-    elif config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE == 'mse_fgbg':
-        localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
-    elif 'res' in config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE:
-        localization_criterion = nn.L1Loss(reduction='none')
-    else:
-        raise ValueError(f"{config.TRAINING.LOSS.TYPE} localization loss type not supported")
+    localization_criterion = set_localization_loss(config.TRAINING.LOSS.LOCALIZATION_LOSS.TYPE)
 
     # Data loading
     data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
@@ -132,6 +122,8 @@ def main(config, args):
                                        random_slice_segment=config.TRAINING.MAX_SCAN_SIZE,
                                        padding=config.DATA.PREPROCESS.CROP_PADDING,
                                        scan_norm_mode=config.DATA.PREPROCESS.SCAN_NORM_MODE)
+    else:
+        raise ValueError('Dataset not supported')
 
     if config.distributed:
         sampler_train = DistributedSampler(dataset_train)
@@ -153,22 +145,7 @@ def main(config, args):
     best_epoch_stat = -np.inf
     # Resume from checkpoint or load pretrain weights
     if config.TRAINING.RESUME:
-        if config.TRAINING.RESUME == 'latest':
-            # Define the pattern to match checkpoint files
-            checkpoint_pattern = os.path.join(output_dir, 'ckpt', 'checkpoint*.pth')
-            # Get all checkpoint files that match the pattern
-            checkpoint_files = glob.glob(checkpoint_pattern)
-            if checkpoint_files:
-                # Find the latest checkpoint based on the epoch number
-                valid_checkpoint_files = [f for f in checkpoint_files if f.split('.')[0][-4:].isdigit()]
-                latest_checkpoint_file = max(valid_checkpoint_files, key=lambda f: int(f.split('.')[0][-4:]))
-                # Load the latest checkpoint
-                checkpoint = torch.load(latest_checkpoint_file, map_location='cpu')
-        elif config.TRAINING.RESUME.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                config.TRAINING.RESUME, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(config.TRAINING.RESUME, map_location='cpu')
+        checkpoint = load_checkpoint(config.TRAINING.RESUME, ckpt_dir=output_dir)
         model_without_ddp.load_state_dict(checkpoint['model'])
         if not config.TRAINING.EVAL and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
             optimizer.load_state_dict(checkpoint['optimizer'])
@@ -178,7 +155,7 @@ def main(config, args):
             best_epoch_stat = checkpoint['best_epoch_stat']
     elif config.MODEL.PRETRAINED_WEIGHTS:
         if config.MODEL.PRETRAINED_WEIGHTS.endswith('.pth'):
-            checkpoint = torch.load(config.MODEL.PRETRAINED_WEIGHTS, map_location='cpu')
+            checkpoint = load_checkpoint(config.MODEL.PRETRAINED_WEIGHTS)
             model_without_ddp.load_state_dict(checkpoint['model'])
         else:
             raise ValueError("Unsupported pretrain file type")
@@ -234,6 +211,43 @@ def main(config, args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+
+
+def set_localization_loss(localization_loss_type):
+    if localization_loss_type == 'kl':
+        localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
+    elif localization_loss_type == 'mse' or localization_loss_type == 'gradmask':
+        localization_criterion = torch.nn.MSELoss(reduction="mean")
+    elif localization_loss_type == 'l1':
+        localization_criterion = torch.nn.L1Loss(reduction="mean")
+    elif localization_loss_type == 'mse_fgbg':
+        localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
+    elif 'res' in localization_loss_type:
+        localization_criterion = nn.L1Loss(reduction='none')
+    else:
+        raise ValueError(f"{localization_loss_type:} localization loss type not supported")
+    return localization_criterion
+
+def load_checkpoint(ckpt_to_load, ckpt_dir=None):
+    if ckpt_to_load == 'latest':
+        # Define the pattern to match checkpoint files
+        checkpoint_pattern = os.path.join(ckpt_dir, 'ckpt', 'checkpoint*.pth')
+        # Get all checkpoint files that match the pattern
+        checkpoint_files = glob.glob(checkpoint_pattern)
+        if checkpoint_files:
+            # Find the latest checkpoint based on the epoch number
+            valid_checkpoint_files = [f for f in checkpoint_files if f.split('.')[0][-4:].isdigit()]
+            latest_checkpoint_file = max(valid_checkpoint_files, key=lambda f: int(f.split('.')[0][-4:]))
+            # Load the latest checkpoint
+            checkpoint = torch.load(latest_checkpoint_file, map_location='cpu')
+        else:
+            raise RuntimeError("No checkpoints to load!")
+    elif ckpt_to_load.startswith('https'):
+        checkpoint = torch.hub.load_state_dict_from_url(ckpt_to_load, map_location='cpu', check_hash=True)
+    else:
+        checkpoint = torch.load(ckpt_to_load, map_location='cpu')
+    return checkpoint
+
 
 if __name__ == '__main__':
     args = parse_args()

@@ -4,12 +4,10 @@ Modified from DETR (https://github.com/facebookresearch/detr)
 """
 import numbers
 import numpy as np
-import os
 import json
 from typing import Iterable
 import torch
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
 
 import utils.util as utils
 from utils.localization import extract_heatmap, generate_heatmap_over_img, generate_spatial_attention, \
