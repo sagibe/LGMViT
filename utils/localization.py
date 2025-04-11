@@ -307,7 +307,7 @@ def generate_learned_processed_annotations(model,binary_masks,input=None, mode='
 
     return learned_masks.permute(1,0,2,3)
 
-def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True): #TODO remove hardcoded map size
+def generate_relevance(model, outputs, input_size=256, upscale=True):
     """
     Computes the relevance map (acoording to the GAE method) for a given model and output predictions. The relevance map highlights
     which parts of the input contribute most to the model's decision-making process.
@@ -315,6 +315,7 @@ def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True)
     Parameters:
     - model (nn.Module): The trained ViT-based model.
     - outputs (Tensor): The model's output predictions, typically from the final layer.
+    - input_size (int): size of input image.
     - upscale (bool, optional): If True, upscales the relevance map to the original input size. If False, keeps a fixed map size. Default is True.
 
     Returns:
@@ -324,6 +325,7 @@ def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True)
     """
     # a batch of samples
     batch_size = outputs.shape[0]
+    feat_map_size = model.feat_size
 
     one_hot = torch.sum(outputs)
     model.zero_grad()
@@ -338,15 +340,15 @@ def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True)
         R = R + apply_self_attention_rules(R, cam)
     relevance = R[:, 0, 1:]
     if upscale:
-        relevance = upscale_relevance(relevance)
+        relevance = upscale_relevance(relevance, feat_map_size, scale_factor=input_size//feat_map_size)
     else:
-        relevance = relevance.reshape(-1, 1, 16, 16)
+        relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
         # normalize between 0 and 1
         relevance = relevance.reshape(relevance.shape[0], -1)
         min = relevance.min(1, keepdim=True)[0]
         max = relevance.max(1, keepdim=True)[0]
         relevance = (relevance - min) / (max - min)
-        relevance = relevance.reshape(-1, 1, 16, 16)
+        relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
     return relevance.permute(1,0,2,3)
 
 def avg_heads(cam, grad):
@@ -397,11 +399,9 @@ def apply_self_attention_rules(R_ss, cam_ss):
     R_ss_addition = torch.matmul(cam_ss, R_ss)
     return R_ss_addition
 
-def upscale_relevance(relevance):  # TODO
-    # relevance = relevance.reshape(-1, 1, 14, 14)
-    relevance = relevance.reshape(-1, 1, 16, 16)
-    # relevance = relevance.reshape(-1, 1, 8, 8)
-    relevance = torch.nn.functional.interpolate(relevance, scale_factor=16, mode='bilinear')
+def upscale_relevance(relevance, feat_map_size=16, scale_factor=16):
+    relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
+    relevance = torch.nn.functional.interpolate(relevance, scale_factor=scale_factor, mode='bilinear')
 
     # normalize between 0 and 1
     relevance = relevance.reshape(relevance.shape[0], -1)
@@ -409,9 +409,7 @@ def upscale_relevance(relevance):  # TODO
     max = relevance.max(1, keepdim=True)[0]
     relevance = (relevance - min) / (max - min)
 
-    # relevance = relevance.reshape(-1, 1, 224, 224)
-    relevance = relevance.reshape(-1, 1, 256, 256)
-    # relevance = relevance.reshape(-1, 1, 128, 128)
+    relevance = relevance.reshape(-1, 1, feat_map_size * scale_factor, feat_map_size * scale_factor)
     return relevance
 
 def BF_solver(X, Y):

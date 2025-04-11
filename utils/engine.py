@@ -21,6 +21,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                     max_seg_size: int = 32, batch_size: int = 32, max_norm: float = 0, cls_thresh: float = 0.5, use_cls_token=False):
     model.train()
     criterion.train()
+    input_size = data_loader.dataset.input_size
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -87,9 +88,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                         reduced_attn_maps = reduced_attn_maps.unsqueeze(0).to(device)
                     elif localization_loss_params.ATTENTION_METHOD == 'relevance_map':
                         if 'res' in localization_loss_params.TYPE:
-                            reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh, upscale=False).to(device)
+                            reduced_attn_maps = generate_relevance(model, outputs, upscale=False).to(device)
                         else:
-                            reduced_attn_maps = generate_relevance(model, outputs, index=None, bin_thresh=cls_thresh).to(device)
+                            reduced_attn_maps = generate_relevance(model, outputs, input_size=input_size).to(device)
                     elif localization_loss_params.ATTENTION_METHOD == 'rollout':
                         all_layers_attn = []
                         for i, blk in enumerate(model.vit_encoder.layers):
