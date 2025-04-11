@@ -1,7 +1,10 @@
-__pycache__/
+**/__pycache__/
 
 /weights/
 /.idea/
 /results/
 /wandb/
-/draft.py
+*.egg-info/
+*.egg
+
+
