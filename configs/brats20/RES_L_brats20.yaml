@@ -1,5 +1,5 @@
 DATA:
-  DATASET_DIR: /mnt/DATA1/Sagi/Data/  # Full path to dataset parent directory
+  DATASET_DIR: /media/rotem/ab5c6608-2520-4a40-bc1e-c55b146472a2/Sagi/Data/  # Full path to dataset parent directory
   DATASETS: BraTS2020 # Name of dataset directory
   DATA_SPLIT_FILE: datasets/data_splits/brats20/train_val_test_split.json # Path to dataset split file. Files located at: datasets/data_splits
   PREPROCESS:
@@ -7,7 +7,7 @@ DATA:
     SCAN_NORM_MODE: 'slice'   # Options: 'slice', 'scan', None. Minmax normalization option (for 'slice' normalization is applied separately for each slice, for 'scan' it is applied on the entire scan at once)
 
 TRAINING:
-  OUTPUT_DIR: /mnt/DATA1/Sagi/Models/LGMViT/  # Path to parent directory where the experiments (checkpoints) will be saved to
+  OUTPUT_DIR: /media/rotem/ab5c6608-2520-4a40-bc1e-c55b146472a2/Sagi/Models/LGMViT/  # Path to parent directory where the experiments (checkpoints) will be saved to
   INPUT_SIZE: 256   # Spatial input size (H and W)
   LR: 0.00001   # Initial learning rate
   SCAN_SEG_SIZE: 32   # Number of slices for each forward pass. This number must be a factor of the batch size. Reduce this number in cases where the desired batch size exceeds the GPU memory.
@@ -17,7 +17,7 @@ TRAINING:
   EPOCHS: 25    # Number of epochs to train
   CLIP_MAX_NORM: 0    # Clip gradients
   EVAL_INTERVAL: 1    # Interval length (in epochs) for evaluation on validation set
-  SAVE_CKPT_INTERVAL: 1   # Interval length (in epochs) to save checkpoints
+  SAVE_CKPT_INTERVAL: 5   # Interval length (in epochs) to save checkpoints
   SAVE_BEST_CKPT_CRITERION: 'f1'    # Options: 'f1', 'acc', 'auroc', 'auprc', 'cohen_kappa'. Criterion in which to save checkpoint for best epoch.
   RESUME: ''    # Resume from checkpoint. Options: 'latest' (resumes from the last saved epoch), insert full path to checkpoint, insert url to checkpoint
   START_EPOCH: 1    # Initialize the epoch count of training session
@@ -51,7 +51,6 @@ MODEL:
     DROP_PATH: 0.1    # Drop path ratio (ViT Block)
     FORWARD_DROP_P: 0.1   # Drop path ratio (MLP inside the ViT Block)
     USE_CLS_TOKEN: true   # Use class token (currently mandatory)
-    ATTENTION_3D: false   # Apply 3D attention instead of 2D
 
 DISTRIBUTED:
   WORLD_SIZE: 1
