@@ -43,6 +43,7 @@ def parse_args():
 def main(config, args):
     utils.init_distributed_mode(config)
     device = torch.device(args.device)
+    config.DEVICE = device
 
     # fix the seed for reproducibility
     seed = args.seed + utils.get_rank()
@@ -50,6 +51,7 @@ def main(config, args):
     np.random.seed(seed)
     random.seed(seed)
 
+    # Build model
     model = build_model(config)
     model.to(device)
 
@@ -149,6 +151,7 @@ def main(config, args):
     os.makedirs(ckpt_dir, exist_ok=True)
 
     best_epoch_stat = -np.inf
+    # Resume from checkpoint or load pretrain weights
     if config.TRAINING.RESUME:
         if config.TRAINING.RESUME == 'latest':
             # Define the pattern to match checkpoint files
@@ -244,7 +247,6 @@ if __name__ == '__main__':
             wandb_run = init_wandb(args.wandb_proj_name, args.config_name, args.wandb_group, cfg=config)
         else:
             raise ValueError('Please insert W&B project name in arguments')
-
 
     if config.TRAINING.OUTPUT_DIR:
         Path(config.TRAINING.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)

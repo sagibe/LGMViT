@@ -3,7 +3,7 @@ import yaml
 
 def get_default_config():
     """
-    Add default config.
+    Initialize and return the default config
     """
     cfg = edict()
 
@@ -79,7 +79,7 @@ def get_default_config():
     cfg.MODEL.VIT_ENCODER.DROP_PATH = 0.1   # Drop path ratio
     cfg.MODEL.VIT_ENCODER.FORWARD_DROP_P = 0.1  # Drop path ratio
     cfg.MODEL.VIT_ENCODER.USE_CLS_TOKEN = True  # Use class token (currently mandatory)
-    cfg.MODEL.VIT_ENCODER.ATTENTION_3D = False  # Apply 3D attention instead of 2D
+    cfg.MODEL.VIT_ENCODER.ATTENTION_3D = False  # Apply 3D attention instead of 2D (Currently not supported, need to fix bug)
 
     # DISTRIBUTED
     cfg.DISTRIBUTED = edict()

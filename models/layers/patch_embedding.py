@@ -2,13 +2,7 @@
 Backbone modules.
 Modified from DETR (https://github.com/facebookresearch/detr)
 """
-import numpy as np
-import torch
-import torchvision
 from torch import nn
-from typing import Dict
-
-from models.layers.position_encoding import build_position_encoding
 
 class PatchEmbedding(nn.Module):
     """

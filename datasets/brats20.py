@@ -4,10 +4,31 @@ import numpy as np
 import scipy
 import SimpleITK as sitk
 
+from utils.util import resize_scan, min_max_norm_scan, min_max_norm_slice
+
 
 class BraTS20Dataset:
-    def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=256,
+    """
+    A PyTorch Dataset class for loading and preprocessing the BraTS 2020 (Brain Tumor Segmentation) dataset.
+
+    This class handles the loading and preprocessing of multi-modal MRI scans(T1, T2, FLAIR)
+    and their corresponding segmentation masks from the BraTS 2020 dataset for the LGM-ViT.
+    """
+    def __init__(self, data_dir, split_dict=None, scan_set='', input_size=256,
                  resize_mode='interpolate', padding=0, scan_norm_mode='slice', random_slice_segment=None):
+        """
+        Initialize the BraTS20Dataset.
+
+        Args:
+            data_dir (str): Root directory of the BraTS 2020 dataset.
+            split_dict (dict): Dictionary containing train/val/test split of scan IDs.
+            scan_set (str): Key in split_dict to select the appropriate set of scans.
+            input_size (int): Desired size of input scans (default: 256).
+            resize_mode (str): Method for resizing scans ('interpolate' or 'padding').
+            padding (int): Padding size when using 'padding' resize mode.
+            scan_norm_mode (str): Normalization mode for scans ('slice' or 'scan').
+            random_slice_segment (int or None): Size (in slices) of the continuous segment to crop from scan (default: entire scan).
+        """
         self.data_dir = os.path.join(data_dir, 'MICCAI_BraTS2020_TrainingData')
         self.scan_list = split_dict[scan_set]
 
@@ -16,12 +37,24 @@ class BraTS20Dataset:
         self.resize_mode = resize_mode
         self.padding = padding
         self.scan_norm_mode = scan_norm_mode
-        self._transforms = transforms
 
     def __len__(self):
+        """Return the number of scans in the dataset."""
         return len(self.scan_list)
 
     def __getitem__(self, idx):
+        """
+        Load and preprocess a single scan with the given index.
+
+        Args:
+            idx (int): Index of the scan to load.
+
+        Returns:
+            tuple: Containing:
+                - scan (numpy.ndarray): Preprocessed multi-modal scan (shape: [B, C, H, W]).
+                - labels (list): Contains classification and segmentation labels of the scan.
+                - scan_id (str): ID of the loaded scan.
+        """
         scan_id = self.scan_list[idx]
         t1_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_t1.nii')
         t2_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_t2.nii')
@@ -76,35 +109,5 @@ class BraTS20Dataset:
 
         scan = np.stack([t1, t2, flair], axis=1)
 
-        # apply the transforms
-        if self._transforms is not None:
-            scan = self._transforms(scan)
-
-        # if True:
-        #     half_seg_size = 25
-        #     mid_idx = cls_labels.shape[0]//2
-        #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
-        #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
-
         labels = [cls_labels, seg_labels]
         return tuple([scan, labels, scan_id])
-
-def resize_scan(scan, size=256):
-    scan_rs = np.zeros((len(scan), size, size))
-    for idx in range(len(scan)):
-        cur_slice = scan[idx, :, :]
-        cur_slice_rs = cv2.resize(cur_slice, (size, size), interpolation=cv2.INTER_CUBIC)
-        scan_rs[idx, :, :] = cur_slice_rs
-    return scan_rs
-
-def min_max_norm_scan(scan):
-    return (scan - scan.min()) / (scan.max() - scan.min())
-
-def min_max_norm_slice(scan):
-    scan_norm = np.zeros_like(scan)
-    for idx in range(len(scan)):
-        cur_slice = scan[idx, :, :]
-        if cur_slice.max() > cur_slice.min():
-            cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
-            scan_norm[idx, :, :] = cur_slice_norm
-    return scan_norm

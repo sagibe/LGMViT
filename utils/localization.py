@@ -7,6 +7,25 @@ from typing import List, Optional, Tuple, Union
 import warnings
 
 def generate_spatial_attention(attn, mode='max_pool'):
+    """
+    Generates spatial attention maps from an attention tensor.
+
+    Parameters:
+    - attn (Tensor): Attention tensor with shape (batch_size, num_heads, num_tokens, num_tokens).
+                      This tensor typically represents the attention weights computed by a multi-head
+                      self-attention mechanism.
+    - mode (str, optional): Specifies how to generate the spatial attention. Can be one of:
+        - 'max_pool': Uses the maximum value of the attention across the spatial dimension (i.e., max pooling).
+        - 'cls_token': Extracts the attention values corresponding to the class token and reshapes it.
+                      This mode assumes that the first token corresponds to the class token.
+        Default is 'max_pool'.
+
+    Returns:
+    - spat_attn (Tensor): Spatial attention map with shape (batch_size, num_heads, feat_size, feat_size),
+                          where `feat_size` is the square root of the number of spatial tokens, representing the
+                          height and width of the feature map.
+
+    """
     bs, nh = attn.shape[0], attn.shape[1]
     if mode == 'max_pool':
         feat_size = int(np.sqrt(attn.shape[2]))
@@ -18,7 +37,29 @@ def generate_spatial_attention(attn, mode='max_pool'):
         raise ValueError(f"{mode} spatial attention type not supported")
     return spat_attn
 
-def generate_spatial_bb_map(bb_feats, mode='max_pool'):
+def generate_spatial_bb_map(bb_feats, mode='max_pool'): # TODO fix the max_pool naming error
+    """
+    Generates a spatial feature map from the backbone features.
+    The spatial map can be computed by either using max pooling over the spatial dimension
+    or by extracting the feature map corresponding to the class token.
+
+    Parameters:
+    - bb_feats (Tensor): Backbone feature tensor with shape (batch_size, embedding_dim, num_tokens),
+                          where `num_tokens` is typically the flattened spatial dimension.
+                          `embedding_dim` represents the size of the feature vector for each token.
+    - mode (str, optional): Specifies how to generate the spatial feature map. Can be one of:
+        - 'max_pool': Uses max pooling over the spatial dimension to compute the feature map.
+        - 'cls_token': Extracts the feature corresponding to the class token and reshapes it.
+        Default is 'max_pool'.
+
+    Returns:
+    - bb_feats (Tensor): A spatial feature map with shape (batch_size, embedding_dim, feat_size, feat_size),
+                          where `feat_size` is the square root of the number of spatial tokens.
+                          This map represents the spatial features from the backbone in a grid format.
+
+    Raises:
+    - ValueError: If an unsupported mode is provided.
+    """
     bs, em = bb_feats.shape[0], bb_feats.shape[1]
     if mode == 'max_pool':
         feat_size = int(np.sqrt(bb_feats.shape[2]))
@@ -33,7 +74,7 @@ def extract_heatmap(featmap: torch.Tensor,
                  feat_interpolation = 'bilinear',
                  channel_reduction: Optional[str] = 'squeeze_mean',
                  topk: int = 20,
-                 resize_shape: Optional[tuple] = None):
+                 resize_shape: Optional[tuple] = None):  #TODO
     """Draw featmap.
 
     - If `overlaid_image` is not None, the final output image will be the
@@ -140,6 +181,18 @@ def extract_heatmap(featmap: torch.Tensor,
         return topk_featmap
 
 def generate_heatmap_over_img(heatmap, overlaid_img, alpha=0.5):
+    """
+    Overlays a heatmap onto an image with adjustable transparency.
+
+    Parameters:
+    - heatmap (numpy array or tensor): The heatmap to overlay. Expected shape is (H, W) or (1, H, W).
+    - overlaid_img (numpy array): The base image onto which the heatmap will be applied.
+      If grayscale (2D), it will be converted to RGB.
+    - alpha (float): The transparency level for the heatmap overlay (0 = fully transparent, 1 = fully opaque).
+
+    Returns:
+    - numpy array: The RGB image with the heatmap overlay applied.
+    """
     if len(overlaid_img.shape) == 2:
         overlaid_img = cv2.cvtColor(overlaid_img, cv2.COLOR_GRAY2RGB)
 
@@ -254,7 +307,21 @@ def generate_learned_processed_annotations(model,binary_masks,input=None, mode='
 
     return learned_masks.permute(1,0,2,3)
 
-def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True):
+def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True): #TODO remove hardcoded map size
+    """
+    Computes the relevance map (acoording to the GAE method) for a given model and output predictions. The relevance map highlights
+    which parts of the input contribute most to the model's decision-making process.
+
+    Parameters:
+    - model (nn.Module): The trained ViT-based model.
+    - outputs (Tensor): The model's output predictions, typically from the final layer.
+    - upscale (bool, optional): If True, upscales the relevance map to the original input size. If False, keeps a fixed map size. Default is True.
+
+    Returns:
+    - relevance (Tensor): The relevance map, which highlights the spatial areas contributing most to the prediction.
+                           The output tensor will have the shape (num_tokens, batch_size, feat_size, feat_size), where
+                           `feat_size` is typically the spatial dimension of the feature map.
+    """
     # a batch of samples
     batch_size = outputs.shape[0]
 
@@ -330,7 +397,7 @@ def apply_self_attention_rules(R_ss, cam_ss):
     R_ss_addition = torch.matmul(cam_ss, R_ss)
     return R_ss_addition
 
-def upscale_relevance(relevance):
+def upscale_relevance(relevance):  # TODO
     # relevance = relevance.reshape(-1, 1, 14, 14)
     relevance = relevance.reshape(-1, 1, 16, 16)
     # relevance = relevance.reshape(-1, 1, 8, 8)

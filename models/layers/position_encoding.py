@@ -10,13 +10,24 @@ import einops
 
 from utils.util import NestedTensor
 
-# position encoding for 3 dims
+# Position encoding for 3 dims
 class PositionalEncodingSine3D(nn.Module):
     """
-    This is a more standard version of the position embedding, very similar to the one
-    used by the Attention is all you need paper, generalized to work on images.
+    A PyTorch module that generates 3D sinusoidal positional encodings for vision transformers.
     """
     def __init__(self, embed_size=64, z_size=36, fit_mode='interpolate', temperature=10000, normalize=False, scale=None, device='cuda'):
+        """
+        Initialize the PositionalEncodingSine2D module.
+
+        Args:
+            embed_size (int): The size of the embedding dimension (last dimension of the input tensor).
+            z_size (int): The maximum number of slices in the z-dimension (depth) of the input volume.
+            fit_mode (str): Specifies how to handle mismatches between the positional encoding dimensions and input volume dimensions. Options include 'interpolate' and 'prune'.
+            temperature (int): A scaling factor for the sine-cosine functions, controlling the frequency of the positional encodings.
+            normalize (bool): If True, normalizes the positional encodings.
+            scale (float): A scaling factor applied during normalization.
+            device (str): The device on which the computations will be performed.
+        """
         super().__init__()
         self.embed_size = embed_size
         self.fit_mode = fit_mode
@@ -31,6 +42,15 @@ class PositionalEncodingSine3D(nn.Module):
         self.scale = scale
 
     def forward(self, scan):
+        """
+        Generate 2D positional encodings for the input tensor.
+
+        Args:
+            scan (torch.Tensor): A 4D input tensor of shape (batch_size, channels, x, y).
+
+        Returns:
+            torch.Tensor: Positional encodings of shape (batch_size, channels, x, y).
+        """
         d, embed, h, w = scan.size()
         mask = torch.ones((self.z_size, h, w))
         mask = mask.reshape(1, self.z_size,h,w).to(self.device)
@@ -71,9 +91,15 @@ class PositionalEncodingSine3D(nn.Module):
         return pos
 
 class PositionalEncodingSine2D(nn.Module):
+    """
+    A PyTorch module that generates 2D sinusoidal positional encodings for vision transformers.
+    """
     def __init__(self, embed_size):
         """
-        :param channels: The last dimension of the tensor you want to apply pos emb to.
+        Initialize the PositionalEncodingSine2D module.
+
+        Args:
+            embed_size (int): The size of the embedding dimension (last dimension of the input tensor).
         """
         super(PositionalEncodingSine2D, self).__init__()
         self.org_channels = embed_size
@@ -85,8 +111,13 @@ class PositionalEncodingSine2D(nn.Module):
 
     def forward(self, tensor):
         """
-        :param tensor: A 4d tensor of size (batch_size, x, y, ch)
-        :return: Positional Encoding Matrix of size (batch_size, x, y, ch)
+        Generate 2D positional encodings for the input tensor.
+
+        Args:
+            tensor (torch.Tensor): A 4D input tensor of shape (batch_size, x, y, channels).
+
+        Returns:
+            torch.Tensor: Positional encodings of shape (batch_size, x, y, channels).
         """
         if len(tensor.shape) != 4:
             raise RuntimeError("The input tensor has to be 4d!")
@@ -123,9 +154,18 @@ def get_emb(sin_inp):
 
 class LearnedPositionalEmbedding3D(nn.Module):
     """
-    Absolute position embedding, learned.
+    Absolute 3D position embedding, learned.
     """
     def __init__(self, embedding_dim, max_depth=40, max_height=256, max_width=256):
+        """
+        Initialize the PositionalEncodingSine2D module.
+
+        Args:
+            embedding_dim (int): The size of the embedding dimension (last dimension of the input tensor).
+            max_depth (int): The maximum number of slices in the depth (z) dimension for which embeddings will be generated.
+            max_height (int): The maximum height (y) of the input volume.
+            max_width (int): The maximum width (x) of the input volume.
+        """
         super().__init__()
         self.row_embed = nn.Embedding(max_width, embedding_dim // 3 + int(embedding_dim % 3 > 0))
         self.col_embed = nn.Embedding(max_height, embedding_dim // 3 + int(embedding_dim % 3 == 2))
@@ -138,6 +178,15 @@ class LearnedPositionalEmbedding3D(nn.Module):
         nn.init.uniform_(self.depth_embed.weight)
 
     def forward(self, scan: NestedTensor):
+        """
+        Generate 2D positional encodings for the input tensor.
+
+        Args:
+            tensor (torch.Tensor): A 4D input tensor of shape (batch_size, x, y, channels).
+
+        Returns:
+            torch.Tensor: Positional encodings of shape (batch_size, x, y, channels).
+        """
         d, em, h, w = scan.size()
         i = torch.arange(w, device=scan.device)
         j = torch.arange(h, device=scan.device)

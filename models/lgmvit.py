@@ -8,18 +8,23 @@ from models.layers.vit_encoder import build_vit_encoder
 
 
 class VisionTransformerLGM(nn.Module):
-    """ This is the VisTR module that performs video object detection """
+    """
+    Localization-Guided Medical Vision Transformer (LGM-ViT) module.
+    """
     def __init__(self, patch_embed, pos_encode, vit_encoder, feat_size, num_classes=2,
                  embed_dim=768, use_cls_token=True, attention_3d=False, store_layers_attn=False): # channel_reduction_srcs=[]
-        """ Initializes the model.
+        """
+        Initializes the model.
         Parameters:
-            backbone: torch module of the backbones to be used. See backbones.py
-            vit_encoder: torch module of the vit_encoder architecture. See vit_encoder.py
-            num_classes: number of object classes
-            num_queries: number of object queries, ie detection slot. This is the maximal number of objects
-                         VisTR can detect in a video. For ytvos, we recommend 10 queries for each frame,
-                         thus 360 queries for 36 frames.
-            aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
+        - patch_embed (nn.Module): Module for converting input images into patch embeddings.
+        - pos_encode (nn.Module or None): Module for adding positional encoding to patch embeddings. If None, no positional encoding is applied.
+        - vit_encoder (nn.Module): Transformer encoder that processes the sequence of patches.
+        - feat_size (int): Feature size of each patch grid dimension.
+        - num_classes (int): Number of classes for the classification task. Defaults to 2.
+        - embed_dim (int): Dimensionality of the patch embeddings. Default is 768.
+        - use_cls_token (bool): Flag to include a class token for classification. Default is True.
+        - attention_3d (bool): Flag for enabling 3D attention in the encoder. Default is False.
+        - store_layers_attn (bool): Whether to store attention maps from each encoder layer. Default is False.
         """
         super().__init__()
         self.feat_size = feat_size
@@ -40,19 +45,16 @@ class VisionTransformerLGM(nn.Module):
         )
 
     def forward(self, samples):
-        """ The forward expects a NestedTensor, which consists of:
-               - samples.tensors: image sequences, of shape [num_frames x 3 x H x W]
-               - samples.mask: a binary mask of shape [num_frames x H x W], containing 1 on padded pixels
+        """
+        Forward pass of the LGM-ViT.
 
-            It returns a dict with the following elements:
-               - "pred_logits": the classification logits (including no-object) for all queries.
-                                Shape= [batch_size x num_queries x (num_classes + 1)]
-               - "pred_boxes": The normalized boxes coordinates for all queries, represented as
-                               (center_x, center_y, height, width). These values are normalized in [0, 1],
-                               relative to the size of each individual image (disregarding possible padding).
-                               See PostProcess for information on how to retrieve the unnormalized bounding box.
-               - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
-                                dictionnaries containing the two above keys for each decoder layer.
+        Parameters:
+        - samples (Tensor): Input image tensor of shape (batch_size, channels, height, width).
+
+        Returns:
+        - out_class (Tensor): Classification output tensor of shape (batch_size, num_classes).
+        - attn (Tensor): Attention map from the last encoder layer.
+        - out_encoder (Tensor): Encoder's final representation tensor of shape (batch_size, embed_dim, seq_length).
         """
         tokens = self.patch_embed(samples)
         if self.pos_encode is not None:
@@ -76,8 +78,10 @@ class VisionTransformerLGM(nn.Module):
         out_encoder, attn = self.vit_encoder(x)
 
         if self.attention_3d:
-            out_encoder = out_encoder.reshape(bs, h * w, em)
-
+            if self.use_cls_token:
+                out_encoder = out_encoder.reshape(bs, h * w + 1, em)
+            else:
+                out_encoder = out_encoder.reshape(bs, h * w, em)
         out_encoder = out_encoder.permute(0, 2, 1)
 
         if self.use_cls_token:
@@ -87,6 +91,9 @@ class VisionTransformerLGM(nn.Module):
         return out_class, attn, out_encoder
 
 def build_model(config):
+    """
+    Build the LGM-ViT model.
+    """
     feat_size = config.TRAINING.INPUT_SIZE // config.MODEL.PATCH_SIZE
     patch_embed = build_patch_embedding(config)
     if config.MODEL.POSITION_EMBEDDING.TYPE is not None:

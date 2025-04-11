@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 import os
+import numpy as np
+import cv2
 import torch
 import torch.distributed as dist
 import time
@@ -9,7 +11,11 @@ from torch import sigmoid
 from torchmetrics.classification import BinaryAUROC, AveragePrecision, BinaryCohenKappa
 
 class RecursiveNamespace(SimpleNamespace):
-
+    """
+    A subclass of SimpleNamespace that recursively converts dictionaries
+    and lists of dictionaries into RecursiveNamespace instances, allowing
+    nested attribute-style access.
+    """
     @staticmethod
     def map_entry(entry):
         if isinstance(entry, dict):
@@ -181,6 +187,25 @@ class SmoothedValue(object):
             value=self.value)
 
 class MetricLogger(object):
+    """
+    A class for logging and displaying metrics during training or evaluation loops, with support for
+    smoothing, synchronization across distributed processes, and periodic printing.
+
+    Attributes:
+    - meters (defaultdict of SmoothedValue): Stores smoothed metric values with custom formatting.
+    - delimiter (str): Delimiter for joining metric log strings.
+
+    Methods:
+    - update(**kwargs): Updates metric values with new data; adds or smooths values over iterations.
+    - synchronize_between_processes(): Synchronizes all SmoothedValue meters across processes.
+    - add_meter(name, meter): Adds a custom meter to the logger.
+    - log_every(iterable, print_freq, header): Iterates over an iterable while logging metrics at
+      a specified frequency. Displays estimated time remaining, current time, and memory usage.
+
+    Special Methods:
+    - __str__(): Returns a formatted string of all current meters.
+    - __getattr__(attr): Provides attribute access to meters or raises an AttributeError if not found.
+    """
     def __init__(self, delimiter="\t"):
         self.meters = defaultdict(SmoothedValue)
         self.delimiter = delimiter
@@ -273,8 +298,25 @@ class MetricLogger(object):
             header, total_time_str, total_time / len(iterable)))
 
 class PerformanceMetrics(object):
-    """Track a series of values and provide access to smoothed values over a
-    window or the global series average.
+    """
+    A class for calculating and storing various performance metrics for binary classification.
+
+    Attributes:
+    - device (torch.device): The device (e.g., CPU or GPU) to store tensors and perform calculations.
+    - bin_thresh (float): The threshold for converting prediction probabilities to binary class labels.
+    - preds (torch.Tensor): Stores concatenated predictions over batches.
+    - targets (torch.Tensor): Stores concatenated true labels over batches.
+    - tp, tn, fp, fn (torch.Tensor): Track counts of true positives, true negatives, false positives,
+      and false negatives, respectively, for binary classification.
+
+    Methods:
+    - update(outputs, targets): Updates the stored predictions, targets, and metric counters
+      (tp, tn, fp, fn) with new batch data.
+    - f1 (property): Computes the F1 score based on tp, fp, and fn.
+    - accuracy (property): Computes the accuracy of predictions.
+    - auroc (property): Computes the Area Under the Receiver Operating Characteristic Curve.
+    - auprc (property): Computes the Area Under the Precision-Recall Curve.
+    - cohen_kappa (property): Computes Cohen's Kappa, a measure of classification reliability.
     """
 
     def __init__(self, device, bin_thresh=0.5):
@@ -324,7 +366,93 @@ class PerformanceMetrics(object):
         cohen_kappa = BinaryCohenKappa().to(self.device)
         return cohen_kappa(self.preds, self.targets).item()
 
+def resize_scan(scan, size=256):
+    """
+    Resize each slice of a 3D medical scan to a specified size.
+
+    This function takes a 3D numpy array representing a medical scan (e.g., CT or MRI)
+    and resizes each 2D slice to the specified size using bicubic interpolation.
+
+    Parameters:
+    scan (numpy.ndarray): A 3D numpy array of shape (num_slices, height, width)
+                          representing the input scan.
+    size (int, optional): The desired width and height of each slice after resizing.
+                          Default is 256.
+
+    Returns:
+    numpy.ndarray: A 3D numpy array of shape (num_slices, size, size) containing
+                   the resized scan.
+    """
+    scan_rs = np.zeros((len(scan), size, size))
+    for idx in range(len(scan)):
+        cur_slice = scan[idx, :, :]
+        cur_slice_rs = cv2.resize(cur_slice, (size, size), interpolation=cv2.INTER_CUBIC)
+        scan_rs[idx, :, :] = cur_slice_rs
+    return scan_rs
+
+def min_max_norm_scan(scan):
+    """
+    Apply min-max normalization to a 3D medical scan.
+
+    This function performs min-max normalization on the entire 3D scan, scaling
+    the voxel values to a range between 0 and 1. The normalization is applied
+    globally across all slices of the scan, preserving the relative intensity
+    differences between different parts of the scan.
+
+    Parameters:
+    scan (numpy.ndarray): A 3D numpy array representing the input scan.
+                          The array can be of any shape, typically
+                          (num_slices, height, width) for medical imaging data.
+
+    Returns:
+    numpy.ndarray: A 3D numpy array of the same shape as the input, containing
+                   the normalized scan with values scaled to the range [0, 1].
+
+    """
+    return (scan - scan.min()) / (scan.max() - scan.min())
+
+def min_max_norm_slice(scan):
+    """
+    Apply min-max normalization to a 3D medical scan on a slice-by-slice basis.
+
+    This function performs min-max normalization independently for each 2D slice
+    of a 3D scan, scaling the pixel values of each slice to a range between 0 and 1.
+
+    Parameters:
+    scan (numpy.ndarray): A 3D numpy array representing the input scan.
+                          Expected shape is (num_slices, height, width).
+
+    Returns:
+    numpy.ndarray: A 3D numpy array of the same shape as the input, containing
+                   the normalized scan with values scaled to the range [0, 1]
+                   for each slice independently.
+
+    """
+    scan_norm = np.zeros_like(scan)
+    for idx in range(len(scan)):
+        cur_slice = scan[idx, :, :]
+        if cur_slice.max() > cur_slice.min():
+            cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
+            scan_norm[idx, :, :] = cur_slice_norm
+    return scan_norm
+
 def attention_softmax_2d(attn, apply_log=True):
+    """
+    Apply 2D softmax normalization to a batch of attention maps.
+
+    This function takes a batch of attention maps and applies softmax (or log_softmax)
+    normalization across the spatial dimensions.
+
+    Parameters:
+    attn (torch.Tensor): A 4D tensor of shape [scans (usually 1), batch_size (slices), height, width]
+                         representing a batch of attention maps.
+    apply_log (bool, optional): If True, applies log_softmax instead of regular softmax.
+                                Default is True.
+
+    Returns:
+    torch.Tensor: A tensor of the same shape as the input, containing the normalized
+                  attention maps.
+    """
     if apply_log:
         return torch.nn.functional.log_softmax((attn.view(*attn.size()[:2], -1)), dim=2).view_as(attn)
     else:

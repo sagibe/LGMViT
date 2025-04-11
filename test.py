@@ -23,12 +23,12 @@ def parse_args():
     parser.add_argument('-c', '--checkpoint',
                         default=['best'],
                         nargs='*',
-                        help='Checkpoint to load. For test of multiple configs insert checkpoint for each config'
+                        help='Checkpoint (model weights file) to load. For test of multiple configs insert checkpoint for each config'
                              'in the same order of the config file names in the configs argument'
                              'Options:'
                              '- "best" (loads the best epoch saved during training). Can be used as a single argument for multiple configs if you want to load the best checkpoint saved during training for each of the models'
-                             '- number of type int (loads a specific checkpoint by number)'
-                             '- or full path to checkpoint.'
+                             '- Number of type int (loads a specific checkpoint by number)'
+                             '- Full path to checkpoint.'
                              'Examples for test of 3 configs:'
                              '-c 20 best 25'
                              '-c /full_path_to_checkpoint_of_first_model /full_path_to_checkpoint_of_second_model /full_path_to_checkpoint_of_third_model'
@@ -60,6 +60,7 @@ def parse_args():
 
 
 def main(args):
+    # Initialize performance metrics table (dataframe)
     cur_df = pd.DataFrame(
         columns=['Model Name',
                  'F1 Score',
@@ -70,6 +71,7 @@ def main(args):
                  ])
     for idx, config_name in enumerate(args.config_name):
         print(f"\nConfig Name: {config_name}")
+        # Load configuration for the current model
         config = get_default_config()
         update_config_from_file(f"configs/{args.dataset}/{config_name}.yaml", config)
         if args.ckpt_parent_dir is None:
@@ -79,9 +81,13 @@ def main(args):
 
         utils.init_distributed_mode(config)
         device = torch.device(args.device)
+        config.DEVICE = device
 
+        # Build model
         model = build_model(config)
         model.to(device)
+
+        # Load model weights
         if isinstance(args.checkpoint[idx], int):
             checkpoint_path = os.path.join(ckpt_parent_dir, args.dataset, config_name, 'ckpt', f'checkpoint{args.checkpoint[idx]:04}.pth')
         elif isinstance(args.checkpoint[idx], str):
@@ -105,11 +111,11 @@ def main(args):
         n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print('number of params:', n_parameters)
 
+        # Data loading
         data_dir = os.path.join(config.DATA.DATASET_DIR, config.DATA.DATASETS)
         with open(config.DATA.DATA_SPLIT_FILE, 'r') as f:
             split_dict = json.load(f)
         scan_set = 'test'
-
         if 'BraTS2020' in config.DATA.DATASETS:
             dataset_test = BraTS20Dataset(data_dir,
                                           scan_set=scan_set,
@@ -139,6 +145,7 @@ def main(args):
         batch_sampler_test = BatchSampler(sampler_test, 1, drop_last=True)
         data_loader_test = DataLoader(dataset_test, batch_sampler=batch_sampler_test, num_workers=args.num_workers)
 
+        # Execute inference and compute performance metrics
         test_stats = eval_test(model,
                                data_loader_test,
                                device=device,
@@ -146,6 +153,7 @@ def main(args):
                                max_norm=args.clip_max_norm,
                                cls_thresh=args.cls_thresh)
 
+        # Update performance metrics table
         cur_df = pd.concat([cur_df, pd.DataFrame([{'Model Name': config_name,
                                                    'F1 Score': test_stats.f1,
                                                    'Accuracy': test_stats.accuracy,
@@ -161,7 +169,6 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-
     if len(args.checkpoint) == 1 and args.checkpoint[0] == 'best':
         args.checkpoint = ['best'] * len(args.config_name)
     else:

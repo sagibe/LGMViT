@@ -310,8 +310,6 @@ def eval_test(model: torch.nn.Module, data_loader: Iterable, device: torch.devic
                 cur_targets = targets[max_seg_size * scan_seg_idx:max_seg_size * (scan_seg_idx + 1)]
                 outputs, attn, _ = model(cur_slices)
                 metrics.update(outputs, cur_targets)
-                # outputs, attn, _ = model(samples)
-                # metrics.update(outputs, targets)
                 if max_norm > 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
                 metric_logger.update(acc=metrics.accuracy)
