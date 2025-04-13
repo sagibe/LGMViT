@@ -1,35 +1,60 @@
-import json
-from collections import OrderedDict
-from pathlib import Path
 import os
-import pickle
-import matplotlib.pyplot as plt
-import cv2
-
 import numpy as np
 import scipy
-import torch
 import SimpleITK as sitk
+from torch.utils.data import Dataset
+
+from utils.util import resize_scan, min_max_norm_scan, min_max_norm_slice
 
 
-class BraTS20Dataset:
-    def __init__(self, data_dir,split_dict=None, transforms=None, scan_set='', input_size=256,
+class BraTS20Dataset(Dataset):
+    """
+    A PyTorch Dataset class for loading and preprocessing the BraTS 2020 (Brain Tumor Segmentation) dataset.
+
+    This class handles the loading and preprocessing of multi-modal MRI scans(T1, T2, FLAIR)
+    and their corresponding segmentation masks from the BraTS 2020 dataset for the LGM-ViT.
+    """
+    def __init__(self, data_dir, split_dict=None, scan_set='', input_size=256,
                  resize_mode='interpolate', padding=0, scan_norm_mode='slice', random_slice_segment=None):
+        """
+        Initialize the BraTS20Dataset.
+
+        Args:
+            data_dir (str): Root directory of the BraTS 2020 dataset.
+            split_dict (dict): Dictionary containing train/val/test split of scan IDs.
+            scan_set (str): Key in split_dict to select the appropriate set of scans.
+            input_size (int): Desired size of input scans (default: 256).
+            resize_mode (str): Method for resizing scans ('interpolate' or 'padding').
+            padding (int): Padding size when using 'padding' resize mode.
+            scan_norm_mode (str): Normalization mode for scans ('slice' or 'scan').
+            random_slice_segment (int or None): Size (in slices) of the continuous segment to crop from scan (default: entire scan).
+        """
         self.data_dir = os.path.join(data_dir, 'MICCAI_BraTS2020_TrainingData')
         self.scan_list = split_dict[scan_set]
-        # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
 
         self.input_size = input_size
         self.random_slice_segment = random_slice_segment
         self.resize_mode = resize_mode
         self.padding = padding
         self.scan_norm_mode = scan_norm_mode
-        self._transforms = transforms
 
     def __len__(self):
+        """Return the number of scans in the dataset."""
         return len(self.scan_list)
 
     def __getitem__(self, idx):
+        """
+        Load and preprocess a single scan with the given index.
+
+        Args:
+            idx (int): Index of the scan to load.
+
+        Returns:
+            tuple: Containing:
+                - scan (numpy.ndarray): Preprocessed multi-modal scan (shape: [B, C, H, W]).
+                - labels (list): Contains classification and segmentation labels of the scan.
+                - scan_id (str): ID of the loaded scan.
+        """
         scan_id = self.scan_list[idx]
         t1_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_t1.nii')
         t2_path = os.path.join(self.data_dir, scan_id, f'{scan_id}_t2.nii')
@@ -51,11 +76,6 @@ class BraTS20Dataset:
             t1 = min_max_norm_slice(t1)
             t2 = min_max_norm_slice(t2)
             flair = min_max_norm_slice(flair)
-        # scan = np.stack((scan, scan, scan), axis=1)
-        # scan = cv2.resize(scan, (self.input_size, self.input_size), interpolation=cv2.INTER_CUBIC)
-        # scan = scan.transpose(2,0,1)
-        # scan = np.expand_dims(scan, 0)
-
         if self.random_slice_segment is not None:
             if self.random_slice_segment < len(cls_labels):
                 random_range = len(cls_labels) - self.random_slice_segment + 1
@@ -86,54 +106,7 @@ class BraTS20Dataset:
             scale_factor_w = self.input_size / seg_labels.shape[-1]
             seg_labels = scipy.ndimage.zoom(seg_labels, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
 
-        # f, ax = plt.subplots(1, 3)
-        # slice = 10
-        # ax[0].imshow(img_t2w[slice,:,:], cmap='gray')
-        # ax[1].imshow(img_adc[slice,:,:], cmap='gray')
-        # ax[2].imshow(img_dwi[slice,:,:], cmap='gray')
-        # plt.show()
-
         scan = np.stack([t1, t2, flair], axis=1)
-
-        # apply the transforms
-        if self._transforms is not None:
-            scan = self._transforms(scan)
-
-        # if True:
-        #     half_seg_size = 25
-        #     mid_idx = cls_labels.shape[0]//2
-        #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
-        #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
-
-        # if True:
-        #     str_idx = 0
-        #     seg_size = 32
-        #     labels = [cls_labels[str_idx:str_idx+seg_size], seg_labels[str_idx:str_idx+seg_size]]
-        #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
 
         labels = [cls_labels, seg_labels]
         return tuple([scan, labels, scan_id])
-        # return tuple([img_concat, seg_labels if self.get_seg_labels else cls_labels])
-
-def resize_scan(scan, size=256):
-    # zoom_factor = (1, size/scan.shape[1], size/scan.shape[2])
-    # scan_rs = scipy.ndimage.zoom(scan,zoom_factor)
-    scan_rs = np.zeros((len(scan), size, size))
-    for idx in range(len(scan)):
-        cur_slice = scan[idx, :, :]
-        # cur_slice_rs = skimage.transform.resize(cur_slice, (size, size),anti_aliasing=True)
-        cur_slice_rs = cv2.resize(cur_slice, (size, size), interpolation=cv2.INTER_CUBIC)
-        scan_rs[idx, :, :] = cur_slice_rs
-    return scan_rs
-
-def min_max_norm_scan(scan):
-    return (scan - scan.min()) / (scan.max() - scan.min())
-
-def min_max_norm_slice(scan):
-    scan_norm = np.zeros_like(scan)
-    for idx in range(len(scan)):
-        cur_slice = scan[idx, :, :]
-        if cur_slice.max() > cur_slice.min():
-            cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
-            scan_norm[idx, :, :] = cur_slice_norm
-    return scan_norm

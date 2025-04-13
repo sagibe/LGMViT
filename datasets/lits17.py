@@ -1,25 +1,42 @@
-import json
-from collections import OrderedDict
-from pathlib import Path
 import os
-import pickle
-import matplotlib.pyplot as plt
-import cv2
-
 import numpy as np
 import scipy
-import torch
+from torch.utils.data import Dataset
 import SimpleITK as sitk
 
+from utils.util import resize_scan, min_max_norm_slice, min_max_norm_scan
 
-class LiTS17Dataset:
-    def __init__(self, data_dir, split_dict=None, transforms=None, scan_set='', input_size=512, batch_size=32, annot_type='lesion',
+
+class LiTS17Dataset(Dataset):
+    """
+    A PyTorch Dataset class for loading and preprocessing the LiTS17 dataset.
+
+    This class handles the loading and preprocessing of CT scans and their corresponding segmentation masks from the LiTS17 dataset for the LGM-ViT.
+    """
+    def __init__(self, data_dir, split_dict=None, scan_set='', input_size=512, batch_size=32, annot_type='lesion',
                  resize_mode='interpolate', liver_masking=True, crop_liver_slices=True, crop_liver_spatial=True,
                  random_slice_segment=None, last_batch_min_ratio=0, padding=0, scan_norm_mode='slice'):
+        """
+        Initialize the LiTS17Dataset.
+
+        Args:
+            data_dir (str): Root directory of the LiTS17 dataset.
+            split_dict (dict): Dictionary containing train/val/test split of scan IDs.
+            scan_set (str): Key in split_dict to select the appropriate set of scans.
+            input_size (int): Desired size of input scans (default: 512).
+            batch_size (int): The number of slices per batch during training.
+            annot_type (str): The type of annotation to use, either 'lesion' or 'organ'.
+            resize_mode (str): Method for resizing scans ('interpolate' or 'padding').
+            liver_masking (bool): Whether to apply a liver mask on the CT scan.
+            crop_liver_slices (bool): Whether to crop the CT scan in the slices dimension based on liver presence.
+            crop_liver_spatial (bool): Whether to crop the CT scan in the spatial dimensions based on liver presence.
+            random_slice_segment (int or None): Size (in slices) of the continuous segment to crop from scan (default: entire scan).
+            last_batch_min_ratio (float): The minimum size of the last batch (set by the ratio with the full batch size) of a scan that is acceptable. Scans where the last batch is smaller than this number will be trimmed at the edges of the scan.
+            padding (int): Padding size when using 'padding' resize mode.
+            scan_norm_mode (str): Normalization mode for scans ('slice' or 'scan').
+        """
         self.data_dir = data_dir
         self.scan_list = split_dict[scan_set]
-        # self.scan_list += [os.path.join(data_dir, f) for f in split_dict[scan_set]]
-
         self.input_size = input_size
         self.batch_size = batch_size
         self.annot_type = annot_type
@@ -31,14 +48,24 @@ class LiTS17Dataset:
         self.resize_mode = resize_mode
         self.padding = padding
         self.scan_norm_mode = scan_norm_mode
-        self._transforms = transforms
 
     def __len__(self):
+        """Return the number of scans in the dataset."""
         return len(self.scan_list)
 
     def __getitem__(self, idx):
-        # scan_id = self.scan_list[idx]
-        # R_num, scan_id  = self.scan_list[idx].split('/')
+        """
+        Load and preprocess a single scan with the given index.
+
+        Args:
+            idx (int): Index of the scan to load.
+
+        Returns:
+            tuple: Containing:
+                - scan (numpy.ndarray): Preprocessed multi-modal scan (shape: [B, C, H, W]).
+                - labels (list): Contains classification and segmentation labels of the scan.
+                - scan_id (str): ID of the loaded scan.
+        """
         scan_id = self.scan_list[idx].split('.')[0].split('-')[1]
         ct_path = os.path.join(self.data_dir, 'scans', f'volume-{scan_id}.nii')
         seg_path = os.path.join(self.data_dir, 'segmentations', f'segmentation-{scan_id}.nii')
@@ -89,13 +116,6 @@ class LiTS17Dataset:
                 binary_seg_labels = binary_seg_labels[random_idx:random_idx + random_slice_segment]
                 cls_labels = cls_labels[random_idx:random_idx + random_slice_segment]
 
-        # f, ax = plt.subplots(1, 3)
-        # slice = 10
-        # ax[0].imshow(img_t2w[slice,:,:], cmap='gray')
-        # ax[1].imshow(img_adc[slice,:,:], cmap='gray')
-        # ax[2].imshow(img_dwi[slice,:,:], cmap='gray')
-        # plt.show()
-
         if self.input_size != ct.shape[1]:
             if self.resize_mode == 'interpolate' or (self.resize_mode == 'padding' and self.input_size < ct.shape[1]):
                 ct = resize_scan(ct, size=self.input_size)
@@ -109,70 +129,25 @@ class LiTS17Dataset:
             scale_factor_h = self.input_size / binary_seg_labels.shape[-2]
             scale_factor_w = self.input_size / binary_seg_labels.shape[-1]
             binary_seg_labels = scipy.ndimage.zoom(binary_seg_labels, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
-            # liver_masks = scipy.ndimage.zoom(liver_masks, (1, scale_factor_h, scale_factor_w), order=0).astype(int)
-
-        # for slice_num in range(binary_seg_labels.shape[0]):
-        #     if binary_seg_labels[slice_num].sum() > 0:
-        #         f, ax = plt.subplots(1, 3, figsize=(14, 4))
-        #         ax[0].imshow(ct[slice_num], cmap='gray')
-        #         ax[1].imshow(liver_masks[slice_num], cmap='gray')
-        #         ax[2].imshow(binary_seg_labels[slice_num], cmap='gray')
-        #         plt.show()
-
-        # f, ax = plt.subplots(1, 3)
-        # slice = 10
-        # ax[0].imshow(img_t2w[slice,:,:], cmap='gray')
-        # ax[1].imshow(img_adc[slice,:,:], cmap='gray')
-        # ax[2].imshow(img_dwi[slice,:,:], cmap='gray')
-        # plt.show()
 
         scan = np.stack([ct, ct, ct], axis=1)
 
-        # apply the transforms
-        if self._transforms is not None:
-            scan = self._transforms(scan)
-
-        # if True:
-        #     half_seg_size = 25
-        #     mid_idx = cls_labels.shape[0]//2
-        #     labels = [cls_labels[mid_idx-half_seg_size:mid_idx+half_seg_size], binary_seg_labels[mid_idx-half_seg_size:mid_idx+half_seg_size]]
-        #     return tuple([scan[mid_idx-half_seg_size:mid_idx+half_seg_size], labels, scan_id])
-
-        # if True:
-        #     str_idx = 0
-        #     seg_size = 16
-        #     labels = [cls_labels[str_idx:str_idx+seg_size], binary_seg_labels[str_idx:str_idx+seg_size]]
-        #     return tuple([scan[str_idx:str_idx+seg_size], labels, scan_id])
-
         labels = [cls_labels, binary_seg_labels]
         return tuple([scan, labels, scan_id])
-        # return tuple([img_concat, binary_seg_labels if self.get_binary_seg_labels else cls_labels])
-
-def resize_scan(scan, size=256):
-    # zoom_factor = (1, size/scan.shape[1], size/scan.shape[2])
-    # scan_rs = scipy.ndimage.zoom(scan,zoom_factor)
-    scan_rs = np.zeros((len(scan), size, size))
-    for idx in range(len(scan)):
-        cur_slice = scan[idx, :, :]
-        # cur_slice_rs = skimage.transform.resize(cur_slice, (size, size),anti_aliasing=True)
-        cur_slice_rs = cv2.resize(cur_slice, (size, size), interpolation=cv2.INTER_CUBIC)
-        scan_rs[idx, :, :] = cur_slice_rs
-    return scan_rs
-
-def min_max_norm_scan(scan):
-    return (scan - scan.min()) / (scan.max() - scan.min())
-
-def min_max_norm_slice(scan):
-    scan_norm = np.zeros_like(scan)
-    for idx in range(len(scan)):
-        cur_slice = scan[idx, :, :]
-        if cur_slice.max() > cur_slice.min():
-            cur_slice_norm = (cur_slice - cur_slice.min()) / (cur_slice.max() - cur_slice.min())
-            scan_norm[idx, :, :] = cur_slice_norm
-    return scan_norm
-
 
 def get_square_crop_coords(mask, padding=0):
+    """
+    Extracts the coordinates for the smallest possible square crop of a 3D binary mask
+    with optional padding.
+
+    Parameters:
+    - mask (numpy array): A 3D binary mask where the shape is (depth, height, width).
+    - padding (int): Number of pixels to add as padding around the cropped area.
+
+    Returns:
+    - (tuple): Coordinates (y1, y2, x1, x2) defining the top-left and bottom-right
+      corners of the square crop region, adjusted for padding.
+    """
     y1 = x1 = np.inf
     y2 = x2 = 0
     for slice_num in range(mask.shape[0]):

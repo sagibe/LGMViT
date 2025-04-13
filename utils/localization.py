@@ -3,10 +3,29 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torchvision.transforms.functional import gaussian_blur
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple, Union
 import warnings
 
 def generate_spatial_attention(attn, mode='max_pool'):
+    """
+    Generates spatial attention maps from an attention tensor.
+
+    Parameters:
+    - attn (Tensor): Attention tensor with shape (batch_size, num_heads, num_tokens, num_tokens).
+                      This tensor typically represents the attention weights computed by a multi-head
+                      self-attention mechanism.
+    - mode (str, optional): Specifies how to generate the spatial attention. Can be one of:
+        - 'max_pool': Uses the maximum value of the attention across the spatial dimension (i.e., max pooling).
+        - 'cls_token': Extracts the attention values corresponding to the class token and reshapes it.
+                      This mode assumes that the first token corresponds to the class token.
+        Default is 'max_pool'.
+
+    Returns:
+    - spat_attn (Tensor): Spatial attention map with shape (batch_size, num_heads, feat_size, feat_size),
+                          where `feat_size` is the square root of the number of spatial tokens, representing the
+                          height and width of the feature map.
+
+    """
     bs, nh = attn.shape[0], attn.shape[1]
     if mode == 'max_pool':
         feat_size = int(np.sqrt(attn.shape[2]))
@@ -18,7 +37,29 @@ def generate_spatial_attention(attn, mode='max_pool'):
         raise ValueError(f"{mode} spatial attention type not supported")
     return spat_attn
 
-def generate_spatial_bb_map(bb_feats, mode='max_pool'):
+def generate_spatial_bb_map(bb_feats, mode='max_pool'): # TODO fix the max_pool naming error
+    """
+    Generates a spatial feature map from the backbone features.
+    The spatial map can be computed by either using max pooling over the spatial dimension
+    or by extracting the feature map corresponding to the class token.
+
+    Parameters:
+    - bb_feats (Tensor): Backbone feature tensor with shape (batch_size, embedding_dim, num_tokens),
+                          where `num_tokens` is typically the flattened spatial dimension.
+                          `embedding_dim` represents the size of the feature vector for each token.
+    - mode (str, optional): Specifies how to generate the spatial feature map. Can be one of:
+        - 'max_pool': Uses max pooling over the spatial dimension to compute the feature map.
+        - 'cls_token': Extracts the feature corresponding to the class token and reshapes it.
+        Default is 'max_pool'.
+
+    Returns:
+    - bb_feats (Tensor): A spatial feature map with shape (batch_size, embedding_dim, feat_size, feat_size),
+                          where `feat_size` is the square root of the number of spatial tokens.
+                          This map represents the spatial features from the backbone in a grid format.
+
+    Raises:
+    - ValueError: If an unsupported mode is provided.
+    """
     bs, em = bb_feats.shape[0], bb_feats.shape[1]
     if mode == 'max_pool':
         feat_size = int(np.sqrt(bb_feats.shape[2]))
@@ -33,7 +74,7 @@ def extract_heatmap(featmap: torch.Tensor,
                  feat_interpolation = 'bilinear',
                  channel_reduction: Optional[str] = 'squeeze_mean',
                  topk: int = 20,
-                 resize_shape: Optional[tuple] = None):
+                 resize_shape: Optional[tuple] = None):  #TODO
     """Draw featmap.
 
     - If `overlaid_image` is not None, the final output image will be the
@@ -90,16 +131,6 @@ def extract_heatmap(featmap: torch.Tensor,
 
     if featmap.ndim == 3:
         featmap = featmap.unsqueeze(0)
-    # if resize_shape is not None:
-    #     assert feat_interpolation in [
-    #         'bilinear', 'nearest'], \
-    #         f'feat_interpolation only support "bilinear", "nearest"' \
-    #         f'but got {feat_interpolation}'
-    #     featmap = F.interpolate(
-    #         featmap,
-    #         resize_shape,
-    #         mode=feat_interpolation,
-    #         align_corners=False)
 
     if channel_reduction is not None:
         assert channel_reduction in [
@@ -128,8 +159,7 @@ def extract_heatmap(featmap: torch.Tensor,
                 mode=feat_interpolation,
                 align_corners=False)
         return feat_map.squeeze(0)
-        # return feat_map
-        # return convert_overlay_heatmap(feat_map, overlaid_image, alpha)
+
     elif topk <= 0:
         featmap_channel = featmap.shape[0]
         assert featmap_channel in [
@@ -140,37 +170,29 @@ def extract_heatmap(featmap: torch.Tensor,
             ' channel_reduction parameter or set topk greater than '
             '0 to solve the error')
         return featmap
-        # return convert_overlay_heatmap(featmap, overlaid_image, alpha)
     else:
         channel = featmap.shape[1]
         # Extract the feature map of topk
         topk = min(channel, topk)
         sum_channel_featmap = torch.sum(featmap, dim=(2, 3))
         _, indices = torch.topk(sum_channel_featmap, topk, dim=1)
-        # feat_map = featmap[indices]
         expanded_indices = indices.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, featmap.size(2), featmap.size(3))
         topk_featmap = torch.gather(featmap, 1, expanded_indices).squeeze()
         return topk_featmap
 
-        # fig = plt.figure(frameon=False)
-        # # Set the window layout
-        # fig.subplots_adjust(
-        #     left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
-        # dpi = fig.get_dpi()
-        # fig.set_size_inches((width * col + 1e-2) / dpi,
-        #                     (height * row + 1e-2) / dpi)
-        # for i in range(topk):
-        #     axes = fig.add_subplot(row, col, i + 1)
-        #     axes.axis('off')
-        #     axes.text(2, 15, f'channel: {indices[i]}', fontsize=10)
-        #     axes.imshow(
-        #         convert_overlay_heatmap(topk_featmap[i], overlaid_image,
-        #                                 alpha))
-        # image = img_from_canvas(fig.canvas)
-        # plt.close(fig)
-        # return image
-
 def generate_heatmap_over_img(heatmap, overlaid_img, alpha=0.5):
+    """
+    Overlays a heatmap onto an image with adjustable transparency.
+
+    Parameters:
+    - heatmap (numpy array or tensor): The heatmap to overlay. Expected shape is (H, W) or (1, H, W).
+    - overlaid_img (numpy array): The base image onto which the heatmap will be applied.
+      If grayscale (2D), it will be converted to RGB.
+    - alpha (float): The transparency level for the heatmap overlay (0 = fully transparent, 1 = fully opaque).
+
+    Returns:
+    - numpy array: The RGB image with the heatmap overlay applied.
+    """
     if len(overlaid_img.shape) == 2:
         overlaid_img = cv2.cvtColor(overlaid_img, cv2.COLOR_GRAY2RGB)
 
@@ -224,21 +246,6 @@ def convert_overlay_heatmap(feat_map: Union[np.ndarray, torch.Tensor],
         heat_img = cv2.addWeighted(norm_img, 1 - alpha, heat_img, alpha, 0)
     return heat_img
 
-def img_from_canvas(canvas: 'FigureCanvasAgg') -> np.ndarray:
-    """Get RGB image from ``FigureCanvasAgg``.
-
-    Args:
-        canvas (FigureCanvasAgg): The canvas to get image.
-
-    Returns:
-        np.ndarray: the output of image in RGB.
-    """  # noqa: E501
-    s, (width, height) = canvas.print_to_buffer()
-    buffer = np.frombuffer(s, dtype='uint8')
-    img_rgba = buffer.reshape(height, width, 4)
-    rgb, alpha = np.split(img_rgba, [3], axis=2)
-    return rgb.astype('uint8')
-
 def generate_gauss_blur_annotations(binary_masks, kernel_size=5, sigma=None):
     """
     Apply Gaussian blur to a batch of binary masks and return normalized blurred masks.
@@ -252,27 +259,8 @@ def generate_gauss_blur_annotations(binary_masks, kernel_size=5, sigma=None):
         torch.Tensor: Batch of normalized blurred masks with the same shape as input binary masks.
                       The values are between 0 and 1.
     """
-    # assert binary_masks.ndim == 3 or (binary_masks.ndim == 4 and binary_masks.shape[0] == 1), "Input binary masks should have 3 dimensions: (batch_size, height, width) or 3 dimensions: (1, batch_size, height, width)"
-    # blurred_masks = []
-    # num_dims = binary_masks.ndim
-    # if (num_dims == 4 and binary_masks.shape[0] == 1):
-    #     binary_masks = binary_masks.squeeze(0)
 
     blurred_masks = gaussian_blur(binary_masks, kernel_size=kernel_size, sigma=sigma)
-    # for mask in binary_masks:
-    #     # Convert mask to float tensor
-    #     mask_float = mask.float()
-    #
-    #     # Apply Gaussian blur using PyTorch's functional interface
-    #     blurred_mask = gaussian_blur(mask_float, kernel_size=kernel_size, sigma=sigma)
-    #
-    #     # Normalize blurred mask to have values between 0 and 1
-    #     blurred_mask_normalized = (blurred_mask - blurred_mask.min()) / (blurred_mask.max() - blurred_mask.min())
-    #
-    #     blurred_masks.append(blurred_mask_normalized)
-    # blurred_masks = torch.stack(blurred_masks)
-    # if num_dims == 4:
-    #     return blurred_masks.unsqueeze(0)
     return blurred_masks
 
 def generate_learned_processed_annotations(model,binary_masks,input=None, mode='learned_S1'):
@@ -300,11 +288,6 @@ def generate_learned_processed_annotations(model,binary_masks,input=None, mode='
         else:
             input_imp = torch.cat((target_map_pos_org, input), 1)
 
-        # input_imp = target_map_pos_org
-        # H1 = torch.relu(model.imp_conv1(input_imp))
-        # H2 = torch.relu(model.imp_conv2(H1))
-        # target_map_trans = torch.relu(model.imp_conv3(H2))
-
         H1 = model.imp_conv1(input_imp)
         target_map_trans = model.imp_conv2(H1)
     elif mode in ['learned_d3', 'learned_ds3']:
@@ -312,10 +295,6 @@ def generate_learned_processed_annotations(model,binary_masks,input=None, mode='
             input_imp = target_map_pos_org
         else:
             input_imp = torch.cat((target_map_pos_org, input), 1)
-        # input_imp = target_map_pos_org
-        # H1 = torch.relu(model.imp_conv1(input_imp))
-        # H2 = torch.relu(model.imp_conv2(H1))
-        # target_map_trans = torch.relu(model.imp_conv3(H2))
 
         H1 = model.imp_conv1(input_imp)
         H2 = model.imp_conv2(H1)
@@ -323,52 +302,32 @@ def generate_learned_processed_annotations(model,binary_masks,input=None, mode='
     else:
         raise ValueError(f"{mode} mode type not supported")
 
-    # learned_masks = torch.squeeze(target_map_trans)
     learned_masks = target_map_trans - torch.min(target_map_trans)
     learned_masks = learned_masks / (torch.max(learned_masks) + 1e-6)
 
     return learned_masks.permute(1,0,2,3)
 
-# def resize_binary_masks(masks, target_size):
-#     if len(target_size) > 2:
-#         raise ValueError("Number elemets in target_size should be 1 or 2 but got {}".format(target_size))
-#     elif len(target_size) == 1:
-#         width = height = target_size
-#     else:
-#         width = target_size[0]
-#         height = target_size[1]
-#
-#     if len(masks.shape) > 4 or len(masks.shape) < 2:
-#         raise ValueError("Number dimensions of masks should be 2 or 3 or 4 but got {}".format(len(masks.shape)))
-#     elif len(masks.shape) == 2:
-#         masks = masks.unsqueeze(0).unsqueeze(0)
-#     elif len(masks.shape) == 3:
-#         masks = masks.unsqueeze(0)
-#     masks_resized = torch.nn.functional.interpolate(masks, (width, height), mode='nearest')
-#     # for idx in range(masks_resized.shape[0]):
-#     #     # cur_mask = np.uint8(masks[idx]) * 255
-#     #     cur_mask = np.uint8(masks[idx].cpu().numpy()) * 255
-#     #     cur_mask = cv2.resize(cur_mask, (width, height), interpolation=cv2.INTER_NEAREST)
-#     #     masks_resized[idx] = torch.from_numpy(cur_mask).type(torch.FloatTensor) / 255
-#
-#     return masks_resized
+def generate_relevance(model, outputs, input_size=256, upscale=True):
+    """
+    Computes the relevance map (acoording to the GAE method) for a given model and output predictions. The relevance map highlights
+    which parts of the input contribute most to the model's decision-making process.
 
+    Parameters:
+    - model (nn.Module): The trained ViT-based model.
+    - outputs (Tensor): The model's output predictions, typically from the final layer.
+    - input_size (int): size of input image.
+    - upscale (bool, optional): If True, upscales the relevance map to the original input size. If False, keeps a fixed map size. Default is True.
 
-def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True):
+    Returns:
+    - relevance (Tensor): The relevance map, which highlights the spatial areas contributing most to the prediction.
+                           The output tensor will have the shape (num_tokens, batch_size, feat_size, feat_size), where
+                           `feat_size` is typically the spatial dimension of the feature map.
+    """
     # a batch of samples
     batch_size = outputs.shape[0]
-    # output = model(input, register_hook=True)
-    # if index == None:
-    #     # index = np.argmax(output.cpu().data.numpy(), axis=-1)
-    #     index = torch.sigmoid(outputs) > bin_thresh
-    #     index = index.long().T
-    #     index = torch.tensor(index)
+    feat_map_size = model.feat_size
 
     one_hot = torch.sum(outputs)
-    # one_hot = np.zeros((batch_size, 2), dtype=np.float32)
-    # one_hot[torch.arange(batch_size), index.data.cpu().numpy()] = 1
-    # one_hot = torch.from_numpy(one_hot).requires_grad_(True)
-    # one_hot = torch.sum(one_hot.to(input.device) * output)
     model.zero_grad()
 
     num_tokens = model.vit_encoder.layers[0].attn.attn_maps.shape[-1]
@@ -381,18 +340,16 @@ def generate_relevance(model, outputs, index=None, bin_thresh=0.5, upscale=True)
         R = R + apply_self_attention_rules(R, cam)
     relevance = R[:, 0, 1:]
     if upscale:
-        relevance = upscale_relevance(relevance)
+        relevance = upscale_relevance(relevance, feat_map_size, scale_factor=input_size//feat_map_size)
     else:
-        relevance = relevance.reshape(-1, 1, 16, 16)
+        relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
         # normalize between 0 and 1
         relevance = relevance.reshape(relevance.shape[0], -1)
         min = relevance.min(1, keepdim=True)[0]
         max = relevance.max(1, keepdim=True)[0]
         relevance = (relevance - min) / (max - min)
-        relevance = relevance.reshape(-1, 1, 16, 16)
+        relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
     return relevance.permute(1,0,2,3)
-    # relevance = R[:, 0, 1:]
-    # return upscale_relevance(relevance).permute(1,0,2,3)
 
 def avg_heads(cam, grad):
     cam = cam.reshape(-1, cam.shape[-3], cam.shape[-2], cam.shape[-1])
@@ -400,26 +357,6 @@ def avg_heads(cam, grad):
     cam = grad * cam
     cam = cam.clamp(min=0).mean(dim=1)
     return cam
-
-
-# def attention_rollout(As):
-#     """Computes attention rollout from the given list of attention matrices.
-#     https://arxiv.org/abs/2005.00928
-#     """
-#     As = As.mean(axis=2)
-#     rollout = As[0]
-#     for A in As[1:]:
-#         rollout = torch.matmul(
-#             0.5 * A + 0.5 * torch.eye(A.shape[1], device=A.device),
-#             rollout
-#         )  # the computation takes care of skip connections
-#
-#     return rollout
-
-import torch
-
-import torch
-
 
 def attention_rollout(batch_As):
     """
@@ -457,52 +394,14 @@ def attention_rollout(batch_As):
 
     return spatial_rollout_attn
 
-
-# def attention_rollout2(attentions, discard_ratio=0.9, head_fusion='mean'):
-#     result = torch.eye(attentions[0].size(-1))
-#     with torch.no_grad():
-#         for attention in attentions:
-#             if head_fusion == "mean":
-#                 attention_heads_fused = attention.mean(axis=1)
-#             elif head_fusion == "max":
-#                 attention_heads_fused = attention.max(axis=1)[0]
-#             elif head_fusion == "min":
-#                 attention_heads_fused = attention.min(axis=1)[0]
-#             else:
-#                 raise "Attention head fusion type Not supported"
-#
-#             # Drop the lowest attentions, but
-#             # don't drop the class token
-#             flat = attention_heads_fused.view(attention_heads_fused.size(0), -1)
-#             _, indices = flat.topk(int(flat.size(-1) * discard_ratio), -1, False)
-#             indices = indices[indices != 0]
-#             flat[0, indices] = 0
-#
-#             I = torch.eye(attention_heads_fused.size(-1))
-#             a = (attention_heads_fused + 1.0 * I) / 2
-#             a = a / a.sum(dim=-1)
-#
-#             result = torch.matmul(a, result)
-#
-#     # Look at the total attention between the class token,
-#     # and the image patches
-#     mask = result[0, 0, 1:]
-#     # In case of 224x224 image, this brings us from 196 to 14
-#     width = int(mask.size(-1) ** 0.5)
-#     mask = mask.reshape(width, width).numpy()
-#     mask = mask / np.max(mask)
-#     return mask
-
 # rule 6 from paper
 def apply_self_attention_rules(R_ss, cam_ss):
     R_ss_addition = torch.matmul(cam_ss, R_ss)
     return R_ss_addition
 
-def upscale_relevance(relevance):
-    # relevance = relevance.reshape(-1, 1, 14, 14)
-    relevance = relevance.reshape(-1, 1, 16, 16)
-    # relevance = relevance.reshape(-1, 1, 8, 8)
-    relevance = torch.nn.functional.interpolate(relevance, scale_factor=16, mode='bilinear')
+def upscale_relevance(relevance, feat_map_size=16, scale_factor=16):
+    relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
+    relevance = torch.nn.functional.interpolate(relevance, scale_factor=scale_factor, mode='bilinear')
 
     # normalize between 0 and 1
     relevance = relevance.reshape(relevance.shape[0], -1)
@@ -510,9 +409,7 @@ def upscale_relevance(relevance):
     max = relevance.max(1, keepdim=True)[0]
     relevance = (relevance - min) / (max - min)
 
-    # relevance = relevance.reshape(-1, 1, 224, 224)
-    relevance = relevance.reshape(-1, 1, 256, 256)
-    # relevance = relevance.reshape(-1, 1, 128, 128)
+    relevance = relevance.reshape(-1, 1, feat_map_size * scale_factor, feat_map_size * scale_factor)
     return relevance
 
 def BF_solver(X, Y):
