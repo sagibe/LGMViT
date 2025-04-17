@@ -37,7 +37,7 @@ def generate_spatial_attention(attn, mode='max_pool'):
         raise ValueError(f"{mode} spatial attention type not supported")
     return spat_attn
 
-def generate_spatial_bb_map(bb_feats, mode='max_pool'): # TODO fix the max_pool naming error
+def generate_spatial_bb_map(bb_feats, cls_token=True):
     """
     Generates a spatial feature map from the backbone features.
     The spatial map can be computed by either using max pooling over the spatial dimension
@@ -47,27 +47,20 @@ def generate_spatial_bb_map(bb_feats, mode='max_pool'): # TODO fix the max_pool 
     - bb_feats (Tensor): Backbone feature tensor with shape (batch_size, embedding_dim, num_tokens),
                           where `num_tokens` is typically the flattened spatial dimension.
                           `embedding_dim` represents the size of the feature vector for each token.
-    - mode (str, optional): Specifies how to generate the spatial feature map. Can be one of:
-        - 'max_pool': Uses max pooling over the spatial dimension to compute the feature map.
-        - 'cls_token': Extracts the feature corresponding to the class token and reshapes it.
-        Default is 'max_pool'.
+    - cls_token (bool): Whether the model has a class token or not.
 
     Returns:
     - bb_feats (Tensor): A spatial feature map with shape (batch_size, embedding_dim, feat_size, feat_size),
                           where `feat_size` is the square root of the number of spatial tokens.
                           This map represents the spatial features from the backbone in a grid format.
 
-    Raises:
-    - ValueError: If an unsupported mode is provided.
     """
     bs, em = bb_feats.shape[0], bb_feats.shape[1]
-    if mode == 'max_pool':
-        feat_size = int(np.sqrt(bb_feats.shape[2]))
-    elif mode == 'cls_token':
+    if cls_token:
         feat_size = int(np.sqrt(bb_feats.shape[2] - 1))
         bb_feats = bb_feats[:, :, 1:]
     else:
-        raise ValueError(f"{mode} spatial attention type not supported")
+        feat_size = int(np.sqrt(bb_feats.shape[2]))
     return bb_feats.reshape(bs, em, feat_size, feat_size)
 
 def extract_heatmap(featmap: torch.Tensor,
@@ -75,53 +68,34 @@ def extract_heatmap(featmap: torch.Tensor,
                  channel_reduction: Optional[str] = 'squeeze_mean',
                  topk: int = 20,
                  resize_shape: Optional[tuple] = None):  #TODO
-    """Draw featmap.
+    """
+    Extracts a heatmap or top-k feature maps from a given feature map tensor.
 
-    - If `overlaid_image` is not None, the final output image will be the
-      weighted sum of img and featmap.
-
-    - If `resize_shape` is specified, `featmap` and `overlaid_image`
-      are interpolated.
-
-    - If `resize_shape` is None and `overlaid_image` is not None,
-      the feature map will be interpolated to the spatial size of the image
-      in the case where the spatial dimensions of `overlaid_image` and
-      `featmap` are different.
-
-    - If `channel_reduction` is "squeeze_mean" and "select_max",
-      it will compress featmap to single channel image and weighted
-      sum to `overlaid_image`.
-
-    - If `channel_reduction` is None
-
-      - If topk <= 0, featmap is assert to be one or three
-        channel and treated as image and will be weighted sum
-        to ``overlaid_image``.
-      - If topk > 0, it will select topk channel to show by the sum of
-        each channel. At the same time, you can specify the `arrangement`
-        to set the window layout.
+    This function supports different strategies for reducing the channel dimension
+    (e.g., mean, max, or selecting the most active channel), or selecting the top-k
+    most activated feature maps based on summed spatial activation. Optionally,
+    the output heatmap(s) can be resized to a target shape.
 
     Args:
-        featmap (torch.Tensor): The featmap to draw which format is
-            (C, H, W).
-        overlaid_image (np.ndarray, optional): The overlaid image.
-            Defaults to None.
-        channel_reduction (str, optional): Reduce multiple channels to a
-            single channel. The optional value is 'squeeze_mean'
-            or 'select_max'. Defaults to 'squeeze_mean'.
-        topk (int): If channel_reduction is not None and topk > 0,
-            it will select topk channel to show by the sum of each channel.
-            if topk <= 0, tensor_chw is assert to be one or three.
-            Defaults to 20.
-        arrangement (Tuple[int, int]): The arrangement of featmap when
-            channel_reduction is not None and topk > 0. Defaults to (4, 5).
-        resize_shape (tuple, optional): The shape to scale the feature map.
-            Defaults to None.
-        alpha (Union[int, List[int]]): The transparency of featmap.
-            Defaults to 0.5.
+        featmap (torch.Tensor): Input feature map tensor of shape (C, H, W) or
+                                (B, C, H, W).
+        feat_interpolation (str, optional): Interpolation method for resizing.
+                                Supports 'bilinear' and 'nearest'. Default is 'bilinear'.
+        channel_reduction (str or None, optional): Strategy to reduce channel dimension.
+                                Options are:
+                                - 'squeeze_mean': average over all channels.
+                                - 'squeeze_max': max over all channels.
+                                - 'select_max': selects the single most activated channel.
+                                If None, the top-k channels will be selected instead.
+        topk (int, optional): Number of most active feature maps to select when
+                                channel_reduction is None. If topk <= 0, input must
+                                have 1 or 3 channels. Default is 20.
+        resize_shape (tuple or None, optional): Target size to resize the output heatmap(s)
+                                as (height, width). If None, no resizing is performed.
 
     Returns:
-        np.ndarray: RGB image.
+        torch.Tensor: A single heatmap (if channel reduction is applied) or a tensor
+                      of top-k feature maps.
     """
     assert isinstance(featmap,
                       torch.Tensor), (f'`featmap` should be torch.Tensor,'
@@ -140,7 +114,6 @@ def extract_heatmap(featmap: torch.Tensor,
         if channel_reduction == 'select_max':
             sum_channel_featmap = torch.sum(featmap, dim=(2, 3))
             _, indices = torch.topk(sum_channel_featmap, 1, dim=1)
-            # feat_map = featmap[indices]
             expanded_indices = indices.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, featmap.size(2), featmap.size(3))
             feat_map = torch.gather(featmap, 1, expanded_indices).squeeze()
         elif channel_reduction == 'squeeze_max':
@@ -263,50 +236,6 @@ def generate_gauss_blur_annotations(binary_masks, kernel_size=5, sigma=None):
     blurred_masks = gaussian_blur(binary_masks, kernel_size=kernel_size, sigma=sigma)
     return blurred_masks
 
-def generate_learned_processed_annotations(model,binary_masks,input=None, mode='learned_S1'):
-    target_map_pos_org = (binary_masks > 0).float().permute(1, 0, 2, 3)
-    if mode in ['learned_S1', 'learned_d1']:
-        input_imp = target_map_pos_org
-        target_map_trans = model.imp(input_imp)
-    elif mode in ['learned_S2', 'learned_ds1']:
-        # input_imp = target_map_pos_org
-        input_imp = torch.cat((target_map_pos_org, input), 1)
-        target_map_trans = model.imp(input_imp)
-    elif mode in ['learned_D1', 'learned_D2']:
-        if mode == 'learned_D1':
-            input_imp = target_map_pos_org
-        else:
-            input_imp = torch.cat((target_map_pos_org, input), 1)
-        H1 = torch.relu(model.imp_conv1(input_imp))
-        H2 = torch.relu(model.imp_conv2(H1))
-        H3 = torch.relu(model.imp_conv3(H2))
-        target_map_trans = torch.relu(model.imp_conv4(H3))
-        # target_map_trans = model.imp_conv5(H4)
-    elif mode in ['learned_d2', 'learned_ds2']:
-        if mode == 'learned_d2':
-            input_imp = target_map_pos_org
-        else:
-            input_imp = torch.cat((target_map_pos_org, input), 1)
-
-        H1 = model.imp_conv1(input_imp)
-        target_map_trans = model.imp_conv2(H1)
-    elif mode in ['learned_d3', 'learned_ds3']:
-        if mode == 'learned_d2':
-            input_imp = target_map_pos_org
-        else:
-            input_imp = torch.cat((target_map_pos_org, input), 1)
-
-        H1 = model.imp_conv1(input_imp)
-        H2 = model.imp_conv2(H1)
-        target_map_trans = model.imp_conv3(H2)
-    else:
-        raise ValueError(f"{mode} mode type not supported")
-
-    learned_masks = target_map_trans - torch.min(target_map_trans)
-    learned_masks = learned_masks / (torch.max(learned_masks) + 1e-6)
-
-    return learned_masks.permute(1,0,2,3)
-
 def generate_relevance(model, outputs, input_size=256, upscale=True):
     """
     Computes the relevance map (acoording to the GAE method) for a given model and output predictions. The relevance map highlights
@@ -358,6 +287,24 @@ def avg_heads(cam, grad):
     cam = cam.clamp(min=0).mean(dim=1)
     return cam
 
+# rule 6 from paper
+def apply_self_attention_rules(R_ss, cam_ss):
+    R_ss_addition = torch.matmul(cam_ss, R_ss)
+    return R_ss_addition
+
+def upscale_relevance(relevance, feat_map_size=16, scale_factor=16):
+    relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
+    relevance = torch.nn.functional.interpolate(relevance, scale_factor=scale_factor, mode='bilinear')
+
+    # normalize between 0 and 1
+    relevance = relevance.reshape(relevance.shape[0], -1)
+    min = relevance.min(1, keepdim=True)[0]
+    max = relevance.max(1, keepdim=True)[0]
+    relevance = (relevance - min) / (max - min)
+
+    relevance = relevance.reshape(-1, 1, feat_map_size * scale_factor, feat_map_size * scale_factor)
+    return relevance
+
 def attention_rollout(batch_As):
     """
     Computes attention rollout from the given list of attention matrices for a batch of instances.
@@ -393,61 +340,3 @@ def attention_rollout(batch_As):
     spatial_rollout_attn = spatial_rollout_attn.reshape(-1, width, width)
 
     return spatial_rollout_attn
-
-# rule 6 from paper
-def apply_self_attention_rules(R_ss, cam_ss):
-    R_ss_addition = torch.matmul(cam_ss, R_ss)
-    return R_ss_addition
-
-def upscale_relevance(relevance, feat_map_size=16, scale_factor=16):
-    relevance = relevance.reshape(-1, 1, feat_map_size, feat_map_size)
-    relevance = torch.nn.functional.interpolate(relevance, scale_factor=scale_factor, mode='bilinear')
-
-    # normalize between 0 and 1
-    relevance = relevance.reshape(relevance.shape[0], -1)
-    min = relevance.min(1, keepdim=True)[0]
-    max = relevance.max(1, keepdim=True)[0]
-    relevance = (relevance - min) / (max - min)
-
-    relevance = relevance.reshape(-1, 1, feat_map_size * scale_factor, feat_map_size * scale_factor)
-    return relevance
-
-def BF_solver(X, Y):
-    epsilon = 1e-4
-
-    with torch.no_grad():
-        x = torch.flatten(X)
-        y = torch.flatten(Y)
-        g_idx = (y<0).nonzero(as_tuple=True)[0]
-        le_idx = (y>0).nonzero(as_tuple=True)[0]
-        len_g = len(g_idx)
-        len_le = len(le_idx)
-        a = 0
-        a_ct = 0.0
-        for idx in g_idx:
-            v = x[idx] + epsilon # to avoid miss the constraint itself
-            v_ct = 0.0
-            for c_idx in g_idx:
-                v_ct += (v>x[c_idx]).float()/len_g
-            for c_idx in le_idx:
-                v_ct += (v<=x[c_idx]).float()/len_le
-            if v_ct>a_ct:
-                a = v
-                a_ct = v_ct
-                # print('New best solution found, a=', a, ', # of constraints matches:', a_ct)
-        for idx in le_idx:
-            v = x[idx]
-            v_ct = 0.0
-            for c_idx in g_idx:
-                v_ct += (v>x[c_idx]).float()/len_g
-            for c_idx in le_idx:
-                v_ct += (v<=x[c_idx]).float()/len_le
-            if v_ct>a_ct:
-                a = v
-                a_ct = v_ct
-                # print('New best solution found, a=', a, ', # of constraints matches:', a_ct)
-
-    # print('optimal solution for batch, a=', a)
-    # print('final threshold a is assigned as:', am)
-
-    return torch.tensor([a]).cuda()

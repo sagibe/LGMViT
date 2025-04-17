@@ -212,18 +212,15 @@ def main(config, args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-
 def set_localization_loss(localization_loss_type):
     if localization_loss_type == 'kl':
         localization_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
-    elif localization_loss_type == 'mse' or localization_loss_type == 'gradmask':
+    elif localization_loss_type == 'mse':
         localization_criterion = torch.nn.MSELoss(reduction="mean")
     elif localization_loss_type == 'l1':
         localization_criterion = torch.nn.L1Loss(reduction="mean")
     elif localization_loss_type == 'mse_fgbg':
         localization_criterion = FGBGLoss(torch.nn.MSELoss(reduction="mean"), lambda_fg=0.3, lambda_bg=2)
-    elif 'res' in localization_loss_type:
-        localization_criterion = nn.L1Loss(reduction='none')
     else:
         raise ValueError(f"{localization_loss_type:} localization loss type not supported")
     return localization_criterion
@@ -252,6 +249,7 @@ def load_checkpoint(ckpt_to_load, ckpt_dir=None):
 if __name__ == '__main__':
     args = parse_args()
 
+    # Load experiment configuration file
     config = get_default_config()
     update_config_from_file(f"configs/{args.dataset}/{args.config_name}.yaml", config)
 

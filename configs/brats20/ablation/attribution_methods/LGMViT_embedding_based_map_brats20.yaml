@@ -28,13 +28,13 @@ TRAINING:
     TYPE: 'bce' # Classification loss type (currently only supports binary cross entropy)
     LOCALIZATION_LOSS:
       USE: true   # Apply localization loss
-      TYPE: 'kl'    # Localization loss type. Options: 'kl', 'mse', 'l1', 'mse_fgbg'(RobustViT), 'res', 'gradmask'
+      TYPE: 'kl'    # Localization loss type. Options: 'kl', 'mse', 'l1', 'mse_fgbg'(RobustViT)
       SPATIAL_FEAT_SRC: 'bb_feat'    # Options: 'attn', 'bb_feat', 'fusion'. Source for attribution map for localization supervision
       SPATIAL_FEAT_INTERPOLATION: 'bilinear'    # Options:  'bilinear', 'nearest'. Interpolation method to resize attribution maps
       FEAT_CHANNEL_REDUCTION: 'squeeze_mean'    # Optiions: 'squeeze_mean', 'select_max', 'squeeze_max'. Channel reduction methods in attribution map generation process (heads/embedding reduction)
       SPATIAL_MAP_NORM: 'softmax'   # Options: 'softmax', 'minmax'. Attribution maps normalization methods in localization loss
-      GT_SEG_PROCESS_METHOD: 'gauss'    # Options: 'None', 'gauss', 'learned_S1', 'learned_S2', 'learned_D1', 'learned_D2', 'learned_d1'. GT process method
-      GT_SEG_PROCESS_KERNEL_SIZE: 51    # Kernel size for gt process (for gauss)
+      GT_SEG_PROCESS_METHOD: 'gauss'    # Options: 'None', 'gauss'. GT process method
+      GT_SEG_PROCESS_KERNEL_SIZE: 51    # Kernel size for GT process (for gauss)
       ALPHA: 1000   # Weighting parameter of the localization loss
       PATIENT_LIST: null    # Path to file of the list of cases to apply localization loss on (for ablation). Default (None) uses all available cases. Files located at: datasets/LGS_patient_lists
 
