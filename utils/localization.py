@@ -37,7 +37,7 @@ def generate_spatial_attention(attn, mode='max_pool'):
         raise ValueError(f"{mode} spatial attention type not supported")
     return spat_attn
 
-def generate_spatial_bb_map(bb_feats, mode='max_pool'): # TODO fix the max_pool naming error
+def generate_spatial_bb_map(bb_feats, cls_token=True):
     """
     Generates a spatial feature map from the backbone features.
     The spatial map can be computed by either using max pooling over the spatial dimension
@@ -47,27 +47,20 @@ def generate_spatial_bb_map(bb_feats, mode='max_pool'): # TODO fix the max_pool 
     - bb_feats (Tensor): Backbone feature tensor with shape (batch_size, embedding_dim, num_tokens),
                           where `num_tokens` is typically the flattened spatial dimension.
                           `embedding_dim` represents the size of the feature vector for each token.
-    - mode (str, optional): Specifies how to generate the spatial feature map. Can be one of:
-        - 'max_pool': Uses max pooling over the spatial dimension to compute the feature map.
-        - 'cls_token': Extracts the feature corresponding to the class token and reshapes it.
-        Default is 'max_pool'.
+    - cls_token (bool): Whether the model has a class token or not.
 
     Returns:
     - bb_feats (Tensor): A spatial feature map with shape (batch_size, embedding_dim, feat_size, feat_size),
                           where `feat_size` is the square root of the number of spatial tokens.
                           This map represents the spatial features from the backbone in a grid format.
 
-    Raises:
-    - ValueError: If an unsupported mode is provided.
     """
     bs, em = bb_feats.shape[0], bb_feats.shape[1]
-    if mode == 'max_pool':
-        feat_size = int(np.sqrt(bb_feats.shape[2]))
-    elif mode == 'cls_token':
+    if cls_token:
         feat_size = int(np.sqrt(bb_feats.shape[2] - 1))
         bb_feats = bb_feats[:, :, 1:]
     else:
-        raise ValueError(f"{mode} spatial attention type not supported")
+        feat_size = int(np.sqrt(bb_feats.shape[2]))
     return bb_feats.reshape(bs, em, feat_size, feat_size)
 
 def extract_heatmap(featmap: torch.Tensor,
@@ -75,53 +68,34 @@ def extract_heatmap(featmap: torch.Tensor,
                  channel_reduction: Optional[str] = 'squeeze_mean',
                  topk: int = 20,
                  resize_shape: Optional[tuple] = None):  #TODO
-    """Draw featmap.
+    """
+    Extracts a heatmap or top-k feature maps from a given feature map tensor.
 
-    - If `overlaid_image` is not None, the final output image will be the
-      weighted sum of img and featmap.
-
-    - If `resize_shape` is specified, `featmap` and `overlaid_image`
-      are interpolated.
-
-    - If `resize_shape` is None and `overlaid_image` is not None,
-      the feature map will be interpolated to the spatial size of the image
-      in the case where the spatial dimensions of `overlaid_image` and
-      `featmap` are different.
-
-    - If `channel_reduction` is "squeeze_mean" and "select_max",
-      it will compress featmap to single channel image and weighted
-      sum to `overlaid_image`.
-
-    - If `channel_reduction` is None
-
-      - If topk <= 0, featmap is assert to be one or three
-        channel and treated as image and will be weighted sum
-        to ``overlaid_image``.
-      - If topk > 0, it will select topk channel to show by the sum of
-        each channel. At the same time, you can specify the `arrangement`
-        to set the window layout.
+    This function supports different strategies for reducing the channel dimension
+    (e.g., mean, max, or selecting the most active channel), or selecting the top-k
+    most activated feature maps based on summed spatial activation. Optionally,
+    the output heatmap(s) can be resized to a target shape.
 
     Args:
-        featmap (torch.Tensor): The featmap to draw which format is
-            (C, H, W).
-        overlaid_image (np.ndarray, optional): The overlaid image.
-            Defaults to None.
-        channel_reduction (str, optional): Reduce multiple channels to a
-            single channel. The optional value is 'squeeze_mean'
-            or 'select_max'. Defaults to 'squeeze_mean'.
-        topk (int): If channel_reduction is not None and topk > 0,
-            it will select topk channel to show by the sum of each channel.
-            if topk <= 0, tensor_chw is assert to be one or three.
-            Defaults to 20.
-        arrangement (Tuple[int, int]): The arrangement of featmap when
-            channel_reduction is not None and topk > 0. Defaults to (4, 5).
-        resize_shape (tuple, optional): The shape to scale the feature map.
-            Defaults to None.
-        alpha (Union[int, List[int]]): The transparency of featmap.
-            Defaults to 0.5.
+        featmap (torch.Tensor): Input feature map tensor of shape (C, H, W) or
+                                (B, C, H, W).
+        feat_interpolation (str, optional): Interpolation method for resizing.
+                                Supports 'bilinear' and 'nearest'. Default is 'bilinear'.
+        channel_reduction (str or None, optional): Strategy to reduce channel dimension.
+                                Options are:
+                                - 'squeeze_mean': average over all channels.
+                                - 'squeeze_max': max over all channels.
+                                - 'select_max': selects the single most activated channel.
+                                If None, the top-k channels will be selected instead.
+        topk (int, optional): Number of most active feature maps to select when
+                                channel_reduction is None. If topk <= 0, input must
+                                have 1 or 3 channels. Default is 20.
+        resize_shape (tuple or None, optional): Target size to resize the output heatmap(s)
+                                as (height, width). If None, no resizing is performed.
 
     Returns:
-        np.ndarray: RGB image.
+        torch.Tensor: A single heatmap (if channel reduction is applied) or a tensor
+                      of top-k feature maps.
     """
     assert isinstance(featmap,
                       torch.Tensor), (f'`featmap` should be torch.Tensor,'
@@ -140,7 +114,6 @@ def extract_heatmap(featmap: torch.Tensor,
         if channel_reduction == 'select_max':
             sum_channel_featmap = torch.sum(featmap, dim=(2, 3))
             _, indices = torch.topk(sum_channel_featmap, 1, dim=1)
-            # feat_map = featmap[indices]
             expanded_indices = indices.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, featmap.size(2), featmap.size(3))
             feat_map = torch.gather(featmap, 1, expanded_indices).squeeze()
         elif channel_reduction == 'squeeze_max':

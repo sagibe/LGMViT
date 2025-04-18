@@ -22,6 +22,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
     model.train()
     criterion.train()
     input_size = data_loader.dataset.input_size
+
+    # Metric Logger
     metrics = utils.PerformanceMetrics(device=device, bin_thresh=cls_thresh)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -36,11 +38,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 50
     metric_logger.update(localization_loss=0)
+
+    # Loading localization supervision patient list subset (only for ablation experiments)
     if localization_loss_params.USE and localization_loss_params.PATIENT_LIST is not None:
         with open(localization_loss_params.PATIENT_LIST, 'r') as f:
             localization_patient_list = json.load(f)
     else:
         localization_patient_list = None
+
     for scan, labels, scan_id in metric_logger.log_every(data_loader, print_freq, header):
         scan = scan.squeeze(0).float().to(device)
         targets = labels[0].float().T.to(device)
@@ -56,17 +61,18 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
             cur_lesion_annot = lesion_annot[:,max_seg_size * scan_seg_idx:max_seg_size * (scan_seg_idx + 1),...]
             outputs, attn, bb_feats = model(cur_slices)
 
+            # Classification Loss
             cls_loss = criterion(outputs, cur_targets)
 
             # Localization Loss
             if localization_loss_params.USE and cur_targets.sum().item() > 0 and (localization_patient_list is None or scan_id[0] in localization_patient_list):
                 reduced_attn_maps = reduced_bb_feat_maps = None
+
+                # Attention-based Maps
                 if localization_loss_params.SPATIAL_FEAT_SRC in ['attn', 'fusion']:
                     if localization_loss_params.ATTENTION_METHOD == 'last_layer_attn':
-                        if use_cls_token:
-                            attn_maps = generate_spatial_attention(attn, mode='cls_token')
-                        else:
-                            attn_maps = generate_spatial_attention(attn, mode='max_pool')
+                        spatial_attn_method = 'cls_token' if use_cls_token else 'max_pool'
+                        attn_maps = generate_spatial_attention(attn, mode=spatial_attn_method)
                         if 'res' in localization_loss_params.TYPE:
                             reduced_attn_maps = extract_heatmap(attn_maps,
                                                                 feat_interpolation=localization_loss_params.SPATIAL_FEAT_INTERPOLATION,
@@ -99,6 +105,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                         reduced_attn_maps = attention_rollout(all_layers_attn).unsqueeze(0)
                         if 'res' not in localization_loss_params.TYPE:
                             reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps, scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1], mode='bilinear')
+                # Embedding-based Maps
                 if localization_loss_params.SPATIAL_FEAT_SRC in ['bb_feat', 'fusion']:
                     if use_cls_token:
                         bb_feat_map = generate_spatial_bb_map(bb_feats, mode='cls_token')
@@ -187,6 +194,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                         localization_loss = localization_loss_params.ALPHA * \
                                              localization_criterion(utils.min_max_normalize(reduced_spatial_feat_maps[:,cur_targets[:,0].to(bool),:,:]),
                                                                    utils.min_max_normalize(cur_lesion_annot[:,cur_targets[:,0].to(bool),:,:]))
+
+                # Total Loss
                 loss = cls_loss + localization_loss
                 localization_loss_value = localization_loss.item()
                 metric_logger.update(localization_loss=localization_loss_value)
