@@ -59,7 +59,7 @@ or:
 ```
 pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0
 pip install SimpleITK-SimpleElastix
-pip install easydict==1.11 pyyaml==6.0.1 scipy==1.12.0 opencv-python==4.9.0.80 torchmetrics==1.3.0 einops==0.7.0 timm==0.9.12 pandas==2.2.0 tabulate==0.9.0
+pip install easydict==1.11 pyyaml==6.0.1 scipy==1.12.0 opencv-python==4.9.0.80 torchmetrics==1.3.0 einops==0.7.0 timm==0.9.12 pandas==2.2.0 tabulate==0.9.0 wandb==0.16.3
 ```
 
 ## Data Preparation
