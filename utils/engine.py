@@ -83,6 +83,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module, localiza
                             all_layers_attn.append(blk.attn.attn_maps)
                         all_layers_attn = torch.stack(all_layers_attn, dim=1)
                         reduced_attn_maps = attention_rollout(all_layers_attn).unsqueeze(0)
+                        reduced_attn_maps = torch.nn.functional.interpolate(reduced_attn_maps,scale_factor=cur_lesion_annot.shape[-1] // reduced_attn_maps.shape[-1],mode='bilinear')
                     else:
                         raise ValueError("ATTENTION_METHOD type not supported")
 
