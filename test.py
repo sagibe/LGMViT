@@ -160,7 +160,13 @@ def load_checkpoint(checkpoint, dataset_name, ckpt_parent_dir, config_name):
         if '/' in checkpoint:
             checkpoint_path = checkpoint
         elif 'best' in checkpoint:
-            checkpoint_path = os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt', 'checkpoint_best.pth')
+            best_ckpt = [f for f in os.listdir(os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt') ) if "best" in f and f.endswith(".pth")]
+            if len(best_ckpt) > 1:
+                raise ValueError(f"Multiple best checkpoints found: {best_ckpt}. Please specify a unique checkpoint.")
+            elif len(best_ckpt) == 0:
+                raise ValueError(f"No best checkpoint found in {os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt')}.")
+            else:
+                checkpoint_path = os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt', best_ckpt[0])
         else:
             if (checkpoint).endswith('.pth'):
                 checkpoint_path = os.path.join(ckpt_parent_dir, dataset_name, config_name, 'ckpt', checkpoint)
