@@ -142,7 +142,7 @@ python train.py LGMViT_brats20 -d brats20 --use_wandb --wandb_proj_name LGMViT_b
 ### LiTS17
 To train on the LiTS17 dataset run the following command:
 ```
-python train.py LGMViT_lits17 -d lits17_liver --use_wandb --wandb_proj_name LGMViT_lits17_liver --seed 42
+python train.py LGMViT_lits17 -d lits17 --use_wandb --wandb_proj_name LGMViT_lits17 --seed 42
 ```
 To train the baseline model (vanilla ViT-B/16 model), a competing method, or a customized configuration
 replace the first argument with the name of the desired model config under `configs/brats20` for BraTS2020 and `configs/lits17` for LiTS17. We use [W&B](https://github.com/wandb/client) to log our training experiments, to disable W&B loging remove `--use_wandb`.
@@ -186,12 +186,12 @@ Example for different checkpoint options:
 ### LiTS17
 To run evaluation on the LiTS17 test set run the following command:
 ```
-python test.py LGMViT_lits17 -d lits17_liver -c best
+python test.py LGMViT_lits17 -d lits17 -c best
 ```
 
 To run evaluation on multiple configurations:
 ```
-python test.py ViT_B16_baseline_lits17 LGMViT_lits17 LGMViT_lits17_2 -d lits17_liver -c best
+python test.py ViT_B16_baseline_lits17 LGMViT_lits17 LGMViT_lits17_2 -d lits17 -c best
 ```
 
 ## Acknowledgments

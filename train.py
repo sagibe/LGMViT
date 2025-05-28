@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('config_name', help='Config file name of the model (without .yaml suffix)')
     parser.add_argument('-d', '--dataset',
                         default='brats20',
-                        help='Name of dataset as presented in /configs directory. Currently supports: "brats20", "lits17_liver"')
+                        help='Name of dataset as presented in /configs directory. Currently supports: "brats20", "lits17"')
     parser.add_argument('--use_wandb', action='store_true', help='Use W&B logging')
     parser.add_argument('--wandb_proj_name', help='Name of project name in W&B where the experiment will be logged to')
     parser.add_argument('--wandb_group', help='*OPTIONAL* in W&B logging(Usually not necessary). Group name inside the W&B project where the experiment will be logged to')
