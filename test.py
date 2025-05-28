@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument('config_name', nargs='+', help='Config file names of the models (without .yaml suffix)')
     parser.add_argument('-d', '--dataset',
                         default='brats20',
-                        help='Name of dataset as presented in /configs directory. Currently supports: "brats20", "lits17_liver"')
+                        help='Name of dataset as presented in /configs directory. Currently supports: "brats20", "lits17"')
     parser.add_argument('-c', '--checkpoint',
                         default=['best'],
                         nargs='*',
