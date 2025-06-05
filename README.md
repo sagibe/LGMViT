@@ -198,11 +198,14 @@ and [VisTR](https://github.com/YuqingWang1029/VisTR) repositories. We would like
 ## Citation
 If our work is useful for your research, please consider citing:
 
-*The official publication of our paper will be published in the near future. This is a temporary Bibtex citation: 
 ```Bibtex
-@article{itzhaklocalization,
+@inproceedings{ben2025localization,
   title={Localization-Guided Supervision for Robust Medical Image Classification by Vision Transformers},
-  author={Itzhak, Sagi Ben and Kiryati, Nahum and Portnoy, Orith and Mayer, Arnaldo}
+  author={Ben Itzhak, Sagi and Kiryati, Nahum and Portnoy, Orith and Mayer, Arnaldo},
+  booktitle={European Conference on Computer Vision},
+  pages={118--133},
+  year={2025},
+  organization={Springer}
 }
 ```
 
